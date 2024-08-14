@@ -41,4 +41,11 @@ setMethod("flowAccumulation", signature(x="SpatRaster"),
     }      
 )
 
+setMethod("flowdirD8ltd", signature(x="SpatRaster"), 
+          function(x,lambda=0.5,filename="", ...) { 
+            opt <- spatOptions(filename, ...)
+            x@ptr <- x@ptr$d8ltd(lambda,opt)
+            messages(x, "flowdirD8ltd") ## EC 20210318
+          }
+)
 
