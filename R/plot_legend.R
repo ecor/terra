@@ -1,14 +1,25 @@
 
 .get_breaks <- function(x, n, method, r=NULL) {
 	#x <- x[!is.na(x)]
+	
 	if (is.function(method)) {
 		if (!is.null(r)) {
-			x[(x<r[1]) | (x>r[2])] <- NA
+			if (!is.na(r[1])) { 
+				x[ x < r[1] ] <- NA
+			} 
+			if (!is.na(r[2])) { 
+				x[ x > r[2] ] <- NA
+			} 
 		}
 		breaks <- method(x)
 	} else if (method[1]=="cases") {
 		if (!is.null(r)) {
-			x[(x<r[1]) | (x>r[2])] <- NA
+			if (!is.na(r[1])) { 
+				x[ x < r[1] ] <- NA
+			} 
+			if (!is.na(r[2])) { 
+				x[ x > r[2] ] <- NA
+			} 
 		}
 		n <- n+1
 		i <- seq(0, 1, length.out=n)
@@ -23,6 +34,9 @@
 	} else { # if (method=="eqint") {
 		if (is.null(r)) {
 			r <- c(min(x, na.rm=TRUE), max(x, na.rm=TRUE))
+		} else if (any(is.na(r))) {
+			if (is.na(r[1])) r[1] <- min(x, na.rm=TRUE)
+			if (is.na(r[2])) r[2] <- max(x, na.rm=TRUE)
 		}
 		small <- 1e-16
 		if ((r[1] %% 1) != 0) { r[1] <- r[1] - small }
@@ -322,6 +336,10 @@ retro_labels <- function(x, lat=TRUE) {
 	zztxt <- x$leg$labels
 	if (is.null(zztxt)) {
 		zztxt <- formatC(zz, digits=x$leg$digits, format = "f")
+		if (x$fill_range) {
+			if (isTRUE(x$range_filled[1])) zztxt[1] <- paste0("< ", zztxt[1])		
+			if (isTRUE(x$range_filled[2])) zztxt[length(zztxt)] <- paste0("> ", zztxt[length(zztxt)])		
+		}
 	}
 	e <- x$leg$ext
 	if (x$leg$x %in% c("left", "right")) {
@@ -530,4 +548,31 @@ add_grid <- function(nx=NULL, ny=nx, col="lightgray", lty="dotted", lwd=1) {
     invisible(list(atx = atx, aty = aty))
 }
 
+
+add_mtext <- function(text, side=3, line=0, ...) {
+
+	stopifnot(side %in% 1:4)
+
+	p <- unlist(get.clip())
+	h <- graphics::strheight(text, units = "user", ...)	
+	
+	srt <- 0
+	if (side==1) {
+		x <- mean(p[1:2])
+		y <- p[3] - h - line * h
+	} else 	if (side==2) {
+		x <- p[1] -1.25 * h - line * h
+		y <- mean(p[3:4])
+		srt <- 90
+	} else 	if (side==3) {
+		x <- mean(p[1:2])
+		y <- p[4] + h + line * h
+	} else {
+		x <- p[2] + 1.25 * h + line * h
+		y <- mean(p[3:4])
+		srt <- 270
+	} 
+	
+	text(x=x, y=y, labels=text, xpd=TRUE, srt=srt, ...)
+}
 

@@ -1,4 +1,4 @@
-# version 1.7-80
+# version 1.7-81
 
 ## bug fixes
 
@@ -8,18 +8,24 @@
 - NetCDF files with month time-step encode from 0-11 made R crash [#1544](https://github.com/rspatial/terra/issues/1544) by Martin Holdrege
 - `split<SpatVector>` only worked well if the split field was of type character. [#1530](https://github.com/rspatial/terra/issues/1530) by Igor Graczykowski
 - `gridDist` (and probably some other methods) emitted a "cannot overwrite existing file" error when processing large datasets [#1522](https://github.com/rspatial/terra/issues/1522) by Clare Pearson
+- `terrain` did not accept multiple variables [#1561](https://github.com/rspatial/terra/issues/1561) by Michael Mahoney
+- `rotate` was vulnerable to an integer overflow [#1562](https://github.com/rspatial/terra/issues/1562) by Sacha Ruzzante
+- `getTileExtents` could return overlapping tiles or tiles with gaps due to floating point imprecision. [#1564](https://github.com/rspatial/terra/issues/1564) by Michael Sumner
 
  
 ## enhancements
 
 - `as.list<SpatRasterDataset>` sets the names of the list [#1513](https://github.com/rspatial/terra/issues/1513)
 - a SpatVectorCollection can now be subset with its names; and if made from a list it takes the names from the list.  [1515](https://github.com/rspatial/terra/issues/1515) by jedgroev
+- argument `fill_range` to plot<SpatRaster> and `plot<SpatVector>` to use the color of the extreme values of the specified range [#1553](https://github.com/rspatial/terra/issues/1553) by Mike Koontz
+
 
 ## new 
 
 - `map-region` returns the coordinates of the axes position of a map created with `plot<Spat*>` [https://github.com/rspatial/terra/issues/1517](https://github.com/rspatial/terra/issues/1517) by Daniel Schuch
 - `polys<leaflet>` method [#1543](https://github.com/rspatial/terra/issues/1543) by Márcia Barbosa
 - `plot<SpatVectorCollection>` method [#1532](https://github.com/rspatial/terra/issues/1532) by jedgroev
+- `add_mtext` to add text around the margins of a map. [#1567](https://github.com/rspatial/terra/issues/1567) by Daniel Schuch
 
 
 # version 1.7-78

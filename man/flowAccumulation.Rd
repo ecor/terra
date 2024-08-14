@@ -30,7 +30,7 @@ SpatRaster
 The algorithm is an adaptation of the one proposed by Zhou at al, 2019. 
 }
 
-\seealso{\code{\link{terrain}},\code{\link{watershed}},\code{\link{NIDP}}}
+\seealso{\code{\link{terrain}},\code{\link{watershed}}, \code{\link{NIDP}}}
 
 \author{
 Emanuele Cordano
@@ -58,7 +58,7 @@ for (r in 1:nrow(elev1)) {
 } 
 
 
-## Elevation Raster Maps
+## Elevation raster
 elev1 <- rast(elev1)
 elev2 <- rast(elev2)
 
@@ -71,7 +71,6 @@ plot(elev2)
 ## Flow direction raster
 flowdir1<- terrain(elev1,v="flowdir")
 flowdir2<- terrain(elev2,v="flowdir")
-u <- terrain(flowdir2,"flowacc")
 
 t(array(flowdir1[],rev(dim(flowdir1)[1:2])))
 t(array(flowdir2[],rev(dim(flowdir2)[1:2])))
@@ -82,18 +81,8 @@ plot(flowdir2)
 ## 
 flow_acc1 <- flowAccumulation((flowdir1))
 flow_acc2 <- flowAccumulation((flowdir2))
-## Alternative option 
-## here the argument of "terrain" functions is  flow directions instead of elevation.
-
-flow_acc2a <- terrain(flowdir2,"flowacc") 
-t(array(flow_acc1[],rev(dim(flow_acc1)[1:2])))
-t(array(flow_acc2[],rev(dim(flow_acc2)[1:2])))
-
-plot(flow_acc1)
-plot(flow_acc2)
 
 weight <- elev1*0+10
-
 
 flow_acc1w <- flowAccumulation(flowdir1,weight)
 flow_acc2w <- flowAccumulation(flowdir2,weight)
@@ -113,8 +102,6 @@ flowdir <- terrain(elev,"flowdir")
 weight <- cellSize(elev,unit="km")
 flowacc_weight <- flowAccumulation(flowdir,weight)
 flowacc  <- flowAccumulation(flowdir)
-
-
 }
 
 \keyword{spatial}

@@ -117,7 +117,35 @@
 #		out$fill_range <- FALSE
 	} else {
 		stopifnot(length(out$range) == 2)
-		stopifnot(out$range[2] > out$range[1])
+		if (out$fill_range) {
+			out$range_filled <- c(FALSE, FALSE)
+			if (!is.na(out$range[1])) {
+				if (out$range[1] > min(z)) {
+					out$range_filled[1] <- TRUE
+					Z[ Z < out$range[1] ] <- out$range[1]
+				} 
+			} else {
+				out$range[1] <- min(z, na.rm=TRUE)
+			}
+			if (!is.na(out$range[2])) {
+				if (out$range[2] < max(z)) {
+					Z[ Z > out$range[2] ] <- out$range[2]
+					out$range_filled[2] <- TRUE
+				} 
+			} else {
+				out$range[2] <- max(z, na.rm=TRUE)
+			}
+		} else {
+			if (all(is.na(out$range))) {
+				out$range <- range(z)
+			} else if (is.na(out$range[1])) {
+				out$range[1] <- min(z)
+			} else if (is.na(out$range[2])) {
+				out$range[2] <- max(z)
+			}
+		}
+		
+		if (!any(out$range_filled)) out$fill_range <- FALSE
 	}
 
 	breaks <- .get_breaks(z, length(out$cols), "eqint", out$range)
@@ -561,7 +589,7 @@ prettyNumbs <- function(x, digits) {
 
 .prep.plot.data <- function(x, type, cols, mar=NULL, draw=FALSE,
   interpolate=FALSE, legend=TRUE, legend.only=FALSE, pax=list(), plg=list(),
-  levels=NULL, add=FALSE, range=NULL, breaks=NULL, breakby="eqint",
+  levels=NULL, add=FALSE, range=NULL, fill_range=FALSE, breaks=NULL, breakby="eqint",
   coltab=NULL, cats=NULL, xlim=NULL, ylim=NULL, ext=NULL, colNA=NA, alpha=NULL, reset=FALSE,
   sort=TRUE, decreasing=FALSE, grid=FALSE, las=0, all_levels=FALSE, decimals=NULL, background=NULL,
   xlab="", ylab="", cex.lab=0.8, line.lab=1.5, asp=NULL, yaxs="i", xaxs="i", main="", cex.main=1.2, 
@@ -721,7 +749,7 @@ prettyNumbs <- function(x, digits) {
 		} else {
 			out$interpolate <- isTRUE(interpolate)
 			out$range <- range
-			#out$fill_range <- fill_range
+			out$fill_range <- fill_range
 			out <- .as.raster.continuous(out, x, type)
 		}
 
@@ -779,7 +807,7 @@ prettyNumbs <- function(x, digits) {
 
 
 setMethod("plot", signature(x="SpatRaster", y="numeric"),
-	function(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), maxcell=500000, smooth=FALSE, range=NULL, levels=NULL, all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, alpha=NULL, sort=FALSE, decreasing=FALSE, grid=FALSE, ext=NULL, reset=FALSE, add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, ...) {
+	function(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, alpha=NULL, sort=FALSE, decreasing=FALSE, grid=FALSE, ext=NULL, reset=FALSE, add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, ...) {
 
 		old.mar <- graphics::par()$mar
 		on.exit(graphics::par(mar=old.mar))
@@ -809,7 +837,7 @@ setMethod("plot", signature(x="SpatRaster", y="numeric"),
 					alpha <- alpha[[y]]
 				}
 			}
-			plot(x, col=col, type=type, mar=mar, legend=legend, axes=axes, plg=plg, pax=pax, maxcell=2*maxcell/length(y), smooth=smooth, range=range, levels=levels, all_levels=all_levels, breaks=breaks, breakby=breakby, fun=fun, colNA=colNA, alpha=alpha, grid=grid, sort=sort, decreasing=decreasing, ext=ext, reset=reset, add=add, buffer=buffer, background=background, box=box, clip=clip, ...)
+			plot(x, col=col, type=type, mar=mar, legend=legend, axes=axes, plg=plg, pax=pax, maxcell=2*maxcell/length(y), smooth=smooth, range=range, fill_range=fill_range, levels=levels, all_levels=all_levels, breaks=breaks, breakby=breakby, fun=fun, colNA=colNA, alpha=alpha, grid=grid, sort=sort, decreasing=decreasing, ext=ext, reset=reset, add=add, buffer=buffer, background=background, box=box, clip=clip, ...)
 			return(invisible())
 		} else {
 			x <- x[[y]]
@@ -885,7 +913,7 @@ setMethod("plot", signature(x="SpatRaster", y="numeric"),
 			}
 		}
 
-		x <- .prep.plot.data(x, type=type, cols=col, mar=mar, draw=TRUE, plg=plg, pax=pax, legend=isTRUE(legend), axes=isTRUE(axes), coltab=coltab, cats=cats, interpolate=smooth, levels=levels, range=range, colNA=colNA, alpha=alpha, reset=reset, grid=grid, sort=sort, decreasing=decreasing, ext=ext, all_levels=all_levels, breaks=breaks, breakby=breakby, add=add, buffer=buffer, background=background, box=box, maxcell=maxcell, clip=clip, ...)
+		x <- .prep.plot.data(x, type=type, cols=col, mar=mar, draw=TRUE, plg=plg, pax=pax, legend=isTRUE(legend), axes=isTRUE(axes), coltab=coltab, cats=cats, interpolate=smooth, levels=levels, range=range, fill_range=fill_range, colNA=colNA, alpha=alpha, reset=reset, grid=grid, sort=sort, decreasing=decreasing, ext=ext, all_levels=all_levels, breaks=breaks, breakby=breakby, add=add, buffer=buffer, background=background, box=box, maxcell=maxcell, clip=clip, ...)
 
 		if (!is.null(fun)) {
 			if (!is.null(formals(fun))) {
