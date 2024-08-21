@@ -14,7 +14,7 @@
 #include <cmath> // per la funzione pow
 #include "watershed_internal_flow_d8ltd.h"
 #include "watershed_internal.h"
-#define NODATA_2 -99999999999999999  
+#define NODATA_2 -999999
 
 // ESRI terra covension:
 //   //     # x-1 x 	x+1
@@ -68,7 +68,9 @@ int nextcell_point_conv1(int nx, int ny,int x,int y,double pv,int conv_type) {
       iout=offset(nx, ny, x, y-1);
     } else if (inRaster(nx, ny, x+1,y-1) && pv==idir[8]) {
       iout=offset(nx, ny, x+1, y-1);
-    } 
+    } else {
+      iout=offset(nx, ny, x, y);
+    }
     //printf("iout=%d\n",iout);
     return(iout);
     }
@@ -87,77 +89,86 @@ int nextcell_point_conv1(int nx, int ny,int x,int y,double pv,int conv_type) {
    */
 
 void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sfacet,
-                     double* tdc, double *tdd,double L) {
+                     double* tdc, double *tdd,double L,
+                     std::vector<double> ddp1,std::vector<double> ddp2,int nncell) {
   
   int i;
   ///int L=1; // dx=dy=L=1
   int ncell=nx*ny;
   double x,y;
-  int efacet=0;
+ // int efacet=0;
   double e0,e1,e2;
   int facet=0;
-  std::vector<double> ddp1 = {2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
-  std::vector<double> ddp2 = {1,3,3,5,5,7,7,1};
+//  std::vector<double> ddp1 = {2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
+//  std::vector<double> ddp2 = {1,3,3,5,5,7,7,1};
 
-  int nncell=8;
+ // int nncell=8;
   //std::vector<double> vOut(nx*ny,0);
   //std::vector<double> slope_mgn(ncell,0);
-  double slope_mgn;
+  
  // double slope=
  
  
   for (int i = 0; i < nx*ny; i++) {
     
-  //  *(vOut+i)=0;
+   
     e0=*(e+i);
-    if (is_NA((int)e0)) e0=(double)NODATA_2; 
+  //  printf("ba5 i=%d e0=%f \n",i,e0);
+  ///  if (is_NA((int)e0)) e0=(double)NODATA_2; 
+  //  printf("ba6 i=%d e0=%f \n",i,e0);
+    
     std::vector<int> offset1(nncell,i);
     std::vector<int> offset2(nncell,i);
     x = getCol(nx, ny, i);   // ATTENTION: base 0 or 1?
     y = getRow(nx, ny, i);
     double slope_mgn_temp=0;
+    double slope_mgn=0;
     int facet=0;
-    printf("ba1\n");
-    if (!is_NA((int)e0)) for (int j=0; j<nncell; j++){
+  ///  printf("ba1\n");
+   /// if (!is_NA((int)e0)) e0=NODATA_2;
+    
+    
+    for (int j=0; j<nncell; j++){
       
       //if (ddp1[j]==1) {
-       printf("ba2 j=%d facet=%d i=%d e0=%f e1=%f e2=%f\n",j,facet,i,e0,e1,e2);
-       e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[j],2));
-       e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[j],2));
-       if (is_NA((int)e1) | is_NA((int)e0)) e1=e0;
-       if (is_NA((int)e2) | is_NA((int)e0)) e2=e0;
+   /// printf("ba2 j=%d facet=%d i=%d e0=%f e1=%f e2=%f\n",j,facet,i,e0,e1,e2);
+    e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[j],2));
+    e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[j],2));
+    if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
+    if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
        
-      /// facet=j;
-       slope_mgn_temp=e0-(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
-       if (slope_mgn_temp<0) slope_mgn_temp=0;
-       printf("ba2 j=%d facet=%d i=%d e0=%f e1=%f e2=%f slope_mgn=%f slope_mgn_temp=%f\n",j,facet,i,e0,e1,e2,slope_mgn,slope_mgn_temp);
-       if (slope_mgn_temp>=slope_mgn) {
-         slope_mgn=slope_mgn_temp;
-         facet=j;
+    /// facet=j;
+    slope_mgn_temp=e0-(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
+    //if (slope_mgn_temp<0) slope_mgn_temp=0;
+   
+    if (slope_mgn_temp>slope_mgn) {
+        slope_mgn=slope_mgn_temp;
+        facet=j;
+      
        }
     }
-    if (!is_NA((int)e0)) {
+  //  if (!is_NA((int)e0)) {
       e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[facet],2));
       e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[facet],2)); 
-      if (is_NA((int)e1) | is_NA((int)e0)) e1=e0;
-      if (is_NA((int)e2) | is_NA((int)e0)) e2=e0;
+      if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
+      if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
       *(sfacet+i)=facet;
       *(sr+i)=std::atan((e1-e2)/(e0-e1)); // RAD
       *(sm+i)=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
-      if (*(sr+i)<0) {
+      if (*(sr+i)<=0) {
       
         *(sr+i)=0;
         *(sm+i)=(e0-e1)/L;
       
-      } else if (*(sr+i)>M_PI/4) {
+      } else if (*(sr+i)>=M_PI/4) {
       
         *(sr+i)=M_PI/4;
-        *(sm+i)=(e0-e2)/L;
+        *(sm+i)=(e0-e2)/(L*sqrt(2));
       }
       *(tdc+i)=L*std::sin(*(sr+i));
       *(tdd+i)=sqrt(2)*L*std::sin(M_PI/4-*(sr+i)); // see qq 5 on Li at al,2022
-      
-    }
+  //    printf("ba33  facet=%d i=%d e0=%f e1=%f e2=%f slope_mgn=%f slope_mgn_temp=%f d1=%f,d2=%f tdc=%f tdd=%f,\n",facet,i,e0,e1,e2,slope_mgn,slope_mgn_temp,ddp1[facet],ddp2[facet],*(tdc+i),*(tdd+i));
+   // }
     
     
     
@@ -174,17 +185,20 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
  
 void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int nx, int ny, double L,
                           
-                          double *atdc, double *atdd, double *atdplus,double *pflow,double *kupdate,double lambda)
+                          double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
+                          std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell)
+                          
+                          
                           
                            {   
    
   // TO DO
   
-  std::vector<double> ddp1 = {2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
-  std::vector<double> ddp2 = {1,3,3,5,5,7,7,1};
-  std::vector<double> sigma = {1,-1,1,-1,1,-1,1,-1};
+ // std::vector<double> ddp1 = {2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
+ // std::vector<double> ddp2 = {1,3,3,5,5,7,7,1};
+//  std::vector<double> sigma = {1,-1,1,-1,1,-1,1,-1};
   int x,y;
-  int nncell=8;
+//  int nncell=8;
 
     //     
     //
@@ -195,7 +209,7 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
   int facet,nextc,nextd,nextp;
   double atdplus_temp;
   double e0,e1,e2;
-  double pflow_estimate;
+  double pflow_estimate=ddp1[0];
   
   
   for (int i = 0; i < nx*ny; i++) {  
@@ -204,29 +218,40 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
    *(atdc+i)=*(tdc+i)*sigma[facet];
    *(atdplus+i)=0;
    *(atdd+i)=*(tdd+i)*sigma[facet];
-   *(pflow+i)=0;
-   *(kupdate+i)=1;
+   *(pflow+i)=ddp1[0];
+   *(kupdate+i)=0;
   }
   int cnt=0;
  // for (int iter=0;iter<niter,iter++) {
  for (int j = 0; j < nx*ny; j++) {
   int i=j; 
-  do {
+  cnt++;
+  if (*(kupdate+i)==0) do {
     exit_cond=0;
     x = getCol(nx, ny, i);   // ATTENTION: base 0 or 1?
     y = getRow(nx, ny, i);
+    nextp=i;
+    pflow_estimate=*(pflow+i);
     e0=*(e+i);
     facet=*(sfacet+i);
     nextc=nextcell_point_conv1(nx,ny,x,y,ddp1[facet],2);
     nextd=nextcell_point_conv1(nx,ny,x,y,ddp2[facet],2);
-    *(atdc+nextc)=*(tdc+nextc)*sigma[facet]+*(atdplus+i)*lambda;
-    *(atdd+nextd)=*(tdd+nextd)*sigma[facet]+*(atdplus+i)*lambda;
+    nextp=nextcell_point_conv1(nx,ny,x,y,pflow_estimate,2);
+    int facetc=*(sfacet+nextc);
+    int facetd=*(sfacet+nextd);
+    *(atdc+nextc)=*(tdc+nextc)*sigma[facetc]+*(atdplus+i)*lambda;
+    *(atdd+nextd)=*(tdd+nextd)*sigma[facetd]+*(atdplus+i)*lambda;
       
     e1=*(e+nextc);
     e2=*(e+nextd); 
-    if (is_NA((int)e1) | is_NA((int)e0)) e1=e0;
-    if (is_NA((int)e2) | is_NA((int)e0)) e2=e0;
-    if (e0<e1) {
+    // if (is_NA((int)e0)) {
+    //   e0=NODATA_2;
+    //   nextp=i;
+    //   
+    // } else {
+    if (is_NA((int)e1) | is_NA((int)e0)  | e1==e0) e1=e0+10;
+    if (is_NA((int)e2) | is_NA((int)e0)  | e2==e0) e2=e0+10;
+    if ((e0<e1) & (e0>e2)) { //// pit ??? 
         //*(atdplus+nextd)=*(atdplus+nextd)+*(atdd+i); //DA VEDERE BENE
       pflow_estimate=ddp2[facet];
       nextp=nextd;
@@ -234,41 +259,61 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
       atdplus_temp=*(atdd+nextp);
         
         //*(pflow2+i)=ddp1[facet]; //tocontinue...
-    } else if (e0<e2) {
+    } else if ((e0<e2) & (e0>e1)) {
       pflow_estimate=ddp1[facet];
       nextp=nextc;
       atdplus_temp=*(atdc+nextp);
-    } else if (abs(*(atdc+i))<abs(*(atdc+i))) {
+    } else if (abs(*(atdc+i))<=abs(*(atdd+i))) {
         
       pflow_estimate=ddp1[facet];
       nextp=nextc;
       atdplus_temp=*(atdc+nextp);
-    } else {
+    } else if (abs(*(atdd+i))<abs(*(atdc+i))) {
       pflow_estimate=ddp2[facet];
       nextp=nextd;
       atdplus_temp=*(atdd+nextp);
         
     }
-  
-    if (pflow_estimate==*(pflow+i)) {
-      exit_cond=1;
-      printf("pflow%f %f\n",pflow_estimate,*(pflow+i));
-      printf("i=%d nextp=%d su j=%d facet=%d \n",i,nextp,j,facet);
+   //21 printf("zzx i=%d pflow=%f %f\n",i,pflow_estimate,*(pflow+i));
+  //  if (pflow_estimate==*(pflow+i)) {
+    //  exit_cond=1;
+  //21    printf("zzz pflow=%f pfow=%f\n",pflow_estimate,*(pflow+i));
+  //21    printf("zzz i=%d nextp=%d su j=%d facet=%d \n",i,nextp,j,facet);
       
-    } else if (nextp!=i) {
-      if (abs(atdplus_temp)>abs(*(atdplus+nextp))){
+ //   }  else {
+      
+ //     exit_cond=0;
+ //   }///else if (nextp!=i) {
+    
+    
+    
+    if (abs(atdplus_temp)>abs(*(atdplus+nextp))){
         
-        *(atdplus+nextp)=atdplus_temp;
+      *(atdplus+nextp)=atdplus_temp;
         
-      }
-      exit_cond=0;
-      *(pflow+i)=pflow_estimate;
-      i=nextp;
-    }  else {
-    //  printf("L2 i=%d nextp=%d su j=%d facet=%f\n",i,nextp,j,facet);
-      exit_cond=1;
     }
-    printf("j=%d su i=%d exit_cond=%d lambda=%f facet=%f\n",j,i,exit_cond,lambda,facet);
+    ///exit_cond=0;
+    *(pflow+i)=pflow_estimate;
+    *(kupdate+i)=cnt;
+    printf("pflow=%f kup=%d i=%d j=%d nextp=%d\n facet=%d e0=%f e1=%f e2=%f \n",*(pflow+i),*(kupdate+i),i,j,nextp,facet,e0,e1,e2);
+    if (nextp!=i) {
+      
+      i=nextp;
+      
+      exit_cond=0;
+    } else {
+      
+      exit_cond=2;
+    }
+      
+      
+ // }
+    
+    //}  else {
+    //  printf("L2 i=%d nextp=%d su j=%d facet=%f pflow=%f\n",i,nextp,j,facet,*(pflow+i));
+  //    exit_cond=1;
+  //  }
+  ///  printf("j=%d su i=%d exit_cond=%d lambda=%f facet=%d\n",j,i,exit_cond,lambda,facet);
     
   } while (exit_cond==0);  
 }
@@ -355,13 +400,26 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     std::vector<double> sm(nx*ny,0);
     
     std::vector<double> pflow(nx*ny,0);
-    std::vector<double> kupdate(nx*ny,0);
+    std::vector<int> kupdate(nx*ny,0);
+    
+    /* FLOW Direction Convention */ 
+    std::vector<double> ddp1 = {0,2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
+    std::vector<double> ddp2 = {0,1,3,3,5,5,7,7,1};
+    std::vector<double> sigma = {0,1,-1,1,-1,1,-1,1,-1};
+    int nncell=9;
+    
+    
+    
     slope_direction(&e[0],nx,ny,&sr[0],&sm[0],&sfacet[0],
-                    &tdc[0],&tdd[0],L);
+                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell);
+    
+    
+    
+    
     
     transverse_deviation(&e[0],&tdc[0],&tdd[0],&sfacet[0],nx,ny,L,
                          
-                         &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda);
+                         &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell);
     
     
     if (!out.writeStart(opt,filenames())) {
