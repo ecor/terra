@@ -315,7 +315,23 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
   //  }
   ///  printf("j=%d su i=%d exit_cond=%d lambda=%f facet=%d\n",j,i,exit_cond,lambda,facet);
     
-  } while (exit_cond==0);  
+  } while (exit_cond==0); 
+  
+  // NOVALUE
+  for (int i=0;i<nx*ny;i++) {
+  //  
+  
+    double e0=*(e+i);
+  
+    if (std::isnan(e0)) {
+      *(pflow+i)=e0;
+   }
+  
+ }
+ 
+  
+  
+  
 }
  
 //                           }      
@@ -420,6 +436,20 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     transverse_deviation(&e[0],&tdc[0],&tdd[0],&sfacet[0],nx,ny,L,
                          
                          &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell);
+    
+    
+    // NOVALUE
+    //for (int i=0;i<nx*ny;i++) {
+    //  
+      
+    //  double e0=*(e+i);
+      
+    //  if (e0==0) {
+    //    *(pflow+i)=*(e+i);
+     // }
+      
+ //   }
+    
     
     
     if (!out.writeStart(opt,filenames())) {
