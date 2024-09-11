@@ -134,11 +134,18 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
    /// printf("ba2 j=%d facet=%d i=%d e0=%f e1=%f e2=%f\n",j,facet,i,e0,e1,e2);
     e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[j],conv_type));
     e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[j],conv_type));
-    if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
-    if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
+    if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0;
+    if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0;
        
     /// facet=j;
-    slope_mgn_temp=e0-(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
+    double mean_e=(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
+    slope_mgn_temp=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
+    if (e0<mean_e) {
+      
+      slope_mgn_temp=0;
+      
+    }
+    
     //if (slope_mgn_temp<0) slope_mgn_temp=0;
    
     if (slope_mgn_temp>slope_mgn) {
@@ -150,8 +157,8 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
   //  if (!is_NA((int)e0)) {
       e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[facet],conv_type));
       e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[facet],conv_type)); 
-      if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
-      if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
+      if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0;
+      if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0;
       *(sfacet+i)=facet;
       *(sr+i)=std::atan((e1-e2)/(e0-e1)); // RAD
       *(sm+i)=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
@@ -249,8 +256,8 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
     //   nextp=i;
     //   
     // } else {
-    if (is_NA((int)e1) | is_NA((int)e0)  | e1==e0) e1=e0+10;
-    if (is_NA((int)e2) | is_NA((int)e0)  | e2==e0) e2=e0+10;
+    if (is_NA((int)e1) | is_NA((int)e0)  | e1==e0) e1=e0;
+    if (is_NA((int)e2) | is_NA((int)e0)  | e2==e0) e2=e0;
     if ((e0<e1) & (e0>e2)) { //// pit ??? 
         //*(atdplus+nextd)=*(atdplus+nextd)+*(atdd+i); //DA VEDERE BENE
       pflow_estimate=ddp2[facet];
