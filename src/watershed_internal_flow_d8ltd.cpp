@@ -90,7 +90,7 @@ int nextcell_point_conv1(int nx, int ny,int x,int y,double pv,int conv_type) {
 
 void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sfacet,
                      double* tdc, double *tdd,double L,
-                     std::vector<double> ddp1,std::vector<double> ddp2,int nncell) {
+                     std::vector<double> ddp1,std::vector<double> ddp2,int nncell,int conv_type) {
   
   int i;
   ///int L=1; // dx=dy=L=1
@@ -132,8 +132,8 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
       
       //if (ddp1[j]==1) {
    /// printf("ba2 j=%d facet=%d i=%d e0=%f e1=%f e2=%f\n",j,facet,i,e0,e1,e2);
-    e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[j],2));
-    e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[j],2));
+    e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[j],conv_type));
+    e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[j],conv_type));
     if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
     if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
        
@@ -148,8 +148,8 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
        }
     }
   //  if (!is_NA((int)e0)) {
-      e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[facet],2));
-      e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[facet],2)); 
+      e1=*(e+nextcell_point_conv1(nx,ny,x,y,ddp1[facet],conv_type));
+      e2=*(e+nextcell_point_conv1(nx,ny,x,y,ddp2[facet],conv_type)); 
       if (is_NA((int)e1) | is_NA((int)e0) | e1==e0) e1=e0+10;
       if (is_NA((int)e2) | is_NA((int)e0) | e2==e0) e2=e0+10;
       *(sfacet+i)=facet;
@@ -186,7 +186,7 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
 void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int nx, int ny, double L,
                           
                           double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
-                          std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell)
+                          std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type)
                           
                           
                           
@@ -234,9 +234,9 @@ void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int n
     pflow_estimate=*(pflow+i);
     e0=*(e+i);
     facet=*(sfacet+i);
-    nextc=nextcell_point_conv1(nx,ny,x,y,ddp1[facet],2);
-    nextd=nextcell_point_conv1(nx,ny,x,y,ddp2[facet],2);
-    nextp=nextcell_point_conv1(nx,ny,x,y,pflow_estimate,2);
+    nextc=nextcell_point_conv1(nx,ny,x,y,ddp1[facet],conv_type);
+    nextd=nextcell_point_conv1(nx,ny,x,y,ddp2[facet],conv_type);
+    nextp=nextcell_point_conv1(nx,ny,x,y,pflow_estimate,conv_type);
     int facetc=*(sfacet+nextc);
     int facetd=*(sfacet+nextd);
     *(atdc+nextc)=*(tdc+nextc)*sigma[facetc]+*(atdplus+i)*lambda;
@@ -419,15 +419,38 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     std::vector<int> kupdate(nx*ny,0);
     
     /* FLOW Direction Convention */ 
+    /*
     std::vector<double> ddp1 = {0,2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
     std::vector<double> ddp2 = {0,1,3,3,5,5,7,7,1};
+    int conv_type=2;
+    // ESRI terra covension:
+    //   //     # x-1 x 	x+1
+    //   // y-1 ## 32	64	128
+    //   // y   ## 16	0	1
+    //   // y+1 ## 8	4	2
+    //   
+    */
+    
+    
+    int conv_type=1;
+    std::vector<double> ddp1 = {0,64,64,1,1,4,4,16,16};// this routine ESRI  convention
+    std::vector<double> ddp2 = {0,32,128,128,2,2,8,8,32};
+    
+    
+    //  Li at al, 2022's convection 
+    //   //     # x-1 x 	x+1
+    //   // y-1 ## 1	2	3
+    //   // y   ## 8	0	4
+    //   // y+1 ## 7	6	5
+    
+    
     std::vector<double> sigma = {0,1,-1,1,-1,1,-1,1,-1};
     int nncell=9;
     
     
     
     slope_direction(&e[0],nx,ny,&sr[0],&sm[0],&sfacet[0],
-                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell);
+                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell,conv_type);
     
     
     
@@ -435,7 +458,7 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     
     transverse_deviation(&e[0],&tdc[0],&tdd[0],&sfacet[0],nx,ny,L,
                          
-                         &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell);
+                         &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell,conv_type);
     
     
     // NOVALUE
