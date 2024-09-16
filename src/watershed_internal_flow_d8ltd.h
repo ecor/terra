@@ -19,7 +19,11 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
                      std::vector<double> ddp1,std::vector<double> ddp2,int nncell,int conv_type);
 
 
-void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int nx, int ny, double L,
+// void transverse_deviation(double *e, double *tdc, double *tdd, int *sfacet,int nx, int ny, double L,
+//                           
+//                           double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
+//                           std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type);
+void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double *sm, int *sfacet,int nx, int ny, double L,
                           
                           double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
                           std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type);
