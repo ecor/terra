@@ -200,6 +200,8 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
         *(sr+i)=M_PI/4;
         *(sm+i)=(e0-e2)/(L*sqrt(2));
     }
+    
+    
     *(tdc+i)=L*std::sin(*(sr+i));
     *(tdd+i)=sqrt(2)*L*std::sin(M_PI/4-*(sr+i)); // see qq 5 on Li at al,2022
   //    printf("ba33  facet=%d i=%d e0=%f e1=%f e2=%f slope_mgn=%f slope_mgn_temp=%f d1=%f,d2=%f tdc=%f tdd=%f,\n",facet,i,e0,e1,e2,slope_mgn,slope_mgn_temp,ddp1[facet],ddp2[facet],*(tdc+i),*(tdd+i));

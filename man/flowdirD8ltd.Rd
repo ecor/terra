@@ -105,6 +105,109 @@ flowdir1<- terrain(elev1,v="flowdir")
 flowdir2<- terrain(elev2,v="flowdir")
 
 
+## Cone Geometry using calculus R package 
+
+
+library(calculus)
+library(stringr)
+
+dx <- 1 #2.5
+dy <- 1 #2.5
+xmin <- -10
+ymin <- -10
+
+xmax <- 10
+ymax <- 10
+
+
+x <- seq(from=xmin,to=xmax,by=dx)
+y <- seq(from=ymin,to=ymax,by=dy)
+
+
+####
+vars <- list()
+vars$x <- rep(x,times=length(y))
+vars$y <- rep(y,each=length(x))
+vars <- as.data.frame(vars)
+### 
+elev_f <- "(x^2+y^2)^(1/2)" ## cone ##ok
+###
+
+vars$elev <- evaluate(elev_f,var=vars[,c("x","y")])
+vars$elev[which(vars$x \%in\% range(vars$x))] <- NA 
+vars$elev[which(vars$y \%in\% range(vars$y))] <- NA 
+
+## Flow Angle 
+
+vgrad <- matrix(gradient(elev_f,var=vars[,c("x","y")],accuracy=8),ncol=2)
+vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
+
+
+####
+
+
+rr <- rast(vars)
+rr$flow_dir <- terrain(rr$elev,"flowdir")
+rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0)
+rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5)
+rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1)
+
+plot(rr$elev)
+plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+
+## V-Shape Watershed  Geometry using calculus R package 
+
+library(calculus)
+library(stringr)
+
+dx <- 1 #2.5
+dy <- 1 #2.5
+xmin <- -10
+ymin <- -10
+
+xmax <- 10
+ymax <- 10
+
+
+x <- seq(from=xmin,to=xmax,by=dx)
+y <- seq(from=ymin,to=ymax,by=dy)
+
+
+####
+vars <- list()
+vars$x <- rep(x,times=length(y))
+vars$y <- rep(y,each=length(x))
+vars <- as.data.frame(vars)
+### 
+elev_f <- "x*tanh(100*x)+0.2*y" ## v-shape basin
+###
+
+vars$elev <- evaluate(elev_f,var=vars[,c("x","y")])
+vars$elev[which(vars$x \%in\% range(vars$x))] <- NA 
+vars$elev[which(vars$y \%in\% range(vars$y))] <- NA 
+
+## Flow Angle 
+
+vgrad <- matrix(gradient(elev_f,var=vars[,c("x","y")],accuracy=8),ncol=2)
+vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
+
+
+####
+
+
+rr <- rast(vars)
+rr$flow_dir <- terrain(rr$elev,"flowdir")
+rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0)
+rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5)
+rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1)
+
+plot(rr$elev)
+plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+
+
+
+
+
 
 
 }
