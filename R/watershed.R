@@ -42,9 +42,16 @@ setMethod("flowAccumulation", signature(x="SpatRaster"),
 )
 
 setMethod("flowdirD8ltd", signature(x="SpatRaster"), 
-          function(x,lambda=0.5,filename="", ...) { 
+          function(x,lambda=0.5,deviation_type=c("ltd","lad"),filename="", ...) { 
+            ## http://www.idrologia.unimore.it/orlandini/web-archive/seminars/nyc-2008-2.pdf
+            ## ltd least transverse deviation
+            ## lad least angular deviation
+            deviation_type=deviation_type[1]
+            use_lad=0
+            if (deviation_type=="lad") use_lad=1
             opt <- spatOptions(filename, ...)
-            x@ptr <- x@ptr$d8ltd(lambda,opt)
+          ##  uselad=0
+            x@ptr <- x@ptr$d8ltd(lambda,use_lad,opt)
             messages(x, "flowdirD8ltd") ## EC 20210318
           }
 )

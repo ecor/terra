@@ -12,12 +12,13 @@ Computes non-disperive flow/draiage direction according to path-based methods ov
 }
 
 \usage{
-\S4method{flowdirD8ltd}{SpatRaster}(x, lambda, filename="", ...) 
+\S4method{flowdirD8ltd}{SpatRaster}(x,lambda=0.5,deviation_type=c("ltd","lad"),filename="", ...) 
 }
 
 \arguments{
   \item{x}{SpatRaster with elevation/terrain model , see \code{\link{terrain}}. }
   \item{lambda}{Parameter between 0 and 1.}  
+  \item{deviation_type}{Character string. Default is the first element of \code{=c("ltd","lad")}. If \code{"ltd"} (default) flow direction dispersion is deteceted with LTD criterion, if \code{"lad"} flow direction dispersion is deteceted with LTD criterion. See Orlandini et al,2003 fur further details.  }  
   \item{filename}{character. Output filename}
   \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
 }
@@ -46,6 +47,7 @@ Orlandini, S., G. Moretti, M. Franchini, B. Aldighieri, and B. Testa (2003), Pat
 Li, Z., Shi, P., Yang, T., Wang, C., Yong, B., & Song, Y. (2022). An improved D8-LTD for the extraction of total contributing area (TCA) by adopting the strategies of path independency and local dispersion. Water Resources Research, 58, e2021WR030948. https://doi.org/10.1029/2021WR030948 \url{https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021WR030948}
 
 
+Useful presentation: \url{http://www.idrologia.unimore.it/orlandini/web-archive/seminars/nyc-2008-2.pdf}
 
 }
 
@@ -197,15 +199,68 @@ vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
 
 rr <- rast(vars)
 rr$flow_dir <- terrain(rr$elev,"flowdir")
-rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0)
-rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5)
-rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1)
-
+rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad")
+rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad")
+rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
+rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
+rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
+rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
 plot(rr$elev)
 plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
 
 
 
+## Planar Hillslope  Geometry using calculus R package 
+
+library(calculus)
+library(stringr)
+
+dx <- 1 #2.5
+dy <- 1 #2.5
+xmin <- -10
+ymin <- -10
+
+xmax <- 10
+ymax <- 10
+
+
+x <- seq(from=xmin,to=xmax,by=dx)
+y <- seq(from=ymin,to=ymax,by=dy)
+
+
+####
+vars <- list()
+vars$x <- rep(x,times=length(y))
+vars$y <- rep(y,each=length(x))
+vars <- as.data.frame(vars)
+### 
+elev_f <- "x+0.5*y" ## planar hillslope basin , try also with elev_f <- "x+0.505*y"
+
+###
+
+vars$elev <- evaluate(elev_f,var=vars[,c("x","y")])
+vars$elev[which(vars$x \%in\% range(vars$x))] <- NA 
+vars$elev[which(vars$y \%in\% range(vars$y))] <- NA 
+
+## Flow Angle 
+
+vgrad <- matrix(gradient(elev_f,var=vars[,c("x","y")],accuracy=8),ncol=2)
+vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
+
+
+####
+
+
+rr <- rast(vars)
+rr$flow_dir <- terrain(rr$elev,"flowdir")
+rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad")
+rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad")
+rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
+rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
+rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
+rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
+plot(rr$elev)
+plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
 
 
 

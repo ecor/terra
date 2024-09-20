@@ -9,11 +9,14 @@
 //line 217 qui: https://github.com/TheHortonMachine/hortonmachine/blob/master/hmachine/src/main/java/org/hortonmachine/hmachine/modules/geomorphology/draindir/OmsDrainDir.java per la prescisione 🙂
 
 // TO BE IMPLEMENTED
+
+
 #include "spatRaster.h"
 #include "NA.h"
 #include <cmath> // per la funzione pow
 #include "watershed_internal_flow_d8ltd.h"
 #include "watershed_internal.h"
+
 #define NODATA_2 -999999
 
 // ESRI terra covension:
@@ -90,7 +93,7 @@ int nextcell_point_conv1(int nx, int ny,int x,int y,double pv,int conv_type) {
 
 void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sfacet,
                      double* tdc, double *tdd,double L,
-                     std::vector<double> ddp1,std::vector<double> ddp2,int nncell,int conv_type) {
+                     std::vector<double> ddp1,std::vector<double> ddp2,int nncell,int conv_type,int use_lad) {
   
   int i;
   ///int L=1; // dx=dy=L=1
@@ -201,16 +204,14 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
         *(sm+i)=(e0-e2)/(L*sqrt(2));
     }
     
-    
-    *(tdc+i)=L*std::sin(*(sr+i));
-    *(tdd+i)=sqrt(2)*L*std::sin(M_PI/4-*(sr+i)); // see qq 5 on Li at al,2022
-  //    printf("ba33  facet=%d i=%d e0=%f e1=%f e2=%f slope_mgn=%f slope_mgn_temp=%f d1=%f,d2=%f tdc=%f tdd=%f,\n",facet,i,e0,e1,e2,slope_mgn,slope_mgn_temp,ddp1[facet],ddp2[facet],*(tdc+i),*(tdd+i));
-   // }
-    
-    
-    
-    
-      //// to do 
+    if (use_lad==1) {
+      *(tdc+i)=(*(sr+i));
+      *(tdd+i)=(M_PI/4-*(sr+i));
+    } else {
+      *(tdc+i)=L*std::sin(*(sr+i));
+      *(tdd+i)=sqrt(2)*L*std::sin(M_PI/4-*(sr+i));
+    }
+  
 }
       
       
@@ -223,23 +224,11 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
 void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double *sm, int *sfacet,int nx, int ny, double L,
                           
                           double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
-                          std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type)
-                          
-                          
-                          
-                           {   
+                          std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type)    {   
    
-  // TO DO
-  
- // std::vector<double> ddp1 = {2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
- // std::vector<double> ddp2 = {1,3,3,5,5,7,7,1};
-//  std::vector<double> sigma = {1,-1,1,-1,1,-1,1,-1};
+ 
   int x,y;
-//  int nncell=8;
 
-    //     
-    //
-    //
   int k=1;
   int niter=nx*ny;
   int exit_cond=0;
@@ -251,7 +240,7 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
   
   for (int i = 0; i < nx*ny; i++) {  
    facet=*(sfacet+i);
- //  *(kcoeff+i)=1;
+
    *(atdc+i)=*(tdc+i)*sigma[facet];
    *(atdplus+i)=0;
    *(atdd+i)=*(tdd+i)*sigma[facet]*(-1); // 20240912
@@ -259,13 +248,13 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
    *(kupdate+i)=0;
   }
   int cnt=0;
- // for (int iter=0;iter<niter,iter++) {
+ 
  for (int j = 0; j < nx*ny; j++) {
   int i=j; 
   cnt++;
   if (*(kupdate+j)==0) do {
     exit_cond=0;
-    x = getCol(nx, ny, i);   // ATTENTION: base 0 or 1?
+    x = getCol(nx, ny, i);   // ATTENTION: base 0 or 1
     y = getRow(nx, ny, i);
     nextp=i;
     pflow_estimate=*(pflow+i);
@@ -393,7 +382,7 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
 }
   
   
-SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
+SpatRaster  SpatRaster::d8ltd(double lambda,int use_lad,SpatOptions &opt) {
     // DA TESTARE
     SpatRaster out=geometry();
     //std::vector<std::string> oname="watershed";
@@ -455,7 +444,7 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     
     
     slope_direction(&e[0],nx,ny,&sr[0],&sm[0],&sfacet[0],
-                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell,conv_type);
+                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell,conv_type,use_lad);
     
     
     
@@ -463,7 +452,7 @@ SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) {
     
     transverse_deviation(&e[0],&tdc[0],&tdd[0],&sr[0],&sm[0],&sfacet[0],nx,ny,L,
                          
-                         &atdc[0], &atdd[0], &atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell,conv_type);
+                         &atdc[0], &atdd[0],&atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell,conv_type);
     
     
     // NOVALUE
