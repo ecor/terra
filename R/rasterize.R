@@ -27,12 +27,11 @@ setMethod("rasterizeGeom", signature(x="SpatVector", y="SpatRaster"),
 	wopt
 }
 
-rasterize_points <- function(x, y, field, values, fun="last", background=NA, update=FALSE, filename="", overwrite=FALSE, wopt=list(), ...) {
+rasterize_points <- function(x, y, values, fun="last", background=NA, update=FALSE, filename="", overwrite=FALSE, wopt=list(), ...) {
 
 	if (missing(fun)) fun <- "last"
 	if (update && (!hasValues(y))) update <- FALSE
 	nrx <- nrow(x)
-
 
 	if (!is.data.frame(values)) {
 		values <- as.data.frame(values)
@@ -72,7 +71,7 @@ rasterize_points <- function(x, y, field, values, fun="last", background=NA, upd
 					wopt$names <- txtfun
 				}
 				if (update) {
-					ops <- spatOptions("", TRUE, wopt)	
+					ops <- spatOptions("", TRUE, wopt=wopt)	
 				} else {
 					ops <- spatOptions(filename, overwrite, wopt=wopt)				
 				}
@@ -81,7 +80,7 @@ rasterize_points <- function(x, y, field, values, fun="last", background=NA, upd
 				r@ptr <- y@ptr$rasterizePointsXY(x[,1], x[,2], txtfun, values[[1]], narm, background, ops)
 				messages(r)
 				if (update) {
-					r <- cover(r, y, filename=filename, overwrite=overwrite, wopt)
+					r <- cover(r, y, filename=filename, overwrite=overwrite, wopt=wopt)
 				}
 				return(r)
 			}
@@ -117,8 +116,12 @@ rasterize_points <- function(x, y, field, values, fun="last", background=NA, upd
 				}
 				length(i)
 			}
+			has_levels <- FALSE
 		}
+	} else {
+		has_levels <- FALSE
 	}
+
 	
 	g <- cellFromXY(y, x)
 	i <- which(!is.na(g))
@@ -128,11 +131,13 @@ rasterize_points <- function(x, y, field, values, fun="last", background=NA, upd
 	}
 	values <- values[i, ,drop=FALSE]
 
-	has_levels <- FALSE
 	values <- aggregate(values, list(g), fun, ...)
+	#if (!all(values %in% ) ?
+	#has_levels <- FALSE ??
+	#levs <- NULL ??
+
 	# allow for multiple fields
 	#r[a[,1]] <- as.matrix(a[,-1])
-	levs <- NULL
 	if (is.null(wopt$names)) {
 		fun <- .makeTextFun(fun)
 		if (inherits(fun, "character")) {
@@ -195,7 +200,7 @@ setMethod("rasterize", signature(x="matrix", y="SpatRaster"),
 			return(out)
 		}
 
-		lonlat <- .checkXYnames(colnames(x))
+		#lonlat <- .checkXYnames(colnames(x))
 
 		if (NCOL(values) <= 1) {
 			values <- unlist(values)
@@ -212,7 +217,7 @@ setMethod("rasterize", signature(x="matrix", y="SpatRaster"),
 				values <- values[i, ]
 			}
 		}
-		rasterize_points(x=x, y=y, field="", values=values, fun=fun, background=background, update=update, filename=filename, overwrite=overwrite, wopt=wopt, ...)
+		rasterize_points(x=x, y=y, values=values, fun=fun, background=background, update=update, filename=filename, overwrite=overwrite, wopt=wopt, ...)
 	}
 )
 
@@ -260,7 +265,7 @@ setMethod("rasterize", signature(x="SpatVector", y="SpatRaster"),
 				}
 			}
 			return(
-				rasterize_points(x=xy, y=y, field=field, values=values, fun=fun, background=background, update=update, filename=filename, overwrite=overwrite, wopt=wopt, ...)
+				rasterize_points(x=xy, y=y, values=values, fun=fun, background=background, update=update, filename=filename, overwrite=overwrite, wopt=wopt, ...)
 			)
 		}
 
