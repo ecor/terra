@@ -7,7 +7,7 @@ exportMethods("[", "[[", "!", "%in%", activeCat, "activeCat<-", "add<-", addCats
 exportMethods(watershed, pitfinder, NIDP, flowAccumulation)
 ## END EC 20210702 ecor
 ## EC 20240413 ecor
-exportMethods(flowdirD8ltd)
+exportMethods(flowdirD8ltd,flowdirD8lad)
 ## END EC 20240413 ecor
 
 

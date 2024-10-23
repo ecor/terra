@@ -3,7 +3,8 @@
 
 \alias{flowdirD8ltd}
 \alias{flowdirD8ltd,SpatRaster-method}
-
+\alias{flowdirD8lad}
+\alias{flowdirD8lad,SpatRaster-method}
 
 \title{Path-Based Nondisperive Flow Direction}
 
@@ -13,7 +14,10 @@ Computes non-disperive flow/draiage direction according to path-based methods ov
 
 \usage{
 \S4method{flowdirD8ltd}{SpatRaster}(x,lambda=0.5,deviation_type=c("ltd","lad"),filename="", ...) 
+\S4method{flowdirD8lad}{SpatRaster}(x,lambda=0.5,deviation_type="lad",filename="",...) 
 }
+
+
 
 \arguments{
   \item{x}{SpatRaster with elevation/terrain model , see \code{\link{terrain}}. }
@@ -199,9 +203,9 @@ vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
 
 rr <- rast(vars)
 rr$flow_dir <- terrain(rr$elev,"flowdir")
-rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad")
-rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad")
-rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
+rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad") ##or flowdirD8lad(rr$elev,lambda=0)
+rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad") ##or flowdirD8lad(rr$elev,lambda=0.5)
+rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad") ##or flowdirD8lad(rr$elev,lambda=1)
 rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
 rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
 rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
@@ -253,14 +257,33 @@ vars$flow_angle <- atan2(y=-vgrad[,2],x=-vgrad[,1])+vars$elev*0
 
 rr <- rast(vars)
 rr$flow_dir <- terrain(rr$elev,"flowdir")
-rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad")
-rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad")
-rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
+rr$flow_dirladl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="lad") ##or flowdirD8lad(rr$elev,lambda=0) 
+rr$flow_dirladlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="lad") ##or flowdirD8lad(rr$elev,lambda=0.5) 
+rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")  ##or flowdirD8lad(rr$elev,lambda=1) 
 rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
 rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
 rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
 plot(rr$elev)
 plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+
+
+### Further examples
+
+elev <- rast(system.file('ex/elev.tif',package="terra"))
+
+flowdirlad <- flowdirD8lad(elev,lambda=0.5)
+flowdirlad_copy <- flowdirD8ltd(elev,lambda=0.5,deviation_type="lad")
+
+if (!all(values(flowdirlad_copy==flowdirlad),na.rm=TRUE)) stop("Something in flowdirD8lad  went wrong!") 
+
+flowdirladl0 <- flowdirD8lad(elev,lambda=0)
+flowdirladl0_copy <- flowdirD8ltd(elev,lambda=0,deviation_type="lad")
+
+if (!all(values(flowdirladl0_copy==flowdirladl0),na.rm=TRUE)) stop("Something in flowdirD8lad  went wrong!") 
+
+flowdir <- terrain(elev,"flowdir")
+flowdir[flowdirladl0==0] <- 0 
+flowdir==flowdirladl0
 
 
 

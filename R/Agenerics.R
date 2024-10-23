@@ -7,6 +7,7 @@ if (!isGeneric("pitfinder")) {setGeneric("pitfinder", function(x, ...) standardG
 if (!isGeneric("NIDP")) {setGeneric("NIDP", function(x, ...) standardGeneric("NIDP"))}
 if (!isGeneric("flowAccumulation")) {setGeneric("flowAccumulation", function(x, ...) standardGeneric("flowAccumulation"))}
 if (!isGeneric("flowdirD8ltd")) {setGeneric("flowdirD8ltd", function(x, ...) standardGeneric("flowdirD8ltd"))}
+if (!isGeneric("flowdirD8lad")) {setGeneric("flowdirD8lad", function(x, ...) standardGeneric("flowdirD8lad"))}
 
 if (!isGeneric("bestMatch")) {setGeneric("bestMatch", function(x, y, ...) standardGeneric("bestMatch"))}
 if (!isGeneric("k_means")) {setGeneric("k_means", function(x, ...) standardGeneric("k_means"))}

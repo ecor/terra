@@ -56,3 +56,11 @@ setMethod("flowdirD8ltd", signature(x="SpatRaster"),
           }
 )
 
+setMethod("flowdirD8lad", signature(x="SpatRaster"), 
+          function(x,lambda=0.5,deviation_type="lad",filename="",...) { 
+            ## http://www.idrologia.unimore.it/orlandini/web-archive/seminars/nyc-2008-2.pdf
+            ## ltd least transverse deviation
+            ## lad least angular deviation
+           flowdirD8ltd(x=x,lambda=lambda,deviation_type=deviation_type,filename=filename,...)
+          }
+)
