@@ -331,7 +331,7 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
     ///exit_cond=0;
     *(pflow+i)=pflow_estimate;
     *(kupdate+i)=cnt;
-    printf("x=%d y=%d atdd=%f atdc=%f tdd=%f tdc=%f sm=%f sr=%f pflow=%f kup=%d i=%d j=%d nextp=%d\n facet=%d e0=%f e1=%f e2=%f \n",x,y,*(atdd+i),*(atdc+i),*(tdd+i),*(tdc+i),*(sm+i),*(sr+i),*(pflow+i),*(kupdate+i),i,j,nextp,facet,e0,e1,e2);
+   //// 20241030 printf("x=%d y=%d atdd=%f atdc=%f tdd=%f tdc=%f sm=%f sr=%f pflow=%f kup=%d i=%d j=%d nextp=%d\n facet=%d e0=%f e1=%f e2=%f \n",x,y,*(atdd+i),*(atdc+i),*(tdd+i),*(tdc+i),*(sm+i),*(sr+i),*(pflow+i),*(kupdate+i),i,j,nextp,facet,e0,e1,e2);
     if (nextp!=i) {
       
       i=nextp;
@@ -380,6 +380,84 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
   
   
 }
+
+
+void d8ltd_computation(double *e,int nx,int ny,double L,double lambda,int use_lad,double*pflow) {
+  //std::vector<double> pOutv(nx*ny,0);
+  std::vector<int> sfacet(nx*ny,0);
+  std::vector<double> tdc(nx*ny,0);
+  std::vector<double> tdd(nx*ny,0);
+  std::vector<double> atdc(nx*ny,0);
+  std::vector<double> atdd(nx*ny,0);
+  std::vector<double> atdplus(nx*ny,0);
+  
+  std::vector<double> sr(nx*ny,0);
+  std::vector<double> sm(nx*ny,0);
+  
+  
+  std::vector<int> kupdate(nx*ny,0);
+  
+  /* FLOW Direction Convention */ 
+  
+  //std::vector<double> ddp1 = {0,2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
+  //std::vector<double> ddp2 = {0,1,3,3,5,5,7,7,1};
+  //int conv_type=2;
+  // ESRI terra covension:
+  //   //     # x-1 x 	x+1
+  //   // y-1 ## 32	64	128
+  //   // y   ## 16	0	1
+  //   // y+1 ## 8	4	2
+  //   
+  
+  
+  
+  int conv_type=1;
+  std::vector<double> ddp1 = {0,64,64,1,1,4,4,16,16};// this routine ESRI  convention
+  std::vector<double> ddp2 = {0,32,128,128,2,2,8,8,32};
+  
+  
+  //  Li at al, 2022's convection 
+  //   //     # x-1 x 	x+1
+  //   // y-1 ## 1	2	3
+  //   // y   ## 8	0	4
+  //   // y+1 ## 7	6	5
+  
+  
+  std::vector<double> sigma = {0,1,-1,1,-1,1,-1,1,-1};
+  int nncell=9;
+  
+  
+  
+  slope_direction(&e[0],nx,ny,&sr[0],&sm[0],&sfacet[0],
+                  &tdc[0],&tdd[0],L,ddp1,ddp2,nncell,conv_type,use_lad);
+  
+  
+  
+  
+  
+  transverse_deviation(&e[0],&tdc[0],&tdd[0],&sr[0],&sm[0],&sfacet[0],nx,ny,L,
+                       
+                       &atdc[0], &atdd[0],&atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell,conv_type);
+  
+  
+  // NOVALUE
+  //for (int i=0;i<nx*ny;i++) {
+  //  
+  
+  //  double e0=*(e+i);
+  
+  //  if (e0==0) {
+  //    *(pflow+i)=*(e+i);
+  // }
+  
+}
+
+
+
+
+
+
+
   
   
 SpatRaster  SpatRaster::d8ltd(double lambda,int use_lad,SpatOptions &opt) {
@@ -392,81 +470,15 @@ SpatRaster  SpatRaster::d8ltd(double lambda,int use_lad,SpatOptions &opt) {
     double Lx=xres();
     double Ly=yres();
     double L=Lx; // to check 
+
     //printf("nx=%d ny=%d\n",nx,ny);
     //Rcpp::IntegerVector pOut(nx*ny);
     // https://www.codeguru.com/cpp/cpp/cpp_mfc/stl/article.php/c4027/C-Tutorial-A-Beginners-Guide-to-stdvector-Part-1.htm 
     std::vector<double> e=getValues(0,opt); //EC 20211203 //see https://www.delftstack.com/howto/cpp/how-to-convert-vector-to-array-in-cpp/
-    ///std::vector<double> sr=weight.getValues(0,opt);
-    
-    std::vector<double> pOutv(nx*ny,0);
-    std::vector<int> sfacet(nx*ny,0);
-    std::vector<double> tdc(nx*ny,0);
-    std::vector<double> tdd(nx*ny,0);
-    std::vector<double> atdc(nx*ny,0);
-    std::vector<double> atdd(nx*ny,0);
-    std::vector<double> atdplus(nx*ny,0);
-   
-    std::vector<double> sr(nx*ny,0);
-    std::vector<double> sm(nx*ny,0);
-    
     std::vector<double> pflow(nx*ny,0);
-    std::vector<int> kupdate(nx*ny,0);
+    d8ltd_computation(&e[0],nx,ny,L,lambda,use_lad,&pflow[0]);
     
-    /* FLOW Direction Convention */ 
-    
-    //std::vector<double> ddp1 = {0,2,2,4,4,6,6,8,8}; // this routine uses Orlandini-Li et, 2022's  convention
-    //std::vector<double> ddp2 = {0,1,3,3,5,5,7,7,1};
-    //int conv_type=2;
-    // ESRI terra covension:
-    //   //     # x-1 x 	x+1
-    //   // y-1 ## 32	64	128
-    //   // y   ## 16	0	1
-    //   // y+1 ## 8	4	2
-    //   
-    
-    
-    
-    int conv_type=1;
-    std::vector<double> ddp1 = {0,64,64,1,1,4,4,16,16};// this routine ESRI  convention
-    std::vector<double> ddp2 = {0,32,128,128,2,2,8,8,32};
-    
-    
-    //  Li at al, 2022's convection 
-    //   //     # x-1 x 	x+1
-    //   // y-1 ## 1	2	3
-    //   // y   ## 8	0	4
-    //   // y+1 ## 7	6	5
-    
-   
-    std::vector<double> sigma = {0,1,-1,1,-1,1,-1,1,-1};
-    int nncell=9;
-    
-    
-    
-    slope_direction(&e[0],nx,ny,&sr[0],&sm[0],&sfacet[0],
-                    &tdc[0],&tdd[0],L,ddp1,ddp2,nncell,conv_type,use_lad);
-    
-    
-    
-    
-    
-    transverse_deviation(&e[0],&tdc[0],&tdd[0],&sr[0],&sm[0],&sfacet[0],nx,ny,L,
-                         
-                         &atdc[0], &atdd[0],&atdplus[0], &pflow[0],&kupdate[0],lambda,ddp1,ddp2,sigma,nncell,conv_type);
-    
-    
-    // NOVALUE
-    //for (int i=0;i<nx*ny;i++) {
-    //  
-      
-    //  double e0=*(e+i);
-      
-    //  if (e0==0) {
-    //    *(pflow+i)=*(e+i);
-     // }
-      
- //   }
-    
+  
     
     
     if (!out.writeStart(opt,filenames())) {

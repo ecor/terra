@@ -807,6 +807,14 @@ class SpatRaster {
 		SpatRaster flowAccu2(SpatOptions &opt); // modified // EC 20231108
 		SpatRaster flowAccu2_weight(SpatRaster weight,SpatOptions &opt); // modified // EC 20231108
 		SpatRaster d8ltd(double lambda,int use_lad,SpatOptions &opt); // EC 20240813 20240919
+	///	SpatRaster pitfillerm(SpatRaster pits,SpatRaster flowdirs,SpatOptions &opt); // EC 20241026
+	///	SpatRaster pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,SpatOptions &opt);
+		SpatRaster  pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,
+                                    double U,double D,double beta,double theta_exp, // see // see reference doi:10.1016/j.advwatres.2006.11.016)    
+                                    SpatOptions &opt);
+	
+	
+	
 		
 		// END watershed2 extension
 		SpatRaster hillshade(SpatRaster aspect, std::vector<double> angle, std::vector<double> direction, bool normalize, SpatOptions &opt);

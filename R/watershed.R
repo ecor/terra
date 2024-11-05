@@ -64,3 +64,27 @@ setMethod("flowdirD8lad", signature(x="SpatRaster"),
            flowdirD8ltd(x=x,lambda=lambda,deviation_type=deviation_type,filename=filename,...)
           }
 )
+
+## EC 20241027
+
+
+setMethod("pitfiller", signature(x="SpatRaster"), 
+          function(x,pit=NULL,flowdir=NULL,niter=10,lambda=0,deviation_type="lad",U=1,D=300,beta=0.9,theta_exp=0.5,filename="",...) { 
+           
+            if (is.null(flowdir)) flowdir <- terrain(x,"flowdir") 
+            if (is.null(pitfinder)) pit <- pitfinder(flowdir) 
+            use_lad=1
+            if (deviation_type=="ltd") use_lad=0
+            flowdir[pit>0] <- 0 
+            opt <- spatOptions(filename, ...)
+            ##  uselad=0
+            print(pit)
+            x@ptr <- x@ptr$pitfillerm(pit@ptr,flowdir@ptr,niter,lambda,use_lad,U,D,beta,theta_exp,opt)
+            messages(x, "pitfiller") ## EC 20210318
+          }
+)
+
+
+# SpatRaster  SpatRaster::pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,
+#                                    double U,double D,double beta,double theta_exp, // see // see reference doi:10.1016/j.advwatres.2006.11.016)    
+# SpatOptions &opt) {

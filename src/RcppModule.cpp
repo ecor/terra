@@ -985,6 +985,8 @@ RCPP_MODULE(spat){
     .method("flowAccu2", &SpatRaster::flowAccu2) //, "flowAccu2") //EC 20231031
     .method("flowAccu2_weight", &SpatRaster::flowAccu2_weight) //, "flowAccu2_weight") //EC 20231114
     .method("d8ltd", &SpatRaster::d8ltd)  //EC 20240813//SpatRaster  SpatRaster::d8ltd(double lambda,SpatOptions &opt) 
+    .method("pitfillerm", &SpatRaster::pitfillerm)  //SpatRaster pitfillerm(SpatRaster pits,SpatOptions &opt); // EC 20241026
+      // EC 20240813
 	;
 
     class_<SpatRasterCollection>("SpatRasterCollection")

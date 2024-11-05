@@ -9,7 +9,9 @@ exportMethods(watershed, pitfinder, NIDP, flowAccumulation)
 ## EC 20240413 ecor
 exportMethods(flowdirD8ltd,flowdirD8lad)
 ## END EC 20240413 ecor
-
+## EC 20241026
+exportMethods(pitfiller)
+## END EC 20241026
 
 ###exportMethods(watershed2,pitfinder2,NIDP2,flowAccu2,flowAccu2_weight)
 ## END EC 

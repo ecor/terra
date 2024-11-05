@@ -82,7 +82,7 @@ void pitfinder(double* p, int nx, int ny, double* pOut);
 
 void NextCell(double* p, int nx, int ny,int* pnext);
 
-void NIDP(int* pnext, int nx, int ny,int* nidp_value); 
+void NIDP(int* pnext, int nx, int ny,double* nidp_value); 
 // FlowAccu algorithm 5 
 // Reference: https://link.springer.com/article/10.1007/s11707-018-0725-9
 void FlowAccu(int* pnext, int nx, int ny,double* nidp_value,double* flowaccu_value);

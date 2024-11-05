@@ -10,8 +10,8 @@
 
 
 
-int nextcell_point_conv1(int nx, int ny,int x,int y,int pv,int conv_type);
-//void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sfacet,double L);
+int nextcell_point_conv1(int nx, int ny,int x,int y,double pv,int conv_type);
+
 
 
 void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sfacet,
@@ -22,3 +22,10 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
                           
                           double *atdc, double *atdd, double *atdplus,double *pflow,int *kupdate,double lambda,
                           std::vector<double> ddp1,std::vector<double> ddp2,std::vector<double> sigma,int nncell,int conv_type);
+
+
+
+void d8ltd_computation(double *e,int nx,int ny,double L,double lambda,int use_lad,double *pflow);
+
+
+
