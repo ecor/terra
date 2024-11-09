@@ -143,8 +143,8 @@ https://doi.org/10.1016/S0169-555X(01)00036-8.
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"ex/elev.tif"</span>, package<span class="op">=</span><span class="st">"terra"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">elev</span> <span class="op">&lt;-</span> <span class="fu"><a href="rast.html">rast</a></span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="project.html">project</a></span><span class="op">(</span>y<span class="op">=</span><span class="st">"epsg:32632"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">flowdir</span> <span class="op">&lt;-</span> <span class="fu"><a href="terrain.html">terrain</a></span><span class="op">(</span><span class="va">elev</span>,<span class="st">"flowdir"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">pits</span> <span class="op">&lt;-</span> <span class="fu"><a href="pitfinder.html">pitfinder</a></span><span class="op">(</span><span class="va">flowdir</span><span class="op">)</span><span class="op">+</span><span class="va">elev</span><span class="op">*</span><span class="fl">0</span></span></span>
+<span class="r-in"><span><span class="va">flowdir</span> <span class="op">&lt;-</span> <span class="fu"><a href="flowdirD8ltd.html">flowdirD8lad</a></span><span class="op">(</span><span class="va">elev</span>,lambda<span class="op">=</span><span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pits</span> <span class="op">&lt;-</span> <span class="fu"><a href="pitfinder.html">pitfinder</a></span><span class="op">(</span><span class="va">flowdir</span>,pits_on_boundary<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">elev2</span> <span class="op">&lt;-</span> <span class="fu">pitfiller</span><span class="op">(</span>x<span class="op">=</span><span class="va">elev</span>,pit<span class="op">=</span><span class="va">pits</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> class       : SpatRaster </span>
@@ -153,13 +153,14 @@ https://doi.org/10.1016/S0169-555X(01)00036-8.
 <span class="r-out co"><span class="r-pr">#&gt;</span> extent      : 263811.2, 324029.8, 5479328, 5565024  (xmin, xmax, ymin, ymax)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> source(s)   : memory</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> name        : flowdir </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> min value   :       0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> max value   :     163 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> name        : elevation </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> min value   :         0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> max value   :       112 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">flowdir2</span> <span class="op">&lt;-</span> <span class="fu"><a href="terrain.html">terrain</a></span><span class="op">(</span><span class="va">elev2</span>,<span class="st">"flowdir"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">pits2</span> <span class="op">&lt;-</span> <span class="fu"><a href="pitfinder.html">pitfinder</a></span><span class="op">(</span><span class="va">flowdir2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">flowdir2</span> <span class="op">&lt;-</span> <span class="fu"><a href="flowdirD8ltd.html">flowdirD8lad</a></span><span class="op">(</span><span class="va">elev2</span>,lambda<span class="op">=</span><span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pits2</span> <span class="op">&lt;-</span> <span class="fu"><a href="pitfinder.html">pitfinder</a></span><span class="op">(</span><span class="va">flowdir</span>,pits_on_boundary<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
