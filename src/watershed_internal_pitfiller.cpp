@@ -265,7 +265,7 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
   std::vector<double> nidp_value(nx*ny,0);
   std::vector<int> pnext(nx*ny,0);
   std::vector<double> flowaccu_value(nx*ny,0);
-  
+  int pits_on_boundary=0; // pits are considered to be internal the terrain area (dtm)
   
   
   for (int i=0;i<nx*ny;i++) {
@@ -318,7 +318,7 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
     
     
     d8ltd_computation(&eout[0],nx,ny,L,lambda,use_lad,&flowdir[0]); // flow direction computation 
-    pitfinder(&flowdir[0],nx,ny,&pitftemp[0]);    ; // pit finder 
+    pitfinder(&flowdir[0],nx,ny,&pitftemp[0],pits_on_boundary);    ; // pit finder 
      
       
       

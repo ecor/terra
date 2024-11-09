@@ -118,14 +118,15 @@ Emanuele Cordano
 
 f <- system.file("ex/elev.tif", package="terra")
 elev <- rast(f) |> project(y="epsg:32632")
-flowdir <- terrain(elev,"flowdir")
-pits <- pitfinder(flowdir)+elev*0
+flowdir <- flowdirD8lad(elev,lambda=0)
+pits <- pitfinder(flowdir,pits_on_boundary=FALSE)
 
 elev2 <- pitfiller(x=elev,pit=pits)
 
 
 flowdir2 <- terrain(elev2,"flowdir")
-pits2 <- pitfinder(flowdir2)
+flowdir2 <- flowdirD8lad(elev2,lambda=0)
+pits2 <- pitfinder(flowdir,pits_on_boundary=FALSE)
 
 
 

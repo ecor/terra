@@ -75,7 +75,7 @@ void watershed_v2(double* p, int nx, int ny, int pp_offset, double* pOut);
 
 
 
-void pitfinder(double* p, int nx, int ny, double* pOut);
+void pitfinder(double* p, int nx, int ny, double* pOut,int pits_on_boundary);
 
 
 ///// flow accumulation

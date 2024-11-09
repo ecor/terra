@@ -14,9 +14,9 @@ setMethod("watershed", signature(x="SpatRaster"),
 )
 
 setMethod("pitfinder", signature(x="SpatRaster"), 
-    function(x, filename="", ...) { 
+    function(x,pits_on_boundary=TRUE,filename="", ...) { 
         opt <- spatOptions(filename, ...)
-        x@ptr <- x@ptr$pitfinder2(opt)
+        x@ptr <- x@ptr$pitfinder2(as.integer(pits_on_boundary),opt)
         messages(x, "pitfinder") ## EC 20210318
     }
 )
