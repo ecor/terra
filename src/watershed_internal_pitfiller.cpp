@@ -296,7 +296,7 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
         *(e+i)=*(eout+i);
       }
       
-      
+      printf("START iteration %07d on %07d \n",ir,niter);
       if (*(pitftemp+i)>0) {
    
         ipit=*(pitftemp+i);
@@ -310,7 +310,8 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
         //        for (int b=0;b<nx*ny;b++) {
 //         // *(e+b)=*(eout+b);
 //        if (*(pitf+b)==ipit) *(pitftemp+b)=0;
-      }  
+      } 
+      printf("END iteration %07d on %07d \n",ir,niter);
     }
     
     
