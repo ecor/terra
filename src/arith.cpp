@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -58,7 +58,7 @@ void operator%(std::vector<double>& a, const std::vector<double>& b) {
 		if (std::isnan(a[i]) || std::isnan(b[i])) {
 			a[i] = NAN;
 		} else {
-			a[i] = std::fmod(a[i], b[i]);
+			a[i] = std::abs(std::fmod(a[i], b[i]));
 		}
 	}
 }
@@ -226,7 +226,7 @@ SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatO
 			 a % b;
 		} else if (oper == "%/%") {
 			for (size_t i=0; i<a.size(); i++) {
-				a[i] = trunc(a[i] / b[i]);
+				a[i] = floor(a[i] / b[i]);
 			}
 		} else if (oper == "==") {
 			for (size_t i=0; i<a.size(); i++) {
@@ -336,18 +336,18 @@ SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool fals
 		} else if (oper == "%") {
 			if (reverse) {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::fmod(x, a[i]);
+					a[i] = std::abs(std::fmod(x, a[i]));
 				}
 			} else {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::fmod(a[i], x);
+					a[i] = std::abs(std::fmod(a[i], x));
 				}
 			}
 		} else if (oper == "%/%") {
 			if (reverse) {
-				for (double& d : a) d = trunc(x / d);
+				for (double& d : a) d = floor(x / d);
 			} else {
-				for (double& d : a) d = trunc(d / x);
+				for (double& d : a) d = floor(d / x);
 			}
 		} else if (oper == "==") {
 			for (double& d : a) if (!std::isnan(d)) d = d == x;
@@ -1906,28 +1906,10 @@ std::vector<std::vector<double>> SpatRaster::where(std::string what, bool values
 	std::vector<double> val;
 	bool do_min = what == "min";
 
-	std::vector<bool> hr = hasRange();
-	bool hasR = true;
-	for (size_t i=0; i<hr.size(); i++) {
-		if (!hr[i]) {
-			hasR = false;
-			break;
-		}
-	}
-	if (hasR) {
-		if (do_min) {
-			val = range_min();
-			for (double &d : val) d *= 1.00001;
-		} else {
-			val = range_max();
-			for (double &d : val) d *= 0.99999;
-		}
+	if (do_min) {
+		val.resize(nl, std::numeric_limits<double>::max());
 	} else {
-		if (do_min) {
-			val.resize(nl, std::numeric_limits<double>::max());
-		} else {
-			val.resize(nl, std::numeric_limits<double>::lowest());
-		}
+		val.resize(nl, std::numeric_limits<double>::lowest());
 	}
 	for (size_t i=0; i<bs.n; i++) {
 		std::vector<double> v;

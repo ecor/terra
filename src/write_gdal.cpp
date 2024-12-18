@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -64,7 +64,7 @@ bool SpatRaster::write_aux_json(std::string filename) {
 		if (f.is_open()) {
 			f << "{" << std::endl;
 			if (wtime) {
-				std::vector<std::string> tstr = getTimeStr(false);
+				std::vector<std::string> tstr = getTimeStr(false, " ");
 				std::string ss = quoted_csv(tstr);
 				f << "\"time\":[" << ss << "]," << std::endl;
 				f << "\"timestep\":\"" << source[0].timestep << "\"";
@@ -410,7 +410,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 			if (is_ratct(source[0].cats[0].d)) {
 				std::fill(hasCT.begin(), hasCT.end(), false);
 			} else if (ct[0].nrow() < 256) {
-				if (opt.datatype_set && (datatype != opt.get_datatype())) {
+				if (opt.datatype_set && (datatype != "INT1U")) {
 					addWarning("change datatype to INT1U to write the color-table");
 				} else {
 					datatype = "INT1U";
@@ -539,8 +539,9 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		std::vector <std::string> files;
 		if (filelist != NULL) {
 			for (size_t i=0; filelist[i] != NULL; i++) {
-				files.push_back(filelist[i]);
-				std::replace( files[i].begin(), files[i].end(), '\\', '/');
+				std::string thefile = filelist[i];
+				std::replace( thefile.begin(), thefile.end(), '\\', '/');
+				files.push_back(thefile);
 			}
 		}
 		CSLDestroy( filelist );
@@ -614,6 +615,21 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 			}
 		}
 	}
+
+	std::vector<std::string> tstr, ustr;
+	bool wtime = false;
+	bool have_date_time=false;
+	std::string tstep = getTimeStep();
+	if (hasTime()) {
+		tstr = getTimeStr(false, "T");
+		wtime = true;	
+		have_date_time = (tstep == "seconds") || (tstep == "days") || (tstep == "years") || (tstep == "yearmonths");
+ 	}
+	bool wunit = false;
+	if (hasUnit()) {
+		ustr = getUnit();
+		wunit = true;
+	}
 	
 	for (size_t i=0; i < nlyr(); i++) {
 
@@ -655,9 +671,20 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		if (driver == "GTiff") {
 			std::vector<std::string> m = getLyrTags({i});
 			if (m.size() > 0) {
-				for (size_t i=0; i<m.size(); i+=2) {
-					poBand->SetMetadataItem(m[i].c_str(), m[i+1].c_str());
+				for (size_t j=0; j<m.size(); j+=3) {
+					poBand->SetMetadataItem(m[j+1].c_str(), m[j+2].c_str(), "USER_TAGS");
 				}
+			}
+			if (wtime) {
+				if (have_date_time) {
+					poBand->SetMetadataItem("DATE_TIME", tstr[i].c_str());				
+				} else {
+					poBand->SetMetadataItem("TIMESTAMP", tstr[i].c_str());									
+					poBand->SetMetadataItem("TIMEUNIT", tstep.c_str());									
+				}
+			}
+			if (wunit) {
+				poBand->SetMetadataItem("UNIT", ustr[i].c_str());				
 			}
 		}
 
@@ -711,7 +738,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 			if (source[0].has_scale_offset[i]) {
 				bool failed = (poBand->SetScale(scale[i])) != CE_None;
 				if (!failed) {
-					failed = ((poBand->SetOffset(offset[i])) != CE_None);
+					failed = (poBand->SetOffset(offset[i])) != CE_None;
 				}
 				if (failed) {
 					source[0].has_scale_offset[i] = false;
@@ -763,8 +790,8 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 	source[0].driver = "gdal" ;
 	source[0].filename = filename;
 	source[0].memory = false;
-	write_aux_json(filename);
 
+	if (driver != "GTiff") write_aux_json(filename);
 /*
 	if (append) {
 		GDALClose( (GDALDatasetH) poDS );
@@ -1124,7 +1151,9 @@ bool SpatRaster::update_meta(bool names, bool crs, bool ext, SpatOptions &opt) {
 		if (names) {
 			for (size_t b=0; b < source[i].nlyr; b++) {
 				poBand = GDALGetRasterBand(hDS, b+1);
-				GDALSetDescription(poBand, source[i].names[b].c_str());
+				if (GDALGetRasterAccess(poBand) == GA_Update) {
+					GDALSetDescription(poBand, source[i].names[b].c_str());
+				}
 			}
 		} 
 		if (crs) {

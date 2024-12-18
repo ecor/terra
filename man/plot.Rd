@@ -61,7 +61,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{background}{background color. Default is no color (white)}
   \item{box}{logical. Should a box be drawn around the map?}
   \item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
-  \item{plg}{list with parameters for drawing the legend. For the classes and interval type legend see the arguments for \code{\link{legend}}. For example \code{x} and \code{y} can be used to place the legend. You can also use keywords such as "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. 
+  \item{plg}{list with parameters for drawing the legend. For the classes and interval type legend see the arguments for \code{\link[graphics]{legend}}. For example \code{x} and \code{y} can be used to place the legend. You can also use keywords such as "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. 
   
   Some of these do not apply to a continuous legend, or they behave a little differently. For example, only the placement keywords "left", "right", "top", and "bottom" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. Additional parameters for continuous legends include: 
   
@@ -119,7 +119,7 @@ plot(r, type="interval")
 
 e <- c(6.37, 6.41, 49.9, 50.1)
 plot(r, plg=list(ext=e, title="Legend\nTitle", title.cex=0.9), 
-		pax=list(side=1:4, retro=TRUE))
+		pax=list(side=1:4, retro=FALSE))
 north(cbind(5.8, 50.1))	
 
 d <- classify(r, c(100,200,300,400,500,600))
@@ -143,7 +143,7 @@ par(mfrow=c(1,2))
 plot(r, range=c(50,600), mar=c(1,1,1,4))
 plot(r/2, range=c(50,600), mar=c(1,1,1,4))
 
-# as we only need one legend:
+# as we only need one legend:	
 par(mfrow=c(1,2))
 plot(r, range=c(50,600), mar=c(2, 2, 2, 2), plg=list(size=0.9, cex=.8), 
 	pax=list(side=1:2, cex.axis=.6), box=FALSE)

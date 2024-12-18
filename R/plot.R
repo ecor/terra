@@ -306,12 +306,16 @@ setMethod("barplot", "SpatRaster",
 shade <- function(slope, aspect, angle=45, direction=0, normalize=FALSE, filename="", overwrite=FALSE, ...) {
 	stopifnot(inherits(slope, "SpatRaster"))
 	opt <- spatOptions(filename, overwrite=overwrite, ...)
-	slope@ptr <- slope@ptr$hillshade(aspect@ptr, angle, direction, normalize[1], opt)
+	slope@pntr <- slope@pntr$hillshade(aspect@pntr, angle, direction, normalize[1], opt)
 	messages(slope, "shade")
 }
 
 
 map.pal <- function(name, n=50, ...) { 
+	n <- round(n)
+	if (n < 1) {
+		error("map.pal", "n should be > 0")	
+	}
 	f <- system.file("colors/palettes.rds", package="terra")
 	v <- readRDS(f)
 	if (missing(name)) {
@@ -324,6 +328,13 @@ map.pal <- function(name, n=50, ...) {
 		} else {
 			v
 		}
+	} else if (name == "random") {
+		if (n > 433) {
+			error("map.pal", "you cannot get more than 433 random colors")
+		}
+		s <- sample(grDevices::colors()[grep('gr(a|e)y', grDevices::colors(), invert = TRUE)], n)
+		rgb(t(grDevices::col2rgb(s))/255)
+
 	} else {
 		error("map.pal", paste(name, "is not a known palette"))
 	}

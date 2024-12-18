@@ -103,7 +103,6 @@ if (!isGeneric("focal3D")) { setGeneric("focal3D", function(x, ...) standardGene
 if (!isGeneric("focalReg")) { setGeneric("focalReg", function(x, ...) standardGeneric("focalReg")) }
 if (!isGeneric("focalCpp")) { setGeneric("focalCpp", function(x, ...) standardGeneric("focalCpp")) }
 if (!isGeneric("focalPairs")) { setGeneric("focalPairs", function(x, ...) standardGeneric("focalPairs")) }
-if (!isGeneric("focalCor")) { setGeneric("focalCor", function(x, ...) standardGeneric("focalCor")) }
 
 if (!isGeneric("clearance")) {setGeneric("clearance", function(x, ...) standardGeneric("clearance"))}
 if (!isGeneric("width")) {setGeneric("width", function(x, ...) standardGeneric("width"))}
@@ -120,6 +119,7 @@ if (!isGeneric("weighted.mean")) {setGeneric("weighted.mean", function(x, w, ...
 
 if (!isGeneric("split")) {setGeneric("split", function(x, f, drop = FALSE, ...) standardGeneric("split"))}
 if (!isGeneric("cellSize")) {setGeneric("cellSize", function(x, ...) standardGeneric("cellSize"))}
+if (!isGeneric("surfArea")) {setGeneric("surfArea", function(x, ...) standardGeneric("surfArea"))}
 
 if (!isGeneric("na.omit")) {setGeneric("na.omit", function(object, ...) standardGeneric("na.omit"))}
 if (!isGeneric("catalyze")) {setGeneric("catalyze", function(x, ...) standardGeneric("catalyze"))}
@@ -220,6 +220,7 @@ if (!isGeneric("hasMinMax")) {setGeneric("hasMinMax", function(x) standardGeneri
 if (!isGeneric("minmax")) {setGeneric("minmax", function(x, ...) standardGeneric("minmax"))}
 if (!isGeneric("nsrc")) { setGeneric("nsrc", function(x) standardGeneric("nsrc")) }
 if (!isGeneric("perim")) {setGeneric("perim", function(x, ...) standardGeneric("perim"))}
+if (!isGeneric("edges")) {setGeneric("edges", function(x, ...) standardGeneric("edges"))}
 if (!isGeneric("project")) {setGeneric("project", function(x,...) standardGeneric("project"))}
 if (!isGeneric("wrapCache")) {setGeneric("wrapCache", function(x, ...) standardGeneric("wrapCache"))}
 if (!isGeneric("wrap")) {setGeneric("wrap", function(x, ...) standardGeneric("wrap"))}
@@ -284,8 +285,6 @@ if (!isGeneric("crs<-")) { setGeneric("crs<-", function(x, ..., value) standardG
 if (!isGeneric("density")) { setGeneric("density", function(x, ...) standardGeneric("density"))}
 if (!isGeneric("aggregate")) {setGeneric("aggregate", function(x, ...) standardGeneric("aggregate"))}
 if (!isGeneric("disagg")) {setGeneric("disagg", function(x, ...) standardGeneric("disagg"))}
-#if (!isGeneric("costDistance")) {setGeneric("costDistance", function(x, ...)standardGeneric("costDistance"))}
-if (!isGeneric("gridDistance")) {setGeneric("gridDistance", function(x, ...)standardGeneric("gridDistance"))}
 if (!isGeneric("costDist")) {setGeneric("costDist", function(x, ...)standardGeneric("costDist"))}
 if (!isGeneric("gridDist")) {setGeneric("gridDist", function(x, ...)standardGeneric("gridDist"))}
 if (!isGeneric("distance")) {setGeneric("distance", function(x, y, ...)standardGeneric("distance"))}
@@ -329,6 +328,7 @@ if (!isGeneric("rasterize")) {setGeneric("rasterize", function(x, y, ...) standa
 if (!isGeneric("rasterizeGeom")) {setGeneric("rasterizeGeom", function(x, y, ...) standardGeneric("rasterizeGeom"))}
 if (!isGeneric("readStart")) {setGeneric("readStart", function(x, ...) standardGeneric("readStart"))}
 if (!isGeneric("readStop")) {setGeneric("readStop", function(x)	standardGeneric("readStop"))}
+if (!isGeneric("toMemory")) {setGeneric("toMemory", function(x, ...) standardGeneric("toMemory"))}
 if (!isGeneric("res")) { setGeneric("res", function(x) standardGeneric("res")) }
 if (!isGeneric("res<-")) { setGeneric("res<-", function(x, value) standardGeneric("res<-")) }
 if (!isGeneric("rectify")) {setGeneric("rectify", function(x, ...) standardGeneric("rectify"))}
@@ -339,6 +339,7 @@ if (!isGeneric("rescale")) {setGeneric("rescale", function(x, ...) standardGener
 #if (!isGeneric("select")) {setGeneric("select", function(x, ...) standardGeneric("select"))}
 if (!isGeneric("setMinMax")) {setGeneric("setMinMax", function(x, ...) standardGeneric("setMinMax"))}
 if (!isGeneric("scale")) {setGeneric("scale", function(x, center=TRUE, scale=TRUE) standardGeneric("scale"))}
+if (!isGeneric("scale_linear")) { setGeneric("scale_linear", function(x, ...) standardGeneric("scale_linear"))}
 if (!isGeneric("shift")) {setGeneric("shift", function(x, ...) standardGeneric("shift"))}
 if (!isGeneric("stdev")) { setGeneric("stdev", function(x, ...) standardGeneric("stdev")) }
 if (!isGeneric("subset")) {setGeneric("subset", function(x, ...) standardGeneric("subset")) }
