@@ -1,4 +1,30 @@
 
+
+hexcols <- function(out) {
+
+	get_col <- function(cols, alpha) {
+		if (isTRUE(alpha < 255)) {
+			grDevices::rgb(t(grDevices::col2rgb(cols, alpha=TRUE)), alpha=alpha, maxColorValue=255)
+		} else {
+			i <- !grepl("^#", cols)
+			cols[i] <- grDevices::rgb(t(grDevices::col2rgb(cols[i], alpha=FALSE)), maxColorValue=255)	
+			cols
+		}
+	}
+
+	if (NCOL(out$cols) == 1) {
+		out$cols <- get_col(out$cols, out$alpha)
+	} else if (NCOL(out$cols) == 2) {
+		out$cols[,2] <- get_col(out$cols[,2], out$alpha)
+	} else if (NCOL(out$cols) == 3) {
+		out$cols[,3] <- get_col(out$cols[,3], out$alpha)
+	}
+	
+	out
+
+}
+
+
 .default.pal <- function() {
 	opt.pal <- options("terra.pal")[[1]]
 	if (is.null(opt.pal))  {
@@ -157,10 +183,11 @@
 #	} else {
 #		out$frange <- out$range	
 #	}
+
 	if (length(breaks) == 1) {
 		Z[] <- out$cols[ceiling(length(out$cols)/2)]
 	} else {
-		Z[] <- out$cols[as.integer(cut(Z, breaks, include.lowest=TRUE, right=FALSE))]
+		Z[] <- out$cols[as.integer(cut(as.numeric(Z), breaks, include.lowest=TRUE, right=FALSE))]
 	}
 	
 	out$r <- as.raster(Z)
@@ -246,8 +273,8 @@ prettyNumbs <- function(x, digits) {
 	stopifnot(length(out$leg$legend) == length(out$levels))
 	nlevs <- length(levs)
 
+
 	if (NCOL(out$cols) == 2) {
-		out$cols[,2] <- as.character(out$cols[,2])
 		i <- match(Z, as.numeric(levs))
 		Z[] <- out$cols[,2][i]
 		i <- match(as.numeric(levs), out$cols[,1])
@@ -411,9 +438,9 @@ prettyNumbs <- function(x, digits) {
 
 	if (!is.null(out$leg$digits)) {
 #		out$leg$legend <- substr(formatC(levs, digits=digits, format = "f", flag="#"), 1, digits+1)
-		fz <- cut(Z, out$breaks, include.lowest=TRUE, right=FALSE, dig.lab=out$leg$digits)
+		fz <- cut(as.numeric(Z), out$breaks, include.lowest=TRUE, right=FALSE, dig.lab=out$leg$digits)
 	} else {
-		fz <- cut(Z, out$breaks, include.lowest=TRUE, right=FALSE)
+		fz <- cut(as.numeric(Z), out$breaks, include.lowest=TRUE, right=FALSE)
 	}
 
 
@@ -429,6 +456,7 @@ prettyNumbs <- function(x, digits) {
 	} else {
 		cols <- rep_len(cols, nlevs)
 	}
+	
 	#out$cols <- cols
 	out$leg$fill <- cols
 	#out$leg$levels <- levels(fz)
@@ -442,6 +470,12 @@ prettyNumbs <- function(x, digits) {
 			m <- prettyNumbs(m, out$leg$digits)
 		}
 		m <- apply(m, 1, function(i) paste(i, collapse=" - "))
+		m <- gsub("-Inf -", "<=", m)
+		i <- grep("- Inf", m)
+		if (length(i) == 1) {
+			m[i] <- gsub("- Inf", "", m[i])
+			m[i] <- paste(">", m[i])				
+		}	
 		out$leg$legend <- m
 	}
 	out$leg$digits <- NULL
@@ -449,13 +483,11 @@ prettyNumbs <- function(x, digits) {
 }
 
 
-
 .as.raster.interval <- function(out, x, ...) {
 
 	out$legend_type <- "classes"
 
 	if (NCOL(out$cols) == 3) {
-		out$cols[,3] <- as.character(out$cols[,3])
 		rcl <- cbind(as.matrix(out$cols[,1:2]), 1:nrow(out$cols))
 		x <- classify(x, rcl, include.lowest=TRUE, others=NA)
 		m <- apply(out$cols[,1:2], 1, function(i) paste(i, collapse=" - "))
@@ -670,13 +702,21 @@ prettyNumbs <- function(x, digits) {
 		out$asp <- asp
 		out$lonlat <- FALSE
 	}
+	out$cols <- cols
 	if (!is.null(alpha)) {
 		if (!inherits(alpha, "SpatRaster")) {
-			alpha <- alpha[1] * 255
-			cols <- grDevices::rgb(t(grDevices::col2rgb(cols)), alpha=alpha, maxColorValue=255)
-		} 
+			out$alpha <- alpha[1]
+			if ((alpha < 0) || (alpha > 1)) {
+				warn("plot", "alpha should be between 0 and 1")
+				out$alpha <- 255
+			} else {
+				out$alpha <- out$alpha[1] * 255
+			}
+			out <- hexcols(out)
+		}
 	} else {
-		alpha <- 255
+		out$alpha <- 255
+		out <- hexcols(out)
 	}
 	out$rgb$stretch <- stretch
 	out$rgb$scale <- scale
@@ -703,7 +743,6 @@ prettyNumbs <- function(x, digits) {
 	out$yaxs <- yaxs
 	out$xlab <- xlab
 	out$ylab <- ylab 
-	out$cols <- cols
 	out$coltab <- coltab
 	out$cats <- cats
 	out$breaks <- breaks
@@ -781,7 +820,7 @@ prettyNumbs <- function(x, digits) {
 
 		if (!is.null(colNA)) {
 			if (!is.na(colNA) && out$values) {
-				out$colNA <- grDevices::rgb(t(grDevices::col2rgb(colNA)), alpha=alpha, maxColorValue=255)
+				out$colNA <- grDevices::rgb(t(grDevices::col2rgb(colNA)), alpha=out$alpha, maxColorValue=255)
 				out$r[is.na(out$r)] <- out$colNA
 			}
 		}

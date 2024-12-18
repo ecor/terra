@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+	// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -47,7 +47,7 @@ SpatVectorCollection SpatVector::bienvenue() {
 std::vector<std::string> SpatVector::wkt() {
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
 	std::vector<GeomPtr> g = geos_geoms(this, hGEOSCtxt);
-	std::vector<std::string> out;
+	std::vector<std::string> out::crop
 	out.reserve(g.size());
 	char * wkt;
 	for (size_t i = 0; i < g.size(); i++) {
@@ -327,6 +327,10 @@ std::vector<std::vector<unsigned>> SpatVector::index_sparse(SpatVector v) {
 SpatVector SpatVector::crop(SpatExtent e, bool wrap) {
 
 	SpatVector out;
+	if ((e.xmin == e.xmax) || (e.ymin == e.ymax)) {
+		return *this;	
+	}
+
 
 #ifndef GEOS350
 	out.setError("GEOS 3.5 required for crop");
@@ -886,6 +890,7 @@ SpatVector SpatVector::crop(SpatVector v) {
 
 	SpatVector out;
 	out.srs = srs;
+	if (v.empty()) return *this;
 
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
 
@@ -927,6 +932,8 @@ SpatVector SpatVector::crop(SpatVector v) {
 //		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt);
 		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt, ids);
 		out = coll.get(0);
+//		std::vector<std::string> nms = out.get_names();
+//		out = out.aggregate(nms[0], true);
 		out.df = df.subset_rows(out.df.iv[0]);
 		out.srs = srs;
 	}
@@ -984,9 +991,9 @@ SpatVector SpatVector::hull(std::string htype, std::string by) {
 		}
 	}
 
+	SpatVector a = aggregate(false);
 
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
-	SpatVector a = aggregate(false);
 	std::vector<GeomPtr> g = geos_geoms(&a, hGEOSCtxt);
 	//std::string vt = type();
 	GEOSGeometry* h;
@@ -1197,9 +1204,16 @@ SpatVector SpatVector::buffer(std::vector<double> d, unsigned quadsegs, std::str
 	out = coll.get(0);
 	out.srs = srs;
 	out.df = df;
+
+// revdep problem with ShapePattern
+	if (std::isnan(out.extent.xmin)) {
+		SpatVector empty;
+		empty.srs = srs;
+		return empty;
+	}
+	
 	return out;
 }
-
 
 
 // basic version of buffer, for debugging
@@ -1212,9 +1226,9 @@ SpatVector SpatVector::buffer2(std::vector<double> d, unsigned quadsegs) {
 	std::vector<GeomPtr> b(size());
 	for (size_t i = 0; i < g.size(); i++) {
 		
-		Rcpp::Rcout << "buffer " << i;		
+//		Rcpp::Rcout << "buffer " << i;		
 		GEOSGeometry* pt = GEOSBuffer_r(hGEOSCtxt, g[i].get(), d[i], (int) quadsegs);
-		Rcpp::Rcout << " done" << std::endl;
+//		Rcpp::Rcout << " done" << std::endl;
 
 		if (pt == NULL) {
 			out.setError("GEOS exception");
@@ -1355,9 +1369,14 @@ SpatVector SpatVector::intersect(SpatVector v, bool values) {
 
 
 
+
 std::function<char(GEOSContextHandle_t, const GEOSGeometry *, const GEOSGeometry *)> getRelateFun(const std::string rel) {
 	std::function<char(GEOSContextHandle_t, const GEOSGeometry *, const GEOSGeometry *)> rfun;
-	if (rel == "intersects") {
+	if (rel == "equals") {
+		rfun = GEOSEquals_r;
+//	} else if (rel == "equalidentical") {
+//		rfun = GEOSEqualsIdentical_r;
+	} else if (rel == "intersects") {
 		rfun = GEOSIntersects_r;
 	} else if (rel == "disjoint") {
 		rfun = GEOSDisjoint_r;
@@ -1413,7 +1432,7 @@ int getRel(std::string &relation) {
 	int pattern = 1;
 	std::string rel = relation;
 	std::transform(rel.begin(), rel.end(), rel.begin(), ::tolower);
-	std::vector<std::string> f {"rook", "queen", "intersects", "touches", "crosses", "overlaps", "within", "contains", "covers", "coveredby", "disjoint"};
+	std::vector<std::string> f {"rook", "queen", "intersects", "touches", "crosses", "overlaps", "within", "contains", "covers", "coveredby", "disjoint", "equals"}; // tbd: "equalsexact", "equals"
 	if (std::find(f.begin(), f.end(), rel) == f.end()) {
 		if (relation.size() != 9) {
 			pattern = 2;
@@ -1438,6 +1457,7 @@ int getRel(std::string &relation) {
 }
 
 std::vector<int> SpatVector::relate(SpatVector v, std::string relation, bool prepared, bool index) {
+
 	// this method is redundant with "which_relate")
 	std::vector<int> out;
 	int pattern = getRel(relation);
@@ -1446,7 +1466,10 @@ std::vector<int> SpatVector::relate(SpatVector v, std::string relation, bool pre
 		return out;
 	}
 	if ((relation == "FF*FF****") || (relation == "disjoint")) index = false;
-
+	if (relation.substr(0, 5) == "equal") {
+		prepared = false;
+	}
+	
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
 	std::vector<GeomPtr> x = geos_geoms(this, hGEOSCtxt);
 	std::vector<GeomPtr> y = geos_geoms(&v, hGEOSCtxt);
@@ -1564,7 +1587,24 @@ std::vector<std::vector<double>> SpatVector::which_relate(SpatVector v, std::str
 	out[0].reserve(nx * 1.5);
 	out[1].reserve(nx * 1.5);
 
-	if (!index) {
+
+	if (relation.substr(0, 5) == "equal") {
+		std::function<char(GEOSContextHandle_t, const GEOSGeometry *, const GEOSGeometry *)> relFun = getRelateFun(relation);
+		for (size_t i = 0; i < nx; i++) {
+			bool none = !narm;
+			for (size_t j = 0; j < ny; j++) {
+				if ( relFun(hGEOSCtxt, x[i].get(), y[j].get())) {
+					out[0].push_back(i);
+					out[1].push_back(j);
+					none = false;
+				}
+			}
+			if (none) {
+				out[0].push_back(i);
+				out[1].push_back(NAN);
+			}
+		}
+	} else if (!index) {
 		if (pattern == 1) {
 			for (size_t i = 0; i < nx; i++) {
 				bool none = !narm;
@@ -1677,8 +1717,23 @@ std::vector<std::vector<double>> SpatVector::which_relate(std::string relation, 
 	out[0].reserve(nx * 1.5);
 	out[1].reserve(nx * 1.5);
 
-
-	if (!index) {
+	if (relation.substr(0, 5) == "equal") {
+		std::function<char(GEOSContextHandle_t, const GEOSGeometry *, const GEOSGeometry *)> relFun = getRelateFun(relation);
+		for (size_t i = 0; i < nx; i++) {
+			bool none = !narm;
+			for (size_t j = 0; j < nx; j++) {
+				if ( relFun(hGEOSCtxt, x[i].get(), x[j].get())) {
+					out[0].push_back(i);
+					out[1].push_back(j);
+					none = false;
+				}
+			}
+			if (none) {
+				out[0].push_back(i);
+				out[1].push_back(NAN);
+			}
+		}
+	} else if (!index) {
 		if (pattern == 1) {
 			for (size_t i=0; i<nx; i++) {
 				bool none = !narm;
@@ -2808,8 +2863,9 @@ SpatVector SpatVector::gaps() {
 
 
 
-SpatVector SpatVector::nearest_point(SpatVector v, bool parallel) {
+SpatVector SpatVector::nearest_point(SpatVector v, bool parallel, const std::string method) {
 	SpatVector out;
+
 
 	if ((size() == 0) || v.empty()) {
 		out.setError("empty SpatVecor(s)");
@@ -2819,14 +2875,22 @@ SpatVector SpatVector::nearest_point(SpatVector v, bool parallel) {
 		out.setError("CRSs do not match");
 		return out;
 	}
+	bool lonlat = is_lonlat();
+	if (lonlat) {
+		std::vector<std::string> methods = {"geo", "cosine", "haversine"};
+		if (!is_in_vector(method, methods)) {
+			out.setError("invalid distance method");
+		}
+	}
 	out.srs = srs;
 
-	if ((is_lonlat()) && (type() == "points") && (v.type() == "points")) {
+	
+	if (lonlat && (type() == "points") && (v.type() == "points")) {
 		std::vector<double> nlon, nlat, dist;
 		std::vector<long> id;
 		std::vector<std::vector<double>> p = coordinates();
 		std::vector<std::vector<double>> pv = v.coordinates();
-		nearest_lonlat(id, dist, nlon, nlat, p[0], p[1], pv[0], pv[1]);
+		nearest_lonlat(id, dist, nlon, nlat, p[0], p[1], pv[0], pv[1], method);
 		out.setPointsGeometry(nlon, nlat);
 		std::vector<long> fromid(id.size());
 		std::iota(fromid.begin(), fromid.end(), 0);
@@ -2873,7 +2937,7 @@ SpatVector SpatVector::nearest_point(SpatVector v, bool parallel) {
 	return out;
 }
 
-SpatVector SpatVector::nearest_point() {
+SpatVector SpatVector::nearest_point(const std::string method) {
 	SpatVector out;
 	if ((size() == 0)) {
 		out.addWarning("empty SpatVecor");
@@ -2886,12 +2950,22 @@ SpatVector SpatVector::nearest_point() {
 	size_t n = size();
 	out.srs = srs;
 
-	if (is_lonlat()) {
+
+	bool lonlat = is_lonlat();
+	if (lonlat) {
+		std::vector<std::string> methods = {"geo", "cosine", "haversine"};
+		if (!is_in_vector(method, methods)) {
+			out.setError("invalid distance method");
+		}
+	}
+
+
+	if (lonlat) {
 		if (type() == "points") {
 			std::vector<double> nlon, nlat, dist;
 			std::vector<long> id;
 			std::vector<std::vector<double>> p = coordinates();
-			nearest_lonlat_self(id, dist, nlon, nlat, p[0], p[1]);
+			nearest_lonlat_self(id, dist, nlon, nlat, p[0], p[1], method);
 			out.setPointsGeometry(nlon, nlat);
 			out.df.add_column(id, "id");
 			out.df.add_column(dist, "distance");
@@ -2901,7 +2975,6 @@ SpatVector SpatVector::nearest_point() {
 			return out;
 		}
 	}
-
 
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
 	std::vector<GeomPtr> x = geos_geoms(this, hGEOSCtxt);

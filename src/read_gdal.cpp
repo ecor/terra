@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -392,8 +392,8 @@ bool colsFromRat(SpatDataFrame &d, SpatDataFrame &out) {
 		if (k >= 0) {
 			if (!setIntCol(d, out, k, cols1[i])) return false;
 		} else {
-				int k = where_in_vector(cols2[i], ss, true);
-		if (k >= 0) {
+			int k = where_in_vector(cols2[i], ss, true);
+			if (k >= 0) {
 				if (!setIntCol(d, out, k, cols1[i])) return false;
 			} else {
 				return false;
@@ -882,9 +882,10 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 		} else {
 			addWarning("unknown extent");
 		}
-		try {
-			s.flipped = adfGeoTransform[5] > 0;
-		} catch(...) {}
+		// seems to cause more harm then benefit #1627
+		//try {
+		//	s.flipped = adfGeoTransform[5] > 0;
+		//} catch(...) {}
 	}
 
 	s.memory = false;
@@ -917,27 +918,6 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 		addWarning(msg);
 	}
 
-	std::vector<int_64> timestamps;
-	std::string timestep="raw";
-	std::vector<std::string> units;
-
-	try {
-		read_aux_json(fname, timestamps, timestep, units, s.nlyr);
-	} catch(...) {
-		timestamps.resize(0);
-		units.resize(0);
-		addWarning("could not parse aux.json");
-	}
-	if (!timestamps.empty()) {
-		s.time = timestamps;
-		s.timestep = timestep;
-		s.hasTime = true;
-	}
-	if (!units.empty()) {
-		s.unit = units;
-		s.hasUnit = true;
-	}
-
 	GDALRasterBand  *poBand;
 	//int nBlockXSize, nBlockYSize;
 	double adfMinMax[2];
@@ -951,27 +931,54 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 	bool getCols = s.nlyr == 3;
 	std::vector<unsigned> rgb_lyrs(3, -99);
 
+	s.hasUnit = true;
+	s.hasTime = true;
+	std::vector<std::string> datm, unts;
+	datm.reserve(s.nlyr);
+	unts.reserve(s.nlyr);
+	
 	int bs1, bs2;
 	for (size_t i = 0; i < s.nlyr; i++) {
 		
 		poBand = poDataset->GetRasterBand(i+1);
 
+		if (s.hasTime) {
+			const char* dtm = poBand->GetMetadataItem("DATE_TIME");
+			if (dtm != NULL) {
+				datm.push_back(dtm);
+			} else {
+				s.hasTime = false;
+			}
+		}
+		if (s.hasUnit) {
+			const char* ut = poBand->GetMetadataItem("UNIT");
+			if (ut != NULL) {
+				unts.push_back(ut);
+			} else {
+				s.hasUnit = false;
+			}
+		}
+
 		if ((gdrv=="netCDF") || (gdrv == "HDF5") || (gdrv == "GRIB") || (gdrv == "GTiff")) {
 			char **m = poBand->GetMetadata();
 			while (m != nullptr && *m != nullptr) {
-
 				bandmeta[i].push_back(*m++);
 			}
-			char **meterra = poBand->GetMetadata("LYR_TAGS");
+			//for (size_t j = 0; j<bandmeta[i].size(); j++) {
+			//	Rcpp::Rcout << bandmeta[i][j] << std::endl;
+			//}
+			
+			
+			char **meterra = poBand->GetMetadata("USER_TAGS");
 			if (meterra != NULL) {
 //				std::vector<std::string> meta;
-				for (size_t i=0; meterra[i] != NULL; i++) {
-					std::string s = meterra[i];
-					size_t pos = s.find("=");
+				for (size_t j=0; meterra[j] != NULL; j++) {
+					std::string ms = meterra[j];
+					size_t pos = ms.find("=");
 					if (pos != std::string::npos) {
-						std::string name = s.substr(0, pos);
-						std::string value = s.substr(pos+1); 
-						addLyrTags({i}, {name}, {value});
+						std::string name = ms.substr(0, pos);
+						std::string value = ms.substr(pos+1); 
+						s.addLyrTag(i, name, value);
 					}
 				}
 			}
@@ -1034,6 +1041,7 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 		}
 
 		std::string bandname = poBand->GetDescription();
+
 		char **cat = poBand->GetCategoryNames();
 		if( cat != NULL )	{
 			SpatCategories scat = GetCategories(cat, bandname);
@@ -1102,6 +1110,45 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 		s.names[i] = nm;
 	}
 
+	if (s.hasTime) {
+		if (datm[0].find('T') != std::string::npos) {
+			s.timestep = "seconds";
+		} else {
+			if (datm[0].length() == 4) {
+				s.timestep = "years";
+			} else if (datm[0].length() == 7) {
+				s.timestep = "yearmonths";
+			} else {
+				s.timestep = "days";
+			}
+		}
+		for (size_t i=0; i<datm.size(); i++) {
+			s.time[i] = parse_time(datm[i]);
+		}
+	} else {
+		std::vector<int_64> timestamps;
+		std::string timestep="raw";
+		std::vector<std::string> units;
+		try {
+			read_aux_json(fname, timestamps, timestep, units, s.nlyr);
+		} catch(...) {
+			timestamps.resize(0);
+			units.resize(0);
+			addWarning("could not parse aux.json");
+		}
+		if (!timestamps.empty()) {
+			s.time = timestamps;
+			s.timestep = timestep;
+			s.hasTime = true;
+		}
+		if (!units.empty()) {
+			s.unit = units;
+			s.hasUnit = true;
+		}
+	}
+	if (s.hasUnit) {
+		s.unit = unts;
+	}
 
 	msg = "";
 	if ((gdrv=="netCDF") || (gdrv == "HDF5"))  {
@@ -1133,7 +1180,7 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 		s.set_names_time_grib(bandmeta, msg);
 	} else if (gdrv == "GTiff") {	
 	// needs to get its own generic one 
-		s.set_names_time_tif(bandmeta, msg);
+	//	s.set_names_time_tif(bandmeta, msg);
 	}
 	s.bmdata = bandmeta;
 	if (msg.size() > 1) {

@@ -30,6 +30,7 @@
 #if PROJ_VERSION_MAJOR >=8
 #include "proj.h"
 #else
+#define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H
 #include <proj_api.h>
 #endif
 #endif
@@ -145,6 +146,7 @@ double getLinearUnits(std::string s) {
 	if (!srs.set(s, msg)) return NAN;
 	return srs.to_meter();
 }
+
 
 
 

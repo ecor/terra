@@ -135,7 +135,7 @@ setMethod("plet", signature(x="SpatVector"),
 		g <- geomtype(x)
 		leg <- NULL
 		if (y == "") { # no legend
-			group <- x@ptr$layer
+			group <- x@pntr$layer
 			if (group == "") group = g
 			cols <- .getCols(nrow(x), col)
 			pop  <- lab <- NULL
@@ -389,7 +389,7 @@ setMethod("lines", signature(x="leaflet"),
 )
 
 setMethod("points", signature(x="leaflet"),
-	function(x, y, col, cex=1, alpha=1, popup=FALSE, ...)  {
+	function(x, y, col, cex=1, alpha=1, label=1:nrow(y), popup=FALSE, ...)  {
 		stopifnot(inherits(y, "SpatVector"))
 		if (nrow(y) == 0) return(x)
 		y <- makelonlat(y)
@@ -406,7 +406,7 @@ setMethod("points", signature(x="leaflet"),
 		} else {
 			popup <- NULL
 		}
-		leaflet::addCircleMarkers(x, data=y, radius=cex, popup=popup, label=1:nrow(y), opacity=alpha, col=col, ...)
+		leaflet::addCircleMarkers(x, data=y, radius=cex, popup=popup, label=label, opacity=alpha, col=col, ...)
 	}
 )
 
@@ -463,9 +463,12 @@ make.panel <- function(x, maxcell) {
 }
 
 
+
 setMethod("plet", signature(x="SpatRaster"),
 	function(x, y=1, col, alpha=0.8, main=names(x), tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
-		wrap=TRUE, maxcell=500000, legend="bottomright", shared=FALSE, panel=FALSE, collapse=TRUE, map=NULL)  {
+		wrap=TRUE, maxcell=500000, stretch=NULL, legend="bottomright", shared=FALSE, panel=FALSE, collapse=TRUE, 
+		# type=NULL, breaks=NULL, breakby="eqint", sort=TRUE, decreasing=FALSE, 
+		map=NULL)  {
 
 		#checkLeafLetVersion()
 		
@@ -496,6 +499,16 @@ setMethod("plet", signature(x="SpatRaster"),
 #		}
 
 		alpha <- max(0, min(1, alpha))
+		
+		hasRGB <- has.RGB(x)
+
+		if (hasRGB) {
+			y <- RGB(x)
+			legend <- NULL		
+		}
+		# else if (!is.null(terra::coltab(x)[[1]])) {
+		#	legend <- NULL		
+		#}
 		
 		e <- ext(x)
 		if (is.lonlat(x) && ((e$ymin < -85) || (e$ymax > 85))) {
@@ -539,9 +552,22 @@ setMethod("plet", signature(x="SpatRaster"),
 			main <- rep_len(main, length(x))[y]
 		}
 
-
-
-		if (has.RGB(x) | nlyr(x) == 1) {
+		if (hasRGB) {
+			if (!is.null(stretch)) {
+				if (stretch == "lin") {
+					x <- stretch(x, minq=0.02, maxq=0.98)
+				} else {
+					x <- stretch(x, histeq=TRUE, scale=255)
+				}
+			}
+			RGB(x) <- 1:length(y)
+			x <- colorize(x, "col")
+		} 
+		#else {
+		#	leg <- .get_leg(na.omit(values(x)), type=type, dig.lab=3, cols=col, breaks=breaks, breakby=breakby, sort=sort, decreasing=decreasing, ...)
+		#}
+		
+		if (nlyr(x) == 1) {
 			map <- leaflet::addRasterImage(map, x, colors=col, opacity=alpha, project=notmerc)
 			if (!is.null(legend)) {
 				if (!all(hasMinMax(x))) setMinMax(x)

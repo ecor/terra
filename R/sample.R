@@ -31,10 +31,14 @@ sampleWeights <- function(x, size, replace=FALSE, as.df=TRUE, as.points=FALSE, v
 
 sampleStratMemory <- function(x, size, replace, lonlat, ext=NULL, weights=NULL, warn=TRUE) {
 	if (!is.null(ext)) {
+		xold <- rast(x)
 		x <- crop(x, ext)
+		cells <- cells(xold, ext)
 		if (!is.null(weights)) {
 			weights <- crop(weights, ext)
 		}
+	} else {
+		cells <- 1:ncell(x)	
 	}
 	
 	if (!is.null(weights)) {
@@ -44,7 +48,7 @@ sampleStratMemory <- function(x, size, replace, lonlat, ext=NULL, weights=NULL, 
 		if (!compareGeom(x, weights)) {
 			error("spatSample", "geometry of weights does not match the geometry of x")
 		}
-		v <- cbind(cell=1:ncell(x), values(x), values(weights))
+		v <- cbind(cell=cells, values(x), values(weights))
 		v <- v[!is.na(v[,2]), ]
 		uv <- sort(unique(v[,2]))
 		ys <- vector(mode="list", length=length(uv))
@@ -58,12 +62,12 @@ sampleStratMemory <- function(x, size, replace, lonlat, ext=NULL, weights=NULL, 
 			ys[[i]] <- vv[s,-3]
 		}
 	} else if (lonlat) {
-		v <- cbind(cell=1:ncell(x), values(x), abs(cos(pi * values(init(x, "y")) / 360)))
+		v <- cbind(cell=cells, values(x), abs(cos(pi * values(init(x, "y")) / 360)))
 		v <- v[!is.na(v[,2]), ]
 		uv <- sort(unique(v[,2]))
 		ys <- vector(mode="list", length=length(uv))
 		for (i in seq_len(length(uv))) {
-			vv <- v[v[,2] == uv[i], ]
+			vv <- v[v[,2] == uv[i], ,drop=FALSE]
 			if (replace) {
 				s <- sample.int(nrow(vv), size, prob=vv[,3], replace=TRUE)
 			} else {
@@ -72,7 +76,7 @@ sampleStratMemory <- function(x, size, replace, lonlat, ext=NULL, weights=NULL, 
 			ys[[i]] <- vv[s,-3]
 		}
 	} else {
-		v <- cbind(cell=1:ncell(x), values(x))
+		v <- cbind(cell=cells, values(x))
 		v <- v[!is.na(v[,2]), ]
 		uv <- sort(unique(v[,2]))
 		ys <- vector(mode="list", length=length(uv))
@@ -94,6 +98,7 @@ sampleStratMemory <- function(x, size, replace, lonlat, ext=NULL, weights=NULL, 
 			warn("spatSample", 'fewer samples than requested are available for group(s): ', paste(ta, collapse=', '))
 		}
 	}
+
 	ys
 }
 
@@ -400,18 +405,21 @@ sampleRaster <- function(x, size, method, replace, ext=NULL, warn) {
 #		hasWin <- TRUE
 #		hadWin <- window(x)
 #		oldWin <- ext(x)
-		w <- intersect(ext(x), ext(ext))		
+		w <- intersect(ext(x), ext(ext))
+		if (is.null(w)) {
+			error("sampleRaster", "x and ext do not intersect")
+		}
 		x <- deepcopy(x)
 		window(x) <- w
 	}
 	if (method == "regular") {
 		if (length(size) > 1) {
-			x@ptr <- x@ptr$sampleRowColRaster(size[1], size[2], warn[1])
+			x@pntr <- x@pntr$sampleRowColRaster(size[1], size[2], warn[1])
 		} else {
-			x@ptr <- x@ptr$sampleRegularRaster(size)
+			x@pntr <- x@pntr$sampleRegularRaster(size)
 		}
 	} else if (method == "random") {
-		x@ptr <- x@ptr$sampleRandomRaster(size, replace, .seed())
+		x@pntr <- x@pntr$sampleRandomRaster(size, replace, .seed())
 	} else {
 		error("spatSample", "method must be 'regular' or 'random' if as.raster=TRUE")
 	}
@@ -484,7 +492,7 @@ setMethod("spatSample", signature(x="SpatRaster"),
 			if (exhaustive && (method=="random") && na.rm) {
 				cnrs <- .sampleCellsExhaustive(x, size, replace, ext, weights=NULL, warn=FALSE)
 			} else {
-				cnrs <- .sampleCells(x, size, method, replace, na.rm, ext)
+				cnrs <- .sampleCells(x, size, method, replace, na.rm, ext, exp=exp)
 			}
 			
 			if (method == "random") {
@@ -538,9 +546,9 @@ setMethod("spatSample", signature(x="SpatRaster"),
 		if (method == "regular") {
 			opt <- spatOptions()
 			if (length(size) > 1) {
-				v <- x@ptr$sampleRowColValues(size[1], size[2], opt)
+				v <- x@pntr$sampleRowColValues(size[1], size[2], opt)
 			} else {
-				v <- x@ptr$sampleRegularValues(size, opt)
+				v <- x@pntr$sampleRegularValues(size, opt)
 			}
 			x <- messages(x, "spatSample")
 			if (length(v) > 0) {
@@ -556,7 +564,7 @@ setMethod("spatSample", signature(x="SpatRaster"),
 				cnrs <- .sampleCellsExhaustive(x, size, replace, ext, weights=NULL, warn=FALSE)
 				out <- x[cnrs]	
 			} else {
-				#v <- x@ptr$sampleRandomValues(size, replace, seed)
+				#v <- x@pntr$sampleRandomValues(size, replace, seed)
 				if (size > 0.75 * ncell(x)) {
 					if (na.rm) {
 						out <- stats::na.omit(values(x))
@@ -626,9 +634,9 @@ setMethod("spatSample", signature(x="SpatExtent"),
 		size <- round(size)
 		stopifnot(size > 0)
 		if (method=="random") {
-			s <- x@ptr$sampleRandom(size, lonlat, .seed())
+			s <- x@pntr$sampleRandom(size, lonlat, .seed())
 		} else {
-			s <- x@ptr$sampleRegular(size, lonlat)
+			s <- x@pntr$sampleRegular(size, lonlat)
 		}
 		s <- do.call(cbind, s)
 		colnames(s) <- c("x", "y")
@@ -696,7 +704,7 @@ setMethod("spatSample", signature(x="SpatExtent"),
 
 
 #coordinates <- function(x) {
-#	do.call(cbind, x@ptr$coordinates())
+#	do.call(cbind, x@pntr$coordinates())
 #}
 
 get_field_name <- function(x, nms, sender="") {
@@ -750,9 +758,9 @@ setMethod("spatSample", signature(x="SpatVector"),
 			}
 			out <- vect()
 			if (length(size) == 1) {
-				out@ptr <- x@ptr$sample(size, method[1], .seed())
+				out@pntr <- x@pntr$sample(size, method[1], .seed())
 			} else {
-				out@ptr <- x@ptr$sampleGeom(size, method[1], .seed())	
+				out@pntr <- x@pntr$sampleGeom(size, method[1], .seed())	
 			}
 			messages(x, "spatSample")
 			return(messages(out, "spatSample"))

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -16,14 +16,10 @@
 // along with spat. If not, see <http://www.gnu.org/licenses/>.
 
 #include "spatRasterMultiple.h"
+#include "string_utils.h"
+
 
 SpatRasterCollection SpatRasterCollection::deepCopy() { return *this; }
-void SpatRasterCollection::setError(std::string s) { msg.setError(s); }
-void SpatRasterCollection::addWarning(std::string s) { msg.addWarning(s); }
-bool SpatRasterCollection::has_error() { return msg.has_error; }
-bool SpatRasterCollection::has_warning() { return msg.has_warning; }
-std::vector<std::string> SpatRasterCollection::getWarnings() { return msg.getWarnings(); }
-std::string SpatRasterCollection::getError() { return msg.getError(); }
 
 SpatRasterCollection::SpatRasterCollection(size_t n) { ds.resize(n); };
 
@@ -102,7 +98,6 @@ void SpatRasterCollection::erase(size_t i) {
 }
 
 SpatRasterCollection SpatRasterCollection::crop(SpatExtent e, std::string snap, bool expand, std::vector<unsigned> use, SpatOptions &opt) {
-
 
 	SpatRasterCollection out;
 	if ( !e.valid() ) {
@@ -210,12 +205,7 @@ std::vector<std::string> SpatRasterCollection::filenames() {
 
 
 SpatRasterStack SpatRasterStack::deepCopy() { return *this; }
-void SpatRasterStack::setError(std::string s) { msg.setError(s); }
-void SpatRasterStack::addWarning(std::string s) { msg.addWarning(s); }
-bool SpatRasterStack::has_error() { return msg.has_error; }
-bool SpatRasterStack::has_warning() { return msg.has_warning; }
-std::vector<std::string> SpatRasterStack::getWarnings() { return msg.getWarnings();}
-std::string SpatRasterStack::getError() { return msg.getError();}
+
 
 SpatRasterStack::SpatRasterStack(SpatRaster r, std::string name, std::string longname, std::string unit, bool warn) { 
 	push_back(r, name, longname, unit, warn); 
@@ -315,6 +305,11 @@ bool SpatRasterStack::readStop() {
 	return true;
 }
 	
+bool SpatRasterStack::readAll() {
+  for (auto& x : ds) { if (!x.readAll()) return false; }
+  return true;
+}
+
 unsigned SpatRasterStack::nsds() {
 	return ds.size();
 }
@@ -430,7 +425,7 @@ SpatRasterStack SpatRasterStack::crop(SpatExtent e, std::string snap, bool expan
 	}
 	for (size_t i=0; i<ds.size(); i++) {
 		out.push_back(ds[i].crop(e, snap, expand, opt), names[i], long_names[i], units[i], true);
-		if (has_error()) {
+		if (hasError()) {
 			return(out);
 		}
 	}
@@ -471,6 +466,43 @@ SpatRaster SpatRasterStack::collapse() {
 			}
 		}
 	} 
+	return out;
+}
+
+
+
+bool SpatRasterStack::addTag(std::string name, std::string value) {
+	lrtrim(name);
+	lrtrim(value);
+	if (value == "") {
+		return removeTag(name);
+	} else if (name != "") {
+		tags[name] = value;
+		return true;
+	} 
+	return false;
+}
+
+bool SpatRasterStack::removeTag(std::string name) {
+	std::map<std::string, std::string>::iterator it = tags.find(name);
+	if (it == tags.end()) return false;
+	tags.erase(it);
+	return true;
+}
+
+std::string SpatRasterStack::getTag(std::string name) {
+	std::map<std::string, std::string>::iterator it = tags.find(name);
+	if (it != tags.end()) return it->second;
+	return "";
+}
+
+std::vector<std::string> SpatRasterStack::getTags() {
+	std::vector<std::string> out;
+	out.reserve(2 * tags.size());
+	for(auto e : tags) {
+		out.push_back(e.first);
+		out.push_back(e.second);
+	}
 	return out;
 }
 

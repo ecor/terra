@@ -457,6 +457,26 @@ bool SpatRaster::getDSh(GDALDatasetH &rstDS, SpatRaster &out, std::string &filen
 }
 
 
+bool SpatRaster::getDShMEM(GDALDatasetH &rstDS, SpatRaster &out, double &naval, double background, SpatOptions &opt) {
+
+	SpatOptions ops(opt);
+	if (opt.names.size() == nlyr()) {
+		out.setNames(opt.names);
+	}
+	if (!out.create_gdalDS(rstDS, "", "MEM", true, background, source[0].has_scale_offset, source[0].scale, source[0].offset, ops)) {
+		out.setError("cannot create dataset");
+		return false;
+	}
+	GDALRasterBandH hBand = GDALGetRasterBand(rstDS, 1);
+	GDALDataType gdt = GDALGetRasterDataType(hBand);
+	getNAvalue(gdt, naval);
+	int hasNA;
+	double naflag = GDALGetRasterNoDataValue(hBand, &hasNA);
+	naval = hasNA ? naflag : naval;
+
+	return true;
+}
+
 
 
 
@@ -492,6 +512,7 @@ SpatRaster SpatRaster::rasterizeLyr(SpatVector x, double value, double backgroun
 	std::string driver, filename;
 	GDALDatasetH rstDS;
 	double naval;
+	
 	if (!getDSh(rstDS, out, filename, driver, naval, update, background, opt)) {
 		return out;
 	}
@@ -575,21 +596,23 @@ SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<do
 	SpatRaster out;
 	if ( !hasValues() ) update = false;
 	if (update) {
-		out = hardCopy(opt);
+		out = geometry();
 	} else {
 		out = geometry(1);
-		if (field.empty()) {
-			out.setNames({"layer"});
-		} else {
-			out.setNames({field});
-		}
+	}
+	if (field.empty()) {
+		out.setNames({"layer"});
+	} else {
+		out.setNames({field});
 	}
 
 	size_t nGeoms = x.size();
 	if (nGeoms == 0) {
-		if (!update) {
+		if (update) {
+			out = *this;
+		} else {
 			out = out.init({background}, opt);
-		}
+		} 
 		return out;
 	}
 
@@ -666,93 +689,116 @@ SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<do
 	GDALDatasetH rstDS;
 	double naval;
 	if (add) {	background = 0;	}
-
-	if (!out.getDSh(rstDS, out, filename, driver, naval, update, background, opt)) {
-		return out;
-	}
-	for (double &d : values) d = std::isnan(d) ? naval : d;
-		// passing NULL instead may also work.
-
 	std::vector<int> bands(out.nlyr());
 	std::iota(bands.begin(), bands.end(), 1);
 	rep_each(values, out.nlyr());
+	
+	SpatRaster temp = out;
+  	if (!out.writeStart(opt, filenames())) {
+		return out;
+	}
+	
+	bool hasError = false;
+	SpatExtent e = temp.getExtent();
+	SpatRaster tmp;
+	SpatOptions topt(opt);
 
 	char** papszOptions = NULL;
-	CPLErr err;
-	if (ispol && touches && (nGeoms > 1)) {
-		// first to get the touches
-		papszOptions = CSLSetNameValue(papszOptions, "ALL_TOUCHED", "TRUE");
-		err = GDALRasterizeGeometries(rstDS,
-				static_cast<int>(bands.size()), &(bands[0]),
-				static_cast<int>(ogrGeoms.size()),
-				(OGRGeometryH *) &(ogrGeoms[0]),
-				NULL, NULL, &(values[0]), papszOptions, NULL, NULL);
-		CSLDestroy(papszOptions);
+
+	for (size_t i = 0; i < out.bs.n; i++) {
+		if (out.bs.n > 1) {
+			double halfres = tmp.yres() / 2;
+			e.ymax = tmp.yFromRow(out.bs.row[i]) + halfres;
+			e.ymin = tmp.yFromRow(out.bs.row[i] + out.bs.nrows[i] - 1) - halfres;
+			if (update) {
+				tmp = crop(e, "near", false, topt);	
+			} else {
+				tmp = temp.crop(e, "near", false, topt);
+			}
+		} else {
+			if (update) {
+				tmp = hardCopy(topt);
+			} else {
+				tmp = temp;
+			}
+		}
+		if (update) {
+			std::string filename;
+			if (!tmp.getDSh(rstDS, tmp, filename, driver, naval, update, background, topt)) {
+				return tmp;
+			}
+		} else if (!tmp.getDShMEM(rstDS, tmp, naval, background, opt)) {
+			return tmp;
+		}
+		
+	
+		if (i==1) for (double &d : values) d = std::isnan(d) ? naval : d;
+
+		CPLErr err;
+		if (ispol && touches && (nGeoms > 1)) {
+			// first to get the touches
+			if (i == 0) papszOptions = CSLSetNameValue(papszOptions, "ALL_TOUCHED", "TRUE");
+			err = GDALRasterizeGeometries(rstDS,
+					static_cast<int>(bands.size()), &(bands[0]),
+					static_cast<int>(ogrGeoms.size()),
+					(OGRGeometryH *) &(ogrGeoms[0]),
+					NULL, NULL, &(values[0]), papszOptions, NULL, NULL);
+
+			if ( err != CE_None ) {
+				tmp.setError("rasterization failed");
+				GDALClose(rstDS);
+				hasError = true; break;
+			}
+			//GDALFlushCache(rstDS);
+			// second time to fix the internal area
+			err = GDALRasterizeGeometries(rstDS,
+					static_cast<int>(bands.size()), &(bands[0]),
+					static_cast<int>(ogrGeoms.size()),
+					(OGRGeometryH *) &(ogrGeoms[0]),
+					NULL, NULL, &(values[0]), NULL, NULL, NULL);
+
+		} else {
+			if (i == 0)  {
+				if (touches) {
+					papszOptions = CSLSetNameValue(papszOptions, "ALL_TOUCHED", "TRUE");
+				} else if (add) {
+					papszOptions = CSLSetNameValue(papszOptions, "MERGE_ALG", "ADD");
+				}
+			}
+			err = GDALRasterizeGeometries(rstDS,
+					static_cast<int>(bands.size()), &(bands[0]),
+					static_cast<int>(ogrGeoms.size()),
+					(OGRGeometryH *) &(ogrGeoms[0]),
+					NULL, NULL, &(values[0]), papszOptions, NULL, NULL);
+
+		}
 
 		if ( err != CE_None ) {
-			out.setError("rasterization failed");
+			tmp.setError("rasterization failed");
 			GDALClose(rstDS);
-			for (size_t i=0; i<ogrGeoms.size(); i++) {
-				OGR_G_DestroyGeometry(ogrGeoms[i]);
-			}
-			return out;
+			hasError = true; break;
 		}
-		//GDALFlushCache(rstDS);
-		// second time to fix the internal area
-		err = GDALRasterizeGeometries(rstDS,
-				static_cast<int>(bands.size()), &(bands[0]),
-				static_cast<int>(ogrGeoms.size()),
-				(OGRGeometryH *) &(ogrGeoms[0]),
-				NULL, NULL, &(values[0]), NULL, NULL, NULL);
 
-	} else {
-		if (touches) {
-			papszOptions = CSLSetNameValue(papszOptions, "ALL_TOUCHED", "TRUE");
-		} else if (add) {
-			papszOptions = CSLSetNameValue(papszOptions, "MERGE_ALG", "ADD");
+		if (!tmp.from_gdalMEM(rstDS, false, true)) {
+			tmp.setError("rasterization failed");
+			GDALClose(rstDS);
+			hasError = true; break;
 		}
-		err = GDALRasterizeGeometries(rstDS,
-				static_cast<int>(bands.size()), &(bands[0]),
-				static_cast<int>(ogrGeoms.size()),
-				(OGRGeometryH *) &(ogrGeoms[0]),
-				NULL, NULL, &(values[0]), papszOptions, NULL, NULL);
+		GDALClose(rstDS);
 
-		CSLDestroy(papszOptions);
+		std::vector<double> v = tmp.getValues(-1, topt);
+		if (!out.writeBlock(v, i)) return out;
 	}
-
+	
+	CSLDestroy(papszOptions);	
 	for (size_t i=0; i<ogrGeoms.size(); i++) {
 		OGR_G_DestroyGeometry(ogrGeoms[i]);
 	}
-
-	if ( err != CE_None ) {
-		out.setError("rasterization failed");
-		GDALClose(rstDS);
-		return out;
-	}
-
-	if (driver == "MEM") {
-		if (!out.from_gdalMEM(rstDS, false, true)) {
-			out.setError("rasterization failed (mem)");
-		}
-	}
-
-	GDALRasterBandH band = GDALGetRasterBand(rstDS, 1);
-
-	if (minmax) {
-		double adfMinMax[2];
-		GDALComputeRasterMinMax(band, false, adfMinMax);
-		GDALSetRasterStatistics(band, adfMinMax[0], adfMinMax[1], -9999, -9999);
-	}
-
-	GDALClose(rstDS);
-	if (driver != "MEM") {
-		out = SpatRaster(filename, {-1}, {""}, {}, {});
-	} else {
-		std::string fname = opt.get_filename();
-		if (!fname.empty() && (!update)) {
-			out = out.writeRaster(opt);
-		}
-	}
+	if (update) readStop();
+	out.writeStop();
+	
+	if (hasError) return tmp; 
+		
 	return out;
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -26,6 +26,7 @@
 #include "NA.h"
 
 #include "string_utils.h"
+
 
 std::string geomType(OGRLayer *poLayer) {
 	std::string s = "";
@@ -59,9 +60,10 @@ SpatDataFrame readAttributes(OGRLayer *poLayer, bool as_proxy) {
 		poFieldDefn = poFDefn->GetFieldDefn(i);
 		std::string fname = poFieldDefn->GetNameRef();
 		ft = poFieldDefn->GetType();
-		if (ft == OFTReal) {
+		// OFTInteger64 may be too large 
+		if ((ft == OFTReal) || (ft == OFTInteger64)) {
 			dtype = 0;
-		} else if ((ft == OFTInteger) | (ft == OFTInteger64)) {
+		} else if ((ft == OFTInteger)) {
 			if (poFieldDefn->GetSubType() == OFSTBoolean) {
 				dtype = 3;
 			} else {
@@ -106,9 +108,9 @@ SpatDataFrame readAttributes(OGRLayer *poLayer, bool as_proxy) {
 					break;
 				case OFTInteger64:
 					if (not_null) {
-						df.iv[j].push_back(poFeature->GetFieldAsInteger64(i));
+						df.dv[j].push_back(poFeature->GetFieldAsInteger64(i));
 					} else {
-						df.iv[j].push_back(longNA);
+						df.dv[j].push_back(NAN);
 					}
 					break;
 	//          case OFTString:
@@ -204,6 +206,7 @@ SpatGeom getMultiPointGeom(OGRGeometry *poGeometry) {
 	unsigned ng = poMultipoint->getNumGeometries();
 	std::vector<double> X(ng);
 	std::vector<double> Y(ng);
+	SpatGeom g(points);
 	for (size_t i=0; i<ng; i++) {
 	   	OGRGeometry *poMpGeometry = poMultipoint->getGeometryRef(i);
 		#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2,3,0)
@@ -211,12 +214,11 @@ SpatGeom getMultiPointGeom(OGRGeometry *poGeometry) {
 		#else
 			OGRPoint *poPoint = (OGRPoint *) poMpGeometry;
 		#endif
-		X[i] = poPoint->getX();
-		Y[i] = poPoint->getY();
+		double x = poPoint->getX();
+		double y = poPoint->getY();
+		SpatPart p(x, y);
+		g.addPart(p);
 	}
-	SpatPart p(X, Y);
-	SpatGeom g(points);
-	g.addPart(p);
 	return g;
 }
 

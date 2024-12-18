@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023  Robert J. Hijmans
+// Copyright (c) 2018-2025  Robert J. Hijmans
 //
 // This file is part of the "spat" library.
 //
@@ -236,9 +236,7 @@ bool can_write(std::vector<std::string> filenames, std::vector<std::string> srcn
 					msg = ("cannot overwrite existing file");
 					return false;
 				}
-				//std::string aux = filename + ".aux.xml";
-				//remove(aux.c_str());
-				std::vector<std::string> exts = {".vat.dbf", ".vat.cpg", ".json"};
+				std::vector<std::string> exts = {".vat.dbf", ".vat.cpg", ".json", ".aux.xml"};
 				for (size_t j=0; j<exts.size(); j++) {
 					std::string f = filenames[i] + exts[j];
 					if (file_exists(f)) {
