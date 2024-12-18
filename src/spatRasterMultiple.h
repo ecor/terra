@@ -22,13 +22,17 @@ class SpatRasterStack {
 	public:
 		virtual ~SpatRasterStack(){}
 		SpatRasterStack deepCopy();
+
 		SpatMessages msg;
-		void setError(std::string s);
-		void addWarning(std::string s);
-		bool has_error();
-		bool has_warning();
-		std::vector<std::string> getWarnings();
-		std::string getError();
+		void setError(std::string s) { msg.setError(s); }
+		void addWarning(std::string s) { msg.addWarning(s); }
+		void setMessage(std::string s) { msg.setMessage(s); }
+		bool hasError() { return msg.has_error; }
+		bool hasWarning() { return msg.has_warning; }
+		std::vector<std::string> getWarnings() { return msg.getWarnings();}
+		std::string getError() { return msg.getError();}
+		std::string getMessage() { return msg.getMessage();}
+
 
 		std::vector<SpatRaster> ds;
 		std::vector<std::string> names;
@@ -57,6 +61,7 @@ class SpatRasterStack {
 
 		bool readStart();
 		bool readStop();
+		bool readAll();
 		unsigned nsds();
 		unsigned nrow();
 		unsigned ncol();
@@ -78,6 +83,14 @@ class SpatRasterStack {
 		SpatRaster collapse();
 		SpatRaster summary_numb(std::string fun, std::vector<double> add, bool narm, SpatOptions &opt);
 		SpatRaster summary(std::string fun, bool narm, SpatOptions &opt);
+		
+		
+		std::map<std::string, std::string> tags;
+		bool addTag(std::string name, std::string value);
+		bool removeTag(std::string name);
+		std::string getTag(std::string name);
+		std::vector<std::string> getTags();
+		
 };
 
 
@@ -86,14 +99,17 @@ class SpatRasterStack {
 class SpatRasterCollection {
 	public:
 		virtual ~SpatRasterCollection(){}	
-		SpatMessages msg;
 		SpatRasterCollection deepCopy();
-		void setError(std::string s);
-		void addWarning(std::string s);
-		bool has_error();
-		bool has_warning();
-		std::vector<std::string> getWarnings();
-		std::string getError();
+
+		SpatMessages msg;
+		void setError(std::string s) { msg.setError(s); }
+		void addWarning(std::string s) { msg.addWarning(s); }
+		void setMessage(std::string s) { msg.setMessage(s); }
+		bool hasError() { return msg.has_error; }
+		bool hasWarning() { return msg.has_warning; }
+		std::vector<std::string> getWarnings() { return msg.getWarnings();}
+		std::string getError() { return msg.getError();}
+		std::string getMessage() { return msg.getMessage();}
 	
 		std::vector<SpatRaster> ds;
 //		SpatExtent extent;

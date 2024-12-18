@@ -1,9 +1,63 @@
-# version 1.8-0
+# version 1.8-6
 
 ## bug fixes
+
+- `expanse<SpatRaster>(transform=TRUE)` crashed R when the crs was "local". [#1671](https://github.com/rspatial/terra/issues/1671) by Michael Chirico
+- `patches(values=TRUE)` wrapped around the edges [#1675](https://github.com/rspatial/terra/issues/1675) by Michael Chirico
+- `spin` now correctly handles spherical coordinates [#1576](https://github.com/rspatial/terra/issues/1576) by jeanlobry
+
 ## enhancements
+
+- `plot<SpatVector>` now uses the same default viridis color palette as `plot<SpatRaster>` [#1670](https://github.com/rspatial/terra/issues/1670) by Márcia Barbosa
+- `relate` now accepts relation="equals" [#1672](https://github.com/rspatial/terra/issues/1672) by Krzysztof Dyba
+
 ## new 
 
+- `$<SpatRaster>` can now be used to get a categorical SpatRaster with a different active category
+- `scale_linear<SpatRaster>` method for linear scaling between e.g., 0 and 1
+- `distance` and related methods get argument "method" to choose the distance algorithm for lon/lat data [#1677](https://github.com/rspatial/terra/issues/1677) by Márcia Barbosa
+
+# version 1.8-5
+
+Released 2024-12-12
+
+
+## bug fixes
+
+- `spatSample(method='stratified', ext=e)` returned the wrong sampling coordinates [#1628](https://github.com/rspatial/terra/issues/1628) by Barnabas Harris
+- `spatSample(method='stratified')` could fail with small sample sizes [#1503](https://github.com/rspatial/terra/issues/1503) by karluf
+- transparency (alpha) did not work with RGB plotting. [#1642](https://github.com/rspatial/terra/issues/1642) by Timothée Giraud
+- rasterization failed on very large rasters [#1636](https://github.com/rspatial/terra/issues/1636) by Mary Fisher, [#1463](https://github.com/rspatial/terra/issues/1463) by Nic Spono and [#1281](https://github.com/rspatial/terra/issues/1281) by Sebastian Dunnett
+- `tmpFiles` only looked in the default temp files folder [#1630](https://github.com/rspatial/terra/issues/1630) by smckenzie1986
+- `where.min` did not work well if there were negative values [#1634](https://github.com/rspatial/terra/issues/1634) by Michael Sumner
+- `plet<SpatRaster>` now works for RGB rasters and rasters with a color table [#1596](https://github.com/rspatial/terra/issues/1596) by Agustin Lobo
+- `vect<MULTIPOINT WKT>` did not work properly [#1376](https://github.com/rspatial/terra/issues/1376) by silasprincipe
+- `compareGeom<SpatVector>` did not work [#1654](https://github.com/rspatial/terra/issues/1654) by Jason Flower
+- `buffer<SpatVector>` is now more accurate buffers for lonlat polygons [#1616](https://github.com/rspatial/terra/issues/1616) by Roberto Amaral-Santos
+- `terra:interpNear` used square windows, not circles, beyond 100 points [#1509](https://github.com/rspatial/terra/issues/1509) by Jean-Luc Dupouey
+- `vect` read INT64 fields as integers, sometimes leading to overflows. [#1666](https://github.com/rspatial/terra/issues/1666) by bengannon-fc
+- `plot` showed a legend title even if none was requestd if title parameters were specified . [#1664](https://github.com/rspatial/terra/issues/1664) by Márcia Barbosa
+
+## enhancements
+
+- improved documentation of `writeVector` overwrite when using layers. [#1573](https://github.com/rspatial/terra/issues/1573) by Todd West
+- improved treatment of (supposedly) flipped rasters by Timothée Giraud [#1627](https://github.com/rspatial/terra/issues/1627) and fchianucci [#1646](https://github.com/rspatial/terra/issues/1646)
+- added `map.pal("random")` [#1631](https://github.com/rspatial/terra/issues/1631) by Agustin Lobo
+- expressions can now be used in legend titles [#1626](https://github.com/rspatial/terra/issues/1626) by Noah Goodkind
+- `app` and `tapp` now emit a warning when factors are coerced to numeric [#1566](https://github.com/rspatial/terra/issues/1566) by shuysman
+- `plet<SpatRaster>` now has argument "stretch" for RGB rasters [#1596](https://github.com/rspatial/terra/issues/1596) by Agustin 
+- `%%` and `%/%` now behave the same for SpatRaster as for (base R) numbers [#1661](https://github.com/rspatial/terra/issues/1661) by Klaus Huebert
+
+## new 
+
+- `patches` with option `valus=TRUE` can now distinguish regions based on their cell values (instead of only NA vs not-NA) [#495](https://github.com/rspatial/terra/issues/495) by Jakub Nowosad and [#1632](https://github.com/rspatial/terra/issues/1632) by Agustin Lobo
+- `rowSums`, `rowMeans`, `colSums` and `colMeans` for SpatRaster
+- `metags` for SpatRasterDataset [#1624](https://github.com/rspatial/terra/issues/1624) by Andrea Manica
+- `metags` for layers (bands) of SpatRaster are now saved to and read from GTiff files [#1071](https://github.com/rspatial/terra/issues/1071) by Mike Koontz
+- `global` has new effcient functions "anyNA" and "anynotNA" [#1540](https://github.com/rspatial/terra/issues/1540) by Kevin J Wolz
+- `wrap`, `saveRDS` and `serialize` for SpatExtent. [#1430](https://github.com/rspatial/terra/issues/1430) by BastienFR
+- `vect<SpatGraticule>` method suggested in relation to [tidyterra #155](https://github.com/dieghernan/tidyterra/issues/155) by Diego Hernangómez
+- `toMemory<SpatRaster>` and `<SpatRasterDataset>` methods [#1660](https://github.com/rspatial/terra/pull/1660) by Derek Friend
 
 # version 1.7-83
 
@@ -20,6 +74,9 @@ Released 2024-10-14
 - `terrain` did not accept multiple variables [#1561](https://github.com/rspatial/terra/issues/1561) by Michael Mahoney
 - `rotate` was vulnerable to an integer overflow [#1562](https://github.com/rspatial/terra/issues/1562) by Sacha Ruzzante
 - `getTileExtents` could return overlapping tiles or tiles with gaps due to floating point imprecision. [#1564](https://github.com/rspatial/terra/issues/1564) by Michael Sumner
+- `rasterize` with points failed when using `update=TRUE` [#1611](https://github.com/rspatial/terra/issues/1611) by Jordan Adamson
+- `buffer` on a lonlat multipoint SpatVector returned a buffer around a single point. [#1607](https://github.com/rspatial/terra/issues/1607) by Márcia Barbosa
+- `buffer<SpatVector>` no longer crashes (for particular cases and unknown reasons) on windows [#1331](https://github.com/rspatial/terra/issues/1331) by Julian090601, [#1363](https://github.com/rspatial/terra/issues/1363) by Rupert Overall and [#1531](https://github.com/rspatial/terra/issues/1531) by Igor Graczykowski
 
  
 ## enhancements
@@ -27,11 +84,13 @@ Released 2024-10-14
 - `as.list<SpatRasterDataset>` sets the names of the list [#1513](https://github.com/rspatial/terra/issues/1513)
 - a SpatVectorCollection can now be subset with its names; and if made from a list it takes the names from the list.  [1515](https://github.com/rspatial/terra/issues/1515) by jedgroev
 - argument `fill_range` to plot<SpatRaster> and `plot<SpatVector>` to use the color of the extreme values of the specified range [#1553](https://github.com/rspatial/terra/issues/1553) by Mike Koontz
-- plet<SpatRaster> can now handle rasters with a "local" (Cartesian) CRS. [#1570](https://github.com/rspatial/terra/issues/1570) by Augustin Lobo.
+- `plet<SpatRaster>` can now handle rasters with a "local" (Cartesian) CRS. [#1570](https://github.com/rspatial/terra/issues/1570) by Augustin Lobo.
+- `geom` can now return "wkb" [#1609](https://github.com/rspatial/terra/issues/1609)
+- faster plotting when color names are used. In response to question by Olle on [gis.stackexchange.com](https://gis.stackexchange.com/questions/487112/plotting-discrete-categorical-rasters-with-custom-colors-slows-down-r-terra/488012#488012)
 
 ## new 
 
-- `map-region` returns the coordinates of the axes position of a map created with `plot<Spat*>` [https://github.com/rspatial/terra/issues/1517](https://github.com/rspatial/terra/issues/1517) by Daniel Schuch
+- `map-region` returns the coordinates of the axes position of a map created with `plot<Spat*>` [#1517](https://github.com/rspatial/terra/issues/1517) by Daniel Schuch
 - `polys<leaflet>` method [#1543](https://github.com/rspatial/terra/issues/1543) by Márcia Barbosa
 - `plot<SpatVectorCollection>` method [#1532](https://github.com/rspatial/terra/issues/1532) by jedgroev
 - `add_mtext` to add text around the margins of a map. [#1567](https://github.com/rspatial/terra/issues/1567) by Daniel Schuch
@@ -70,7 +129,7 @@ Released 2024-05-22
 ## new 
 
 - `bestMatch<SpatRaster>` method
-- argument "pairs=TRUE" to `cells` [https://github.com/rspatial/terra/issues/1487](https://github.com/rspatial/terra/issues/1487) by Floris Vanderhaeghe
+- argument "pairs=TRUE" to `cells` [#1487](https://github.com/rspatial/terra/issues/1487) by Floris Vanderhaeghe
 - `add_grid` to add a grid to a map
 
 

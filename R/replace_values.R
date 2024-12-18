@@ -3,6 +3,14 @@
 # Version 1.0
 # License GPL v3
 
+setMethod("set.values", signature(x="SpatRasterDataset"),
+	function(x)  {	
+		x@pntr$readAll()
+		messages(x, "set.values")
+	}
+)
+
+
 setMethod("set.values", signature(x="SpatRaster"),
 	function(x, cells, values, layer=0)  {
 
@@ -42,7 +50,7 @@ setMethod("set.values", signature(x="SpatRaster"),
 				#}
 				values <- as.vector(values)
 			}
-			ok <- x@ptr$replaceCellValuesLayer(layer-1, cells-1, values, bylyr, spatOptions())
+			ok <- x@pntr$replaceCellValuesLayer(layer-1, cells-1, values, bylyr, spatOptions())
 			messages(x)
 			invisible(TRUE)
 		} else {
@@ -50,7 +58,8 @@ setMethod("set.values", signature(x="SpatRaster"),
 				error("set.values", "some (but not all) layer numbers are < 1")
 			}
 			if (missing(cells) && missing(values)) {
-				return(readAll(x))
+				x@pntr$readAll()
+				return(messages(x, "set.values"))
 			}
 			bylyr <- FALSE
 			if (!is.null(dim(values))) {
@@ -63,7 +72,7 @@ setMethod("set.values", signature(x="SpatRaster"),
 				#}
 				values <- as.vector(values)
 			}
-			ok <- x@ptr$replaceCellValues(cells-1, values, bylyr, spatOptions())
+			ok <- x@pntr$replaceCellValues(cells-1, values, bylyr, spatOptions())
 			messages(x)
 		}
 		invisible(TRUE)
@@ -179,13 +188,13 @@ make_replace_index <- function(v, vmx, nreps, name="i") {
 		value <- as.vector(value)
 	}
 	opt <- spatOptions()
-	x@ptr <- x@ptr$deepcopy()
+	x@pntr <- x@pntr$deepcopy()
 	if (is.na(k[1])) {
-		if (!x@ptr$replaceCellValues(i-1, value, bylyr, opt)) {
+		if (!x@pntr$replaceCellValues(i-1, value, bylyr, opt)) {
 			messages(x, "`[<-`")
 		} 
 	} else {
-		if (!x@ptr$replaceCellValuesLayer(k-1, i-1, value, bylyr, opt)) {
+		if (!x@pntr$replaceCellValuesLayer(k-1, i-1, value, bylyr, opt)) {
 			messages(x, "`[<-`")
 		}
 	}
@@ -198,7 +207,7 @@ make_replace_index <- function(v, vmx, nreps, name="i") {
 	for (lyr in ulyrs) {
 		y <- x[[lyr]]
 		i <- which(lyrs == lyr)
-		if (!y@ptr$replaceCellValues(cell[i]-1, value[i], FALSE, opt)) {
+		if (!y@pntr$replaceCellValues(cell[i]-1, value[i], FALSE, opt)) {
 			messages(y, "`[<-`")
 		}
 		x[[lyr]] <- y
@@ -258,6 +267,11 @@ setReplaceMethod("[", c("SpatRaster", "ANY", "ANY", "ANY"),
 	function(x, i, j, k, value) {
 
 		m <- c(missing(i), missing(j), missing(k))
+		if (all(m) && is.matrix(value) && ((nrow(value) == nrow(x)) && (ncol(value) == ncol(x) * nlyr(x)))) {
+			values(x) <- value
+			return(x)
+		}
+		
 		s <- rep(FALSE, 3)
 		if (!m[1]) s[1] <- inherits(i, "list")
 		if (!m[2]) s[2] <- inherits(j, "list")
@@ -276,7 +290,7 @@ setReplaceMethod("[", c("SpatRaster", "ANY", "ANY", "ANY"),
 			m[3] <- TRUE
 		}
 
-		if ((!m[1]) && (inherits(i, "matrix"))) {
+		if ((!m[1]) && (inherits(i, "matrix"))) {		
 			if (ncol(i) == 1) {
 				i <- i[,1]
 			} else if (ncol(i) == 2) {

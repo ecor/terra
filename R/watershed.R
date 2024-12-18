@@ -8,7 +8,7 @@ setMethod("watershed", signature(x="SpatRaster"),
         opt <- spatOptions(filename, ...)		
 		cell <- cellFromXY(x, pourpoint)
 		if (is.na(cell)) error("watershed", "pourpoint not on raster")
-        x@ptr <- x@ptr$watershed2(as.integer(cell-1), opt)
+        x@pntr <- x@pntr$watershed2(as.integer(cell-1), opt)
         messages(x, "watershed") ## EC 20210318
     }
 )
@@ -16,7 +16,8 @@ setMethod("watershed", signature(x="SpatRaster"),
 setMethod("pitfinder", signature(x="SpatRaster"), 
     function(x,pits_on_boundary=TRUE,filename="", ...) { 
         opt <- spatOptions(filename, ...)
-        x@ptr <- x@ptr$pitfinder2(as.integer(pits_on_boundary),opt)
+        x@pntr <- x@pntr$pitfinder2(as.integer(pits_on_boundary),opt)
+
         messages(x, "pitfinder") ## EC 20210318
     }
 )
@@ -24,7 +25,7 @@ setMethod("pitfinder", signature(x="SpatRaster"),
 setMethod("NIDP", signature(x="SpatRaster"), 
     function(x, filename="", ...) { 
         opt <- spatOptions(filename, ...)
-        x@ptr <- x@ptr$NIDP2(opt)
+        x@pntr <- x@pntr$NIDP2(opt)
         messages(x, "NIDP") ## EC 20231031
     }
 )
@@ -33,9 +34,9 @@ setMethod("flowAccumulation", signature(x="SpatRaster"),
     function(x, weight=NULL, filename="", ...) { 
 		opt <- spatOptions(filename, ...)
 		if (is.null(weight)) {      
-			x@ptr <- x@ptr$flowAccu2(opt)
+			x@pntr <- x@pntr$flowAccu2(opt)
 	    } else {
-			x@ptr <- x@ptr$flowAccu2_weight(weight@ptr, opt)
+			x@pntr <- x@pntr$flowAccu2_weight(weight@pntr, opt)
 		} 
 		messages(x, "flowAccumulation") 
     }      
@@ -51,7 +52,7 @@ setMethod("flowdirD8ltd", signature(x="SpatRaster"),
             if (deviation_type=="lad") use_lad=1
             opt <- spatOptions(filename, ...)
           ##  uselad=0
-            x@ptr <- x@ptr$d8ltd(lambda,use_lad,opt)
+            x@pntr <- x@pntr$d8ltd(lambda,use_lad,opt)
             messages(x, "flowdirD8ltd") ## EC 20210318
           }
 )
@@ -79,7 +80,7 @@ setMethod("pitfiller", signature(x="SpatRaster"),
             opt <- spatOptions(filename, ...)
             ##  uselad=0
             print(pit)
-            x@ptr <- x@ptr$pitfillerm(pit@ptr,flowdir@ptr,niter,lambda,use_lad,U,D,beta,theta_exp,opt)
+            x@pntr <- x@pntr$pitfillerm(pit@pntr,flowdir@pntr,niter,lambda,use_lad,U,D,beta,theta_exp,opt)
             messages(x, "pitfiller") ## EC 20210318
           }
 )

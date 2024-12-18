@@ -53,16 +53,23 @@ setMethod("subset", signature(x="SpatRaster"),
 		if (negate) subset = -subset
 		subset <- positive_indices(subset, nlyr(x), TRUE, "subset")
 		opt <- spatOptions(filename, overwrite, ...)
-		x@ptr <- x@ptr$subset(subset-1, opt)
+		x@pntr <- x@pntr$subset(subset-1, opt)
 		messages(x, "subset")
 	}
 )
 
 
-
 ## exact matching
 setMethod("$", "SpatRaster",
 	function(x, name) {
+		if ((nlyr(x) == 1) && is.factor(x)) {
+			factnms <- names(cats(x)[[1]])
+			i <- match(name, factnms[-1])
+			if (!is.na(i)) {
+				activeCat(x) <- i		
+				return(x)
+			}
+		}
 		subset(x, name, NSE=FALSE)
 	}
 )
@@ -144,10 +151,10 @@ setMethod("subset", signature(x="SpatVector"),
 			i <- 0
 		}
 	}
-	x@ptr <- x@ptr$subset_cols(i-1)
+	x@pntr <- x@pntr$subset_cols(i-1)
 	x <- messages(x, "subset")
 	if (drop) {	# drop geometry
-		.getSpatDF(x@ptr$df)
+		.getSpatDF(x@pntr$df)
 	} else {
 		x
 	}
@@ -157,7 +164,7 @@ setMethod("subset", signature(x="SpatVector"),
 setMethod("[", c("SpatVector", "numeric", "missing"),
 function(x, i, j, ... , drop=FALSE) {
 	i <- positive_indices(i, nrow(x), TRUE, "`[`")
-	x@ptr <- x@ptr$subset_rows(i-1)
+	x@pntr <- x@pntr$subset_rows(i-1)
 	x <- messages(x, "[")
 	if (drop) {
 		as.data.frame(x)
@@ -176,7 +183,7 @@ function(x, i, j, drop=FALSE) {
 setMethod("[", c("SpatVector", "logical", "missing"),
 function(x, i, j, drop=FALSE) {
 	i <- which(rep_len(i, nrow(x)))
-	x@ptr <- x@ptr$subset_rows(i-1)
+	x@pntr <- x@pntr$subset_rows(i-1)
 	x <- messages(x, "[")
 	if (drop) {
 		as.data.frame(x)
@@ -189,8 +196,8 @@ setMethod("[", c("SpatVector", "numeric", "numeric"),
 function(x, i, j, drop=FALSE) {
 	i <- positive_indices(i, nrow(x), TRUE, "`[`")
 	j <- positive_indices(j, ncol(x), TRUE, "`[`")
-	p <- x@ptr$subset_rows(i-1)
-	x@ptr <- p$subset_cols(j-1)
+	p <- x@pntr$subset_rows(i-1)
+	x@pntr <- p$subset_cols(j-1)
 	x <- messages(x, "'['")
 	if (drop) {
 		as.data.frame(x)
@@ -203,7 +210,7 @@ function(x, i, j, drop=FALSE) {
 setMethod("[", c("SpatVector", "missing", "numeric"),
 function(x, i, j, drop=FALSE) {
 	j <- positive_indices(j, ncol(x), TRUE, "`[`")
-	x@ptr <- x@ptr$subset_cols(j-1)
+	x@pntr <- x@pntr$subset_cols(j-1)
 	x <- messages(x, "[")
 	if (drop) {
 		as.data.frame(x)
