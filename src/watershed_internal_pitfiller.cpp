@@ -116,7 +116,7 @@ void pitfiller(int nx,int ny,double ipit, double *pitf,double *e,double *eout,do
     
     
     *(eout+jv[0])=ev[0];
-    if (is_one_pixel==1) printf("pit number %f : e=%f eout=%f one_pixel=%d\n",ipit,*(e+jv[0]),*(eout+jv[0]),is_one_pixel);
+   //20241218 if (is_one_pixel==1) printf("pit number %f : e=%f eout=%f one_pixel=%d\n",ipit,*(e+jv[0]),*(eout+jv[0]),is_one_pixel);
     
     
   }
@@ -296,7 +296,7 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
         *(e+i)=*(eout+i);
       }
       
-      printf("START iteration %07d on %07d \n",ir,niter);
+      //20241218 printf("START iteration %07d on %07d \n",ir,niter);
       if (*(pitftemp+i)>0) {
    
         ipit=*(pitftemp+i);
@@ -311,7 +311,7 @@ void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double
 //         // *(e+b)=*(eout+b);
 //        if (*(pitf+b)==ipit) *(pitftemp+b)=0;
       } 
-      printf("END iteration %07d on %07d \n",ir,niter);
+    //20241218  printf("END iteration %07d on %07d \n",ir,niter);
     }
     
     
@@ -458,16 +458,16 @@ SpatRaster  SpatRaster::pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter
     double dx2 = dx * dx; // Calcolo di dx al quadrato
     
     // Print input variables
-    printf("U = %f\n", U);
-    printf("delta_l = %f\n", delta_l);
-    printf("dx = %f\n", dx);
-    printf("D = %f\n", D);
-    printf("z_avg = %f\n", z_avg);
-    printf("beta = %f\n", beta);
-    printf("A = %f\n", A);
-    printf("theta = %f\n", theta);
-    printf("z_d = %f\n", z_d);
-    printf("dx^2 = %f\n", dx2);
+    // printf("U = %f\n", U);
+    // printf("delta_l = %f\n", delta_l);
+    // printf("dx = %f\n", dx);
+    // printf("D = %f\n", D);
+    // printf("z_avg = %f\n", z_avg);
+    // printf("beta = %f\n", beta);
+    // printf("A = %f\n", A);
+    // printf("theta = %f\n", theta);
+    // printf("z_d = %f\n", z_d);
+    // printf("dx^2 = %f\n", dx2);
     
     
     double numerator = U * delta_l * dx2 + 4 * D * delta_l * z_avg + beta * pow(A, theta) * dx2 * z_d;
