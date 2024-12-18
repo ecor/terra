@@ -52,7 +52,7 @@ setMethod("flowdirD8ltd", signature(x="SpatRaster"),
             if (deviation_type=="lad") use_lad=1
             opt <- spatOptions(filename, ...)
           ##  uselad=0
-            x@ptr <- x@ptr$d8ltd(lambda,use_lad,opt)
+            x@pntr <- x@pntr$d8ltd(lambda,use_lad,opt)
             messages(x, "flowdirD8ltd") ## EC 20210318
           }
 )
@@ -80,7 +80,7 @@ setMethod("pitfiller", signature(x="SpatRaster"),
             opt <- spatOptions(filename, ...)
             ##  uselad=0
             print(pit)
-            x@ptr <- x@ptr$pitfillerm(pit@ptr,flowdir@ptr,niter,lambda,use_lad,U,D,beta,theta_exp,opt)
+            x@pntr <- x@pntr$pitfillerm(pit@pntr,flowdir@pntr,niter,lambda,use_lad,U,D,beta,theta_exp,opt)
             messages(x, "pitfiller") ## EC 20210318
           }
 )
