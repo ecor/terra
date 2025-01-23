@@ -14,6 +14,7 @@
 \alias{categories,SpatRaster-method}
 \alias{addCats}
 \alias{addCats,SpatRaster-method}
+\alias{combineLevels}
   
   
 \title{Categorical rasters}
@@ -33,6 +34,8 @@ To set categories for the first layer of a SpatRaster, you can provide \code{lev
 \code{droplevels} removes categories that are not used (declared but not present as values in the raster) if \code{levels=NULL}.
 
 \code{addCats} adds additional categories to a layer that already is categorical. It adds new variables, not new levels of an existing categorical variable.
+
+\code{combineLevels} combines the levels of all layers of \code{x} and sets them to all layers. That fails if there are labeling conflicts between layers
 }
 
 \usage{
@@ -47,6 +50,8 @@ To set categories for the first layer of a SpatRaster, you can provide \code{lev
 \S4method{droplevels}{SpatRaster}(x, level=NULL, layer=1)
 
 \S4method{addCats}{SpatRaster}(x, value, merge=FALSE, layer=1)
+
+combineLevels(x, assign=TRUE)
 }
 
 
@@ -58,11 +63,12 @@ To set categories for the first layer of a SpatRaster, you can provide \code{lev
   \item{level}{the categories to remove for the layer specified with \code{layer}}
   \item{merge}{logical. If \code{TRUE}, the categories are combined with \code{\link[base]{merge}} using the first column of \code{value} as ID. If \code{FALSE} the categories are combined with \code{cbind}}
   \item{...}{additional arguments (none)}
+  \item{assign}{logical. Assign the combined levels to all layers of \code{x}? If \code{FALSE}, the levels are returned}
 }  
 
 
 \value{
-list of data.frames (levels, cats) or logical (is.factor)
+SpatRaster, data.frame, list of data.frames (levels, cats), or logical (is.factor)
 }
 
 \seealso{\code{\link{activeCat}}, \code{\link{catalyze}}, \code{\link{set.cats}}, \code{\link{as.factor}}, \code{\link{is.factor}}}

@@ -33,6 +33,35 @@
 #include <sstream>
 
 
+/*
+GDAL 3.10
+
+std::vector<double> SpatRaster::extract_interpolate(std::vector<double> x, std::vector<double> y, std::string algo) {
+
+	GDALRIOResampleAlg eInterpolation = GRIORA_Bilinear ;
+	size_t n = x.size();
+	std::vector<double> out(n, NAN);
+	double value;
+	GDALDatasetH hDs;
+	
+	SpatOptions opt;
+	if (!open_gdal(hDs, 0, false, opt)) {
+		setError("cannot open dataset");
+		return(out);
+	}
+	
+	GDALRasterBandH poBand = GDALGetRasterBand(hDs, 1);
+	for (size_t i=0; i<n; i++) {
+		if (GDALInterpolateAtPoint(pbBand, x[i], y[1],  eInterpolation, &value) == CE_None) {
+			out[i] = value;
+		}
+	}
+	GDALClose( hDs );
+	return out;
+}	
+*/
+
+
 SpatGeom getPolygonsGeom2(OGRGeometry *poGeometry) {
 	SpatGeom g(polygons);
 	OGRPoint ogrPt;
@@ -164,7 +193,7 @@ SpatVector SpatRaster::dense_extent(bool inside, bool geobounds) {
 
 #if GDAL_VERSION_MAJOR <= 2 && GDAL_VERSION_MINOR < 2
 
-SpatRaster SpatRaster::warper(SpatRaster x, std::string crs, std::string method, bool mask, bool align, SpatOptions &opt) {
+SpatRaster SpatRaster::warper(SpatRaster x, std::string crs, std::string method, bool mask, bool align, bool resample, SpatOptions &opt) {
 	SpatRaster out;
 	out.setError("Not supported for this old version of GDAL");
 	return(out);
@@ -523,7 +552,7 @@ SpatRaster SpatRaster::warper(SpatRaster x, std::string crs, std::string method,
 		out.setSRS(crs);
 		if (!get_output_bounds(hSrcDS, srccrs, crs, out)) {
 			GDALClose( hSrcDS );
-			out.setError("cannot get output boundaries");
+			out.setError("cannot get output boundaries for the target crs");
 			return out;
 		}
 		GDALClose( hSrcDS );
@@ -987,7 +1016,7 @@ SpatRaster SpatRaster::warper_by_util(SpatRaster x, std::string crs, std::string
 		out.setSRS(crs);
 		if (!get_output_bounds(hSrcDS, srccrs, crs, out)) {
 			GDALClose( hSrcDS );
-			out.setError("cannot get output boundaries");
+			out.setError("cannot get output boundaries for the target crs");
 			return out;
 		}
 		GDALClose( hSrcDS );
@@ -1367,7 +1396,9 @@ SpatVector SpatRaster::polygonize(bool round, bool values, bool narm, bool aggre
 	}
 */
 	
-	if (tmp.source[0].extset || tmp.source[0].flipped) {
+	if (tmp.source[0].extset) { // || tmp.source[0].flipped) {
+	Rcpp::Rcout << "hardcopy\n";
+		
 		tmp = tmp.hardCopy(topt);
 	}
 

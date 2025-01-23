@@ -287,6 +287,9 @@ bool checkFormatRequirements(const std::string &driver, std::string &filename, s
 			msg = "SAGA filenames must end on '.sdat'";
 			return false;
 		}
+	} else if (driver == "VRT") {
+		msg = "Cannot directly write to VRT (see '?vrt')";
+		return false;
 	}
 
 	return true;
@@ -351,6 +354,13 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		setError("invalid driver");
 		return (false);
 	}
+	if (driver == "GTiff") {
+		if (nlyr() > 65535) {
+			setError("cannot write more than 65535 layers");
+			return(false);
+		}
+	}
+	
     char **papszMetadata;
     papszMetadata = poDriver->GetMetadata();
     if (!CSLFetchBoolean( papszMetadata, GDAL_DCAP_RASTER, FALSE)) {
@@ -607,14 +617,14 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 
 	bool scoffwarning = false;
 
-	if (driver == "GTiff") {
+	// if (driver == "GTiff") {
 		std::vector<std::string> m = getTags();
 		if (m.size() > 0) {
 			for (size_t i=0; i<m.size(); i+=2) {
 				poDS->SetMetadataItem(m[i].c_str(), m[i+1].c_str(), "USER_TAGS");
 			}
 		}
-	}
+	// }
 
 	std::vector<std::string> tstr, ustr;
 	bool wtime = false;
@@ -623,7 +633,8 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 	if (hasTime()) {
 		tstr = getTimeStr(false, "T");
 		wtime = true;	
-		have_date_time = (tstep == "seconds") || (tstep == "days") || (tstep == "years") || (tstep == "yearmonths");
+		have_date_time = true;
+//		have_date_time = (tstep == "seconds") || (tstep == "days") || (tstep == "years") || (tstep == "yearmonths");
  	}
 	bool wunit = false;
 	if (hasUnit()) {
@@ -668,7 +679,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		*/
 		poBand->SetDescription(nms[i].c_str());
 
-		if (driver == "GTiff") {
+		// if (driver == "GTiff") {
 			std::vector<std::string> m = getLyrTags({i});
 			if (m.size() > 0) {
 				for (size_t j=0; j<m.size(); j+=3) {
@@ -686,7 +697,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 			if (wunit) {
 				poBand->SetMetadataItem("UNIT", ustr[i].c_str());				
 			}
-		}
+		// }
 
 
 		if ((i==0) || (driver != "GTiff")) {
@@ -1139,7 +1150,6 @@ bool SpatRaster::update_meta(bool names, bool crs, bool ext, SpatOptions &opt) {
 		return false;
 	}
 	GDALDatasetH hDS;
-	GDALRasterBandH poBand;
 	size_t n=0;
 	for (size_t i=0; i<nsrc(); i++) {
 		if (source[i].memory) continue;
@@ -1150,12 +1160,12 @@ bool SpatRaster::update_meta(bool names, bool crs, bool ext, SpatOptions &opt) {
 		}
 		if (names) {
 			for (size_t b=0; b < source[i].nlyr; b++) {
-				poBand = GDALGetRasterBand(hDS, b+1);
+				GDALRasterBandH poBand = GDALGetRasterBand(hDS, b+1);
 				if (GDALGetRasterAccess(poBand) == GA_Update) {
 					GDALSetDescription(poBand, source[i].names[b].c_str());
 				}
 			}
-		} 
+		}
 		if (crs) {
 			std::string crs = source[i].srs.wkt;
 			OGRSpatialReference oSRS;

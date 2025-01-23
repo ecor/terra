@@ -722,6 +722,18 @@ SpatRaster SpatRaster::aggregate(std::vector<size_t> fact, std::string fun, bool
 	//size_t outnc = out.ncol();
 	
 	if (fun == "table") {
+		
+	/*
+		std::vector<std::vector<double>> ud = unique(false, 0, ops);
+		std::vector<long> uvals;
+		uvals.reserve(ud.size());
+		for (size_t i=0; i<ud.size(); i++) uvals.push_back(round(ud[i]));
+		std::map<long, unsigned long long> counts;
+		for (sizt_t =0; i<uvals.size(); i++) {
+			counts[uvals[i]] = 0;
+		}
+	*/
+		
 		for (size_t i = 0; i < bs.n; i++) {
 			std::vector<double> vin, v;
 			readValues(vin, bs.row[i], bs.nrows[i], 0, nc);
@@ -3267,6 +3279,103 @@ SpatRaster SpatRaster::cover(SpatRaster x, std::vector<double> values, SpatOptio
 }
 
 
+SpatRaster SpatRaster::cover(std::vector<double> values, SpatOptions &opt) {
+
+	SpatRaster out = geometry(1, true, true, true);
+	if (!hasValues()) return out;
+	size_t nl = nlyr();
+	if (nl == 1) {
+		return deepCopy();
+	}
+	if (!readStart()) {
+		out.setError(getError());
+		return out;
+	}
+
+  	if (!out.writeStart(opt, filenames())) {
+		readStop();
+		return out;
+	}
+	if (values.size() == 1) {
+		double value=values[0];
+		for (size_t i = 0; i < out.bs.n; i++) {
+			std::vector<size_t> off(nl);
+			for (size_t k=1; k < nl; k++) {
+				off[k] = k * out.bs.nrows[i] * ncol();
+			}
+			std::vector<double> v;
+			readValues(v, out.bs.row[i], out.bs.nrows[i], 0, ncol());
+			if (std::isnan(value)) {
+				for (size_t j=0; j < off[1]; j++) {
+					for (size_t k=1; k < nl; k++) {
+						if (std::isnan(v[j])) {
+							v[j] = v[j + off[k]];
+						} else {
+							continue;
+						}
+					}
+				}
+			} else {
+				for (size_t j=0; j < off[1]; j++) {
+					for (size_t k=1; k < nl; k++) {
+						if (v[j] == value) {
+							v[j] = v[j + off[k]];
+						} else {
+							continue;
+						}
+					}
+				}
+			}
+			std::vector<double> w = {v.begin(), v.begin()+off[1]}; 
+			if (!out.writeBlock(w, i)) return out;
+		}
+
+	} else {
+
+		values = vunique(values);
+		bool hasNA = false;
+		for (int i = values.size()-1; i>=0; i--) {
+			if (std::isnan(values[i])) {
+				hasNA = true;
+				values.erase(values.begin()+i);
+			}
+		}
+
+		for (size_t i = 0; i < out.bs.n; i++) {
+			std::vector<size_t> off(nl);
+			for (size_t k=1; k < nl; k++) {
+				off[k] = k * out.bs.nrows[i] * ncol();
+			}
+			std::vector<double> v;
+			readValues(v, out.bs.row[i], out.bs.nrows[i], 0, ncol());
+			for (size_t j=0; j < off[1]; j++) {
+				if (hasNA) {
+					for (size_t k=1; k < nl; k++) {
+						if (std::isnan(v[j])) {
+							v[j] = v[j+off[k]];
+							continue;
+						}
+					}
+				}
+				for (size_t j=0; j<values.size(); j++) {
+					for (size_t k=1; k < nl; k++) {
+						if (v[j] == values[j]) {
+							v[j] = v[j+off[k]];
+							continue;
+						}
+					}
+				}
+			}
+			std::vector<double> w = {v.begin(), v.begin()+off[1]}; 
+			if (!out.writeBlock(w, i)) return out;
+		}
+	}
+
+	out.writeStop();
+	readStop();
+	return(out);
+}
+
 
 
 SpatRaster SpatRaster::extend(SpatExtent e, std::string snap, double fill, SpatOptions &opt) {
@@ -3428,20 +3537,36 @@ SpatRaster SpatRaster::crop(SpatExtent e, std::string snap, bool expand, SpatOpt
 
 
 SpatRaster SpatRaster::cropmask(SpatVector &v, std::string snap, bool touches, bool extend, SpatOptions &opt) {
+	SpatRaster out;
 	if (v.nrow() == 0) {
-		SpatRaster out;
 		out.setError("cannot crop a SpatRaster with an empty SpatVector");
 		return out;
 	}
+	std::vector<bool> w = hasWindow();
+	bool haswin = false;
+	for (size_t i=0; i<w.size(); i++) {
+		if (w[i]) {
+			haswin = true;
+			break;
+		}
+	}
+	if (extend || haswin) {
+		SpatOptions copt(opt);
+		out = crop(v.extent, snap, extend, copt);
+		if (out.hasError()) return out;
 
-	SpatOptions copt(opt);
-	SpatRaster out = crop(v.extent, snap, extend, copt);
-	if (out.hasError()) return out;
+//		out = out.mask(v, false, NAN, touches, opt);	
 
-	SpatOptions ropt(copt);
-	SpatRaster msk = out.geometry(1, false, false, false, false);
-	msk = out.rasterize(v, "", {1}, 0, touches, "", false, false, false, ropt);
-	return out.mask(msk, false, 0, NAN, opt);	
+		SpatRaster msk = out.geometry(1, false, false, false, false);
+		msk = out.rasterize(v, "", {1}, 0, touches, "", false, false, false, copt);
+		if (msk.hasError()) return msk;
+		out = out.mask(msk, false, 0, NAN, opt);	
+	} else {
+		setWindow(align(v.extent, snap));
+		out = mask(v, false, NAN, touches, opt);	
+		removeWindow();		
+	}
+	return out;
 }
 
 
@@ -3555,38 +3680,50 @@ bool SpatRaster::compare_origin(std::vector<double> x, double tol) {
 	return true;
 }
 
+/*
+void print_ext(SpatRaster &r){
+	SpatExtent e = r.getExtent();
+	Rcpp::Rcout << e.xmin << " " << e.xmax << " " << e.ymin << " " << e.ymax << " - " << r.xres() << " " << r.yres() <<  std::endl;
+}
+*/
 
 
+bool write_part(SpatRaster& out, SpatRaster r, const double& hxr, size_t& nl, bool notfirstlyr, std::string method, size_t &warn, SpatOptions &opt) {
 
-bool write_part(SpatRaster& out, SpatRaster& r, const double& hxr, size_t& nl, bool notfirstlyr, bool &warn, SpatOptions &opt) {
 	BlockSize bs = r.getBlockSize(opt);
-	if (!r.readStart()) {
-	out.setError(r.getError());
-		return false;
-	}
 	SpatExtent re = r.getExtent();
-	if (!r.shared_basegeom(out, 0.1, true)) {
-		SpatRaster temp = out.crop(re, "near", false, opt);
+	SpatRaster tmp = out.geometry();
+	tmp = tmp.crop(r.getExtent(), "near", false, opt);
+
+	if (!tmp.compare_geom(r, false, true, opt.get_tolerance(), false, true, true, false)) {
 		std::vector<bool> hascats = r.hasCategories();
-		std::string method = hascats[0] ? "near" : "bilinear";
-		r = r.warper(temp, "", method, false, false, true, opt);
+		if (method == "") method = hascats[0] ? "near" : "bilinear";
+		//std::string filename = tempFile(opt.get_tempdir(), opt.tmpfile, ".tif");
+		SpatOptions wopt(opt);
+		r = r.warper(tmp, "", method, false, false, true, wopt);
 		if (r.hasError()) {
 			out.setError(r.getError());
 			return false;
 		}
-		warn = true;
+		warn++;
+		bs = r.getBlockSize(opt);
 		re = r.getExtent();
 	}
 
 	for (size_t i=0; i<bs.n; i++) {
 		std::vector<double> v, vout;
-		r.readBlock(v, bs, i);
 		size_t row1  = out.rowFromY(r.yFromRow(bs.row[i])); 
 		size_t row2  = out.rowFromY(r.yFromRow(bs.row[i]+bs.nrows[i]-1));
 		size_t col1  = out.colFromX(re.xmin + hxr);
 		size_t col2  = out.colFromX(re.xmax - hxr);
 		size_t ncols = col2-col1+1;
 		size_t nrows = row2-row1+1;
+
+		if (!r.readStart()) {
+			out.setError(r.getError());
+			return false;
+		}
+		r.readBlock(v, bs, i);
 		recycle(v, ncols * nrows * nl);
 		
 		if (notfirstlyr) {
@@ -3604,7 +3741,8 @@ bool write_part(SpatRaster& out, SpatRaster& r, const double& hxr, size_t& nl, b
 }
 
 
-SpatRaster SpatRasterCollection::merge(bool first, bool narm, SpatOptions &opt) {
+SpatRaster SpatRasterCollection::merge(bool first, bool narm, int algo, std::string method, SpatOptions &opt) {
+
 
 	SpatRaster out;
 	size_t n = size();
@@ -3617,70 +3755,267 @@ SpatRaster SpatRasterCollection::merge(bool first, bool narm, SpatOptions &opt) 
 		return(out);
 	}
 
-	std::vector<bool> hvals(n);
-	hvals[0] = ds[0].hasValues();
-	SpatExtent e = ds[0].getExtent();
-	size_t nl = ds[0].nlyr();
-	for (size_t i=1; i<n; i++) {
-		//  lyrs, crs, warncrs, ext, rowcol, res
-		if (!ds[0].compare_geom(ds[i], false, false, opt.get_tolerance(), false, false, false, true)) {
-			out.setError(ds[0].msg.error);
-			return(out);
+	if (algo == 1) {
+		SpatExtent e = ds[0].getExtent();
+		size_t nl = ds[0].nlyr();
+		bool anyvals = false;
+		for (size_t i=1; i<n; i++) {
+			e.unite(ds[i].getExtent());
+			if (ds[i].hasValues()) anyvals = true;
+			nl = std::max(nl, ds[i].nlyr());
 		}
-		e.unite(ds[i].getExtent());
-		hvals[i] = ds[i].hasValues();
-		nl = std::max(nl, ds[i].nlyr());
-	}
 
-	out = ds[0].geometry(nl, true);
-	//out = ds[0].geometry(1, false);
-	out.setExtent(e, true, true, "");
+		out = ds[0].geometry(nl, true);
+		out.setExtent(e, true, true, "");
 
-	bool anyvals = false;
-	for (size_t i=0; i<n; i++) {
-		if (hvals[i]) {
-			anyvals = true;
-			break;
+		if (!anyvals) return out;
+
+		double hxr = out.xres()/2;
+
+		std::vector<int> vt = getValueType(true);
+			if (vt.size() == 1) {
+			out.setValueType(vt[0]);
 		}
-	}
-	if (!anyvals) {
-		return out;
-	}
 
-	//out = out.geometry(nl, true);
-	double hxr = out.xres()/2;
+		opt.ncopies = std::max(opt.ncopies, size() + nl);
+		if (!out.writeStart(opt, filenames())) { return out; }
 
-	std::vector<int> vt = getValueType(true);
-		if (vt.size() == 1) {
-		out.setValueType(vt[0]);
-	}
+		std::vector<size_t> seq(n);
+		if (first) {
+			std::iota(seq.rbegin(), seq.rend(), 0);
+		} else {
+			std::iota(seq.begin(), seq.end(), 0);
+		}
 
- 	if (!out.writeStart(opt, filenames())) { return out; }
+		SpatOptions topt(opt);
 
-	std::vector<size_t> seq(n);
-	if (first) {
-		std::iota(seq.rbegin(), seq.rend(), 0);
+		size_t warn = 0;
+		bool notfirst = false;
+		for (size_t i=0; i<n; i++) {
+			if (!ds[seq[i]].hasValues()) continue;
+			if (narm) {
+				notfirst = i > 0;
+			}
+			if (!write_part(out, ds[seq[i]], hxr, nl, notfirst, method, warn, topt)) {
+				return out;
+			}
+		}
+		out.writeStop();
+		if (warn > 0) {
+			out.addWarning(std::to_string(warn) + " raster(s) that did not share the base geometry of the first raster were resampled");
+		}
+		return(out);
+		
+	} else if (algo == 2) {
+
+// narm is not used
+
+		std::vector<unsigned> use;
+		use.reserve(n);
+		if (ds[0].hasValues()) use.push_back(0);
+		SpatExtent e = ds[0].getExtent();
+		size_t nl = ds[0].nlyr();
+		for (size_t i=1; i<n; i++) {
+			e.unite(ds[i].getExtent());
+			if (ds[i].hasValues()) use.push_back(i);
+			nl = std::max(nl, ds[i].nlyr());
+		}
+
+		out = ds[0].geometry(nl, true);
+		out.setExtent(e, true, true, "");
+		if (use.empty()) return out;
+
+		SpatOptions topt(opt);
+
+		for (size_t i=0; i<use.size(); i++) {
+			//  lyrs, crs, warncrs, ext, rowcol, res
+			SpatRaster tmp = out.crop(ds[use[i]].getExtent(), "near", false, topt);
+			if (!tmp.compare_geom(ds[use[i]], false, true, topt.get_tolerance(), true, true, true, false)) {
+				out.setError("rasters geometries are not compatible");
+				return(out);
+			}
+		}
+
+		std::vector<int> vt = getValueType(true);
+			if (vt.size() == 1) {
+			out.setValueType(vt[0]);
+		}
+
+		opt.ncopies = std::max(opt.ncopies, size() + nl);
+		if (!out.writeStart(opt, filenames())) { return out; }
+
+		SpatOptions ropt(opt);
+		
+		for (size_t i=0; i<out.bs.n; i++) {
+			std::vector<std::vector<double>> v;
+			readBlock(out, v, out.bs, i, use, ropt);
+			if (hasError()) {
+				out.writeStop();
+				out.setError(getError());
+				return out;
+			}
+			std::vector<size_t> sizes(v.size());
+
+			size_t n = nl * out.bs.nrows[i] * out.ncol();
+			size_t m = v.size();
+
+			bool multi_sz = false;
+			std::vector<size_t> sz(m);
+			for (size_t j=0; j<m; j++) {
+				sz[j] = v[j].size();
+				if (v[j].size() < n) multi_sz = true;
+				if (v[j].size() > n) {
+				out.setError("something is not right. Exected: " + std::to_string(n) + " got: " + std::to_string(v[j].size()) + " values");
+					return out;
+				}
+			}
+
+			if (m == 1) {
+				if (!out.writeBlock(v[0], i)) return out;				
+			} else if (first) {
+				recycle(v[0], n);
+				if (multi_sz) { // with recycling
+					for (size_t j=0; j<n; j++) {
+						for (size_t k=1; k<m; k++) {
+							if (std::isnan(v[0][j])) {
+								v[0][j] = v[k][j%sz[k]];
+							} else {
+								continue;
+							}
+						}
+					}
+				} else {
+					for (size_t j=0; j<n; j++) {
+						for (size_t k=1; k<m; k++) {
+							if (std::isnan(v[0][j])) {
+								v[0][j] = v[k][j];
+							} else {
+								continue;
+							}
+						}
+					}
+				}
+				if (!out.writeBlock(v[0], i)) return out;	
+			} else { // last
+				m -= 1;
+				recycle(v[m], n);
+				if (multi_sz) {
+					for (size_t j=0; j<n; j++) {
+						for (long k=(m-1); k >= 0; k--) {
+							if (std::isnan(v[m][j])) {
+								v[m][j] = v[k][j%sz[k]];
+							} else {
+								continue;
+							}
+						}
+					}
+				} else {
+					for (size_t j=0; j<n; j++) {
+						for (long k=(m-1); k >= 0; k--) {
+							if (std::isnan(v[m][j])) {
+								v[m][j] = v[k][j];
+							} else {
+								continue;
+							}
+						}
+					}
+				}
+				if (!out.writeBlock(v[m], i)) return out;
+			}
+		}
+		out.writeStop();
+		return(out);
+		
+	} else if (algo==3) {
+
+// narm is not used
+
+		SpatExtent e = ds[0].getExtent();
+		size_t nl = ds[0].nlyr();
+		for (size_t i=1; i<n; i++) {
+			if (nl != ds[i].nlyr()) {
+				out.setError("you cannot use this algo with rasters with different numbers of layers");
+				return out;
+			}
+			e.unite(ds[i].getExtent());
+		}
+
+		out = ds[0].geometry(nl, true);
+		out.setExtent(e, true, true, "");
+
+		SpatRaster tmp = out;
+		for (size_t i=1; i<n; i++) {
+//			SpatRaster tmp = out.crop(ds[i].getExtent(), "near", false, opt);
+// check crs only
+			tmp.compare_geom(ds[i], false, true, opt.get_tolerance(), false, false, false, false);
+			if (tmp.hasError()) {
+				return tmp;
+			}
+		}
+		
+		if (method == "") method = ds[0].hasCategories()[0] ? "nearest" : "bilinear";
+		std::vector<std::string> options = {"-r", method};
+
+		bool wvrt = false;
+		std::string fout = opt.get_filename();
+		if (!fout.empty()) {
+			if (fout.size() > 4) {
+				std::string ss = fout.substr(fout.size()-4, fout.size());
+				lowercase(ss);
+				wvrt = ss == ".vrt";
+			}
+		}
+
+		std::vector<std::string> warnings;
+		if (fout != "") {
+			std::string fname;
+			if (opt.names.empty()) {
+				opt.names = ds[0].getNames();
+			}
+			
+			if (wvrt) {
+				fname = make_vrt(options, first, opt);
+				warnings = opt.msg.warnings;
+			} else {
+				SpatOptions vopt(opt);
+				fname = make_vrt(options, first, vopt);				
+				warnings = vopt.msg.warnings;
+			}
+			
+			if (hasError()) {
+				out.setError(getError());
+				return out;
+			}
+			SpatRaster v(fname, {}, {}, {}, {});
+			if (warnings.size() > 0) {
+				v.msg.warnings = warnings;
+				v.msg.has_warning = true;
+			}
+			if (wvrt) {
+				return v;
+			} else {
+				return v.writeRaster(opt);
+			}
+		}
+		
+		SpatOptions vopt(opt);
+		std::string fname = make_vrt(options, first, vopt);
+		SpatRaster v(fname, {}, {}, {}, {});
+		v.setNames(ds[0].getNames(), false);
+
+		if (vopt.msg.warnings.size() > 0) {
+			v.msg.warnings = warnings;
+			v.msg.has_warning = true;
+		}
+	
+		return v;
+		
 	} else {
-		std::iota(seq.begin(), seq.end(), 0);
+		out.setError("invalid algo (should be 1, 2, or 3)");
+		return out;		
 	}
-
-	SpatOptions topt(opt);
-	bool warn = false;
-	bool notfirst = false;
-	for (size_t i=0; i<n; i++) {
-		if (!ds[seq[i]].hasValues()) continue;
-		if (narm) {
-			notfirst = i > 0;
-		}
-		if (!write_part(out, ds[seq[i]], hxr, nl, notfirst, warn, topt)) {
-			return out;
-		}
-	}
-	out.writeStop();
-	if (warn) out.addWarning("rasters did not align and were resampled");
-
-	return(out);
 }
+
 
 
 
@@ -3707,12 +4042,10 @@ SpatRaster SpatRasterCollection::mosaic(std::string fun, SpatOptions &opt) {
 		return out;
 	}
 	
-	if (fun == "first") {
-		return merge(true, true, opt);
+	if ((fun == "first") || (fun == "last")) {
+		return merge(fun=="first", true, 1, "", opt);
 	}
-	if (fun == "last") {
-		return merge(false, true, opt);
-	}
+
 	size_t n = size();
 
 	if (n == 0) {

@@ -24,6 +24,20 @@
 #include "string_utils.h"
 
 
+void get_nx_ny(double size, size_t &nx, size_t &ny) {
+	double nxy = nx * ny;
+	if (std::isfinite(size) && (!std::isnan(size)) && (size < nxy)) {
+		double f = sqrt(size / nxy );
+		double fnx = nx * f;
+		double fny = ny * f;
+		double s = fnx * fny;
+		f = size / s;
+		nx = std::max((size_t)1, (size_t) std::ceil(fnx * f));
+		ny = std::max((size_t)1, (size_t) std::ceil(fny * f));
+	}
+}
+
+
 void getSampleRowCol(std::vector<size_t> &oldrow, std::vector<size_t> &oldcol, size_t nrows, size_t ncols, size_t snrow, size_t sncol) {
 
 	double rf = nrows / (double)(snrow);
@@ -83,7 +97,7 @@ std::vector<double> SpatRaster::readSample(size_t src, size_t srows, size_t scol
 }
 
 
-SpatRaster SpatRaster::sampleRegularRaster(double size) {
+SpatRaster SpatRaster::sampleRegularRaster(double size, bool overview) {
 
 	if (size >= ncell()) {
 		return( *this );
@@ -119,7 +133,7 @@ SpatRaster SpatRaster::sampleRegularRaster(double size) {
 		//	v = readSampleBinary(src, nr, nc);
 		} else {
 		    #ifdef useGDAL
-			v = readGDALsample(src, nr, nc);
+			v = readGDALsample(src, nr, nc, overview);
 			#endif
 		}
 		if (hasError()) return out;
@@ -171,7 +185,7 @@ SpatRaster SpatRaster::sampleRowColRaster(size_t nr, size_t nc, bool warn) {
 		//	v = readSampleBinary(src, nr, nc);
 		} else {
 		    #ifdef useGDAL
-			v = readGDALsample(src, nr, nc);
+			v = readGDALsample(src, nr, nc, false);
 			#endif
 		}
 		if (hasError()) return out;
@@ -185,20 +199,29 @@ SpatRaster SpatRaster::sampleRowColRaster(size_t nr, size_t nc, bool warn) {
 }
 
 
+
 std::vector<std::vector<double>> SpatRaster::sampleRegularValues(double size, SpatOptions &opt) {
 
 	std::vector<std::vector<double>> out;
 	if (!source[0].hasValues) return (out);
 
-	size_t nsize;
+
 	size_t nr = nrow();
 	size_t nc = ncol();
+	get_nx_ny(size, nc, nr);
+/*	
 	if (size < ncell()) {
 		double f = sqrt(size / ncell());
-		nr = std::ceil(nrow() * f);
-		nc = std::ceil(ncol() * f);
+		double nr1 = nrow() * f;
+		double nc1 = ncol() * f;
+		double s = nr1 * nc1;
+		f = size / s;
+		nr = std::max((size_t)1, (size_t) std::ceil(nr1 * f));
+		nc = std::max((size_t)1, (size_t) std::ceil(nc1 * f));
 	}
-	nsize = nc * nr;
+*/	
+
+	size_t nsize = nc * nr;
 	std::vector<double> v;
 	if ((size >= ncell()) || ((nc == ncol()) && (nr == nrow()))) {
 		v = getValues(-1, opt) ;
@@ -218,7 +241,7 @@ std::vector<std::vector<double>> SpatRaster::sampleRegularValues(double size, Sp
 		//	v = readSampleBinary(src, nr, nc);
 		} else {
 		    #ifdef useGDAL
-			v = readGDALsample(src, nr, nc);
+			v = readGDALsample(src, nr, nc, false);
 			#endif
 		}
 		if (hasError()) return out;
@@ -262,7 +285,7 @@ std::vector<std::vector<double>> SpatRaster::sampleRowColValues(size_t nr, size_
 			v = readSample(src, nr, nc);
 		} else {
 		    #ifdef useGDAL
-			v = readGDALsample(src, nr, nc);
+			v = readGDALsample(src, nr, nc, false);
 			#endif
 		}
 		if (hasError()) return out;
@@ -546,10 +569,16 @@ std::vector<std::vector<double>> SpatExtent::sampleRegular(size_t size, bool lon
 		// beware that -180 is the same as 180; and that latitude can only go from -90:90 therefore:
 		double dx = distance_lonlat(xmin, halfy, xmin + 1, halfy) * std::min(180.0, r1);
 		double dy = distance_lonlat(0, ymin, 0, ymax);
+
 		double ratio = dy/dx;
 		double n = sqrt(size);
-		double ny = std::round(std::max(1.0, n * ratio));
-		double nx = std::round(std::max(1.0, n / ratio));
+		double ny = n * ratio;
+		double nx = n / ratio;
+		double s = nx * ny;
+		ratio = size / s;
+		ny = std::max((size_t)1, (size_t) std::ceil(ny * ratio));
+		nx = std::max((size_t)1, (size_t) std::ceil(nx * ratio));
+
 		double x_i = r1 / nx;
 		double y_i = r2 / ny;
 
@@ -598,10 +627,13 @@ std::vector<std::vector<double>> SpatExtent::sampleRegular(size_t size, bool lon
 		}
 	} else {
 		double ratio = r1/r2;
-		double ny = std::max(1.0, sqrt(size / ratio));
-		double nx = std::max(1.0, size / ny);
-		ny = std::round(ny);
-		nx = std::round(nx);
+		double ny = sqrt(size / ratio);
+		double nx = size / ny;
+		double s = nx * ny;
+		ratio = size / s;
+		ny = std::max((size_t)1, (size_t) std::ceil(ny * ratio));
+		nx = std::max((size_t)1, (size_t) std::ceil(nx * ratio));
+
 		double x_i = r1 / nx;
 		double y_i = r2 / ny;
 
@@ -775,7 +807,7 @@ SpatVector SpatVector::sample(unsigned n, std::string method, unsigned seed) {
 	out = intersect(out, true);
 	if (random) {
 		if (out.size() > n) {
-			std::vector<int> rows(out.size());
+			std::vector<long> rows(out.size());
 			std::iota(rows.begin(), rows.end(), 0);
 			std::default_random_engine gen(seed);
 			std::shuffle(rows.begin(), rows.end(), gen);

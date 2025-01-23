@@ -47,7 +47,7 @@ getLyrNrs <- function(layer, nms, n) {
 		layer <- match(layer, nms)
 	}
 	if (any(is.na(layer))) {
-		error("extract", "names in argument 'layer' do not match names(x)")
+#		error("extract", "names in argument 'layer' do not match names(x)")
 	}
 	rep_len(layer, n)
 }
@@ -220,11 +220,37 @@ do_fun <- function(e, fun, ...) {
 
 
 setMethod("extract", signature(x="SpatRaster", y="SpatVector"),
-function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weights=FALSE, exact=FALSE, touches=is.lines(y), small=TRUE, layer=NULL, bind=FALSE, raw=FALSE, ...) {
+function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weights=FALSE, exact=FALSE, touches=is.lines(y), small=TRUE, layer=NULL, bind=FALSE, raw=FALSE, search_radius=0, ...) {
 
 	geo <- geomtype(y)
-	if (geo == "points") {		
-		if (weights || exact) {
+	if (!is.null(layer)) {
+		if (length(layer) != nrow(y)) {
+			error("extract", "length(layer) != nrow(y)")
+		}
+	}
+
+	if (geo == "points") {
+		if (search_radius > 0) {
+			pts <- crds(y)
+			e <- x@pntr$extractBuffer(pts[,1], pts[,2], search_radius)
+			messages(x)
+			e <- do.call(cbind, e)
+			colnames(e) <- c(names(x)[1], "distance", "cell")		
+			e[,3] <- e[,3] + 1
+			if (xy) {
+				e <- cbind(xyFromCell(x, e[,3]), e)
+			}
+			if (!raw) {
+				e <- cbind(.makeDataFrame(x, e[,1,drop=FALSE]), e[,2:3])
+			}
+			if (bind) {
+				e <- data.frame(e)
+				e <- cbind(y, e)
+			} else if (ID) {
+				e <- cbind(ID=1:nrow(e), e) 
+			}
+			return(e)
+		} else if (weights || exact) {
 			method <- "bilinear"
 			weights <- FALSE
 			exact <- FALSE
@@ -236,12 +262,13 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 			if (any(txtfun == "table")) {
 				if (length(fun) > 1) {
 					warn("extract", "'table' cannot be combined with other functions")
-				}			
+				}
 				if (!is.null(layer)) {
 					warn("extract", "argument 'layer' is ignored when 'fun=table'")
 				}
 				e <- extract_table(x, y, ID=ID, weights=weights, exact=exact, touches=touches, small=small, ...)
 			} else {
+				 
 				e <- extract_fun(x, y, txtfun, ID=ID, weights=weights, exact=exact, touches=touches, small=small, bind=bind, layer=layer, ...)
 			}
 			return(e)
@@ -252,9 +279,11 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 		raw <- TRUE
 	} 
 	
+
 	opt <- spatOptions()
 	e <- x@pntr$extractVectorFlat(y@pntr, "", FALSE, touches[1], small[1], method, isTRUE(cells[1]), isTRUE(xy[1]), isTRUE(weights[1]), isTRUE(exact[1]), opt)
 	x <- messages(x, "extract")
+
 
 	cn <- c("ID", names(x))
 	nc <- nl <- nlyr(x)
@@ -347,7 +376,7 @@ function(x, y, ...) {
 setMethod("extract", signature(x="SpatRaster", y="numeric"),
 function(x, y, xy=FALSE, raw=FALSE) {
 	y <- round(y)
-	y[(y < 1) | (y > ncell(x))] <- NA
+#	y[(y < 1) | (y > ncell(x))] <- NA
 	v <- .extract_cell(x, y, drop=TRUE, raw=raw)
 	if (xy) {
 		v <- cbind(xyFromCell(x, y), v)

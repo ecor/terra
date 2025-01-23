@@ -437,7 +437,7 @@ setMethod("dots", signature(x="SpatVector"),
 	xlim=NULL, ylim=NULL, colNA=NA, alpha=NULL, axes=TRUE, buffer=TRUE, background=NULL,
 	pax=list(), plg=list(), ext=NULL, grid=FALSE, las=0, sort=TRUE, decreasing=FALSE, values=NULL,
 	box=TRUE, xlab="", ylab="", cex.lab=0.8, line.lab=1.5, yaxs="i", xaxs="i", main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, 
-	density=NULL, angle=45, border="black", dig.lab=3, cex=1, clip=TRUE, leg_i=1, asp=NULL, ...) {
+	density=NULL, angle=45, border="black", dig.lab=3, cex=1, clip=TRUE, leg_i=1, asp=NULL, xpd=NULL, ...) {
 
 	out <- list()
 	out$blank <- FALSE
@@ -483,7 +483,9 @@ setMethod("dots", signature(x="SpatVector"),
 			stopifnot(length(ylim) == 2)
 			out$lim[3:4] <- sort(ylim)
 		}
-	} 
+	} else if ((!add) && is.null(xpd)) {
+		xpd <- TRUE
+	}
 	out$ngeom <- nrow(x)
 	out$clip <- isTRUE(clip)
 
@@ -651,7 +653,7 @@ setMethod("dots", signature(x="SpatVector"),
 		}
 	}
 
-	.plot.vect.map(x, out, ...)
+	.plot.vect.map(x, out, xpd=xpd, ...)
 }
 
 
@@ -781,6 +783,18 @@ setMethod("plot", signature(x="SpatVectorCollection", y="missing"),
 		}
 		for (i in 1:nl) {
 			plot(x[i], main=main[i], mar=mar, ...)
+		}
+	}
+)
+
+setMethod("plot", signature(x="SpatVectorCollection", y="numeric"),
+	function(x, y, main, mar=NULL, ext=NULL, ...) {
+		y <- round(y)
+		if ((y > 0) && (y <= length(x))) {
+			if (is.null(ext)) ext <- ext(x)
+			plot(x[y], main=main, mar=mar, ext=ext, ...)
+		} else {
+			error("plot", "y should be between 1 and length(x)")
 		}
 	}
 )

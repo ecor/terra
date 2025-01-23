@@ -3,11 +3,12 @@
 setMethod("blocks", signature(x="SpatRaster"),
 	function(x, n=4) {
 		opt <- spatOptions("", FALSE, ncopies=n)
-		b <- x@pntr$getBlockSizeR(n, opt$memfrac)
+		b <- x@pntr$getBlockSizeR(opt)
 		b$row <- b$row + 1
 		b
 	}
 )
+
 
 
 setMethod("writeStart", signature(x="SpatRaster", filename="character"),
@@ -74,7 +75,7 @@ get_filetype <- function(filename) {
 	fn <- tolower(filename)
 	ext <- tools::file_ext(fn)
 	ext2 <- gsub("^[^.]*\\.(.*).*$", "\\1", fn)
-	if (ext == "shp" || ext == "shz" || (ext == "zip" && ext2 == "shp.zip") || ext == "") {
+	if (ext == "shp" || ext == "shz" || (ext == "zip" && ext2 == "shp.zip")) {
 		"ESRI Shapefile"
 	} else if (ext == "gpkg" || (ext == "zip" && ext2 == "gpkg.zip")) {
 		"GPKG"

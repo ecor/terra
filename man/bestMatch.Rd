@@ -3,27 +3,36 @@
 \alias{bestMatch}
 \alias{bestMatch,SpatRaster,SpatVector-method}
 \alias{bestMatch,SpatRaster,data.frame-method}
+\alias{bestMatch,SpatRaster,matrix-method}
 
 \title{bestMatch}
 
 \description{
-Determine for each grid cell which reference it is most similar to. A reference consists of a SpatVector with reference locations, or a data.frame in which each column matches a layer name in the SpatRaster.
+Determine for each grid cell which reference it is most similar to. A reference consists of a SpatVector with reference locations, or a data.frame or matrix in which each column matches a layer name in the SpatRaster.
 
-Similarity is computed with the sum of squared differences between the cell and the reference. It may be important to first scale the input. 
+Similarity is computed with the mean absolute or the mean squared differences between the cell and the reference, or with an alternative function you provide. It may be important to first scale the input. 
 }
 
 \usage{
-\S4method{bestMatch}{SpatRaster,SpatVector}(x, y, labels="", filename="", ...)
+\S4method{bestMatch}{SpatRaster,SpatVector}(x, y, labels=NULL, fun="squared", ..., 
+		filename="", overwrite=FALSE, wopt=list())
 
-\S4method{bestMatch}{SpatRaster,data.frame}(x, y, labels="", filename="", ...)
+\S4method{bestMatch}{SpatRaster,data.frame}(x, y, labels=NULL, fun="squared", ..., 
+		filename="", overwrite=FALSE, wopt=list())
+
+\S4method{bestMatch}{SpatRaster,matrix}(x, y, labels=NULL, fun="squared", ..., 
+		filename="", overwrite=FALSE, wopt=list())
 }
 
 \arguments{
   \item{x}{SpatRaster}
-  \item{y}{SpatVector or data.frame}
+  \item{y}{SpatVector, data.frame or matrix}
   \item{labels}{character. labels that correspond to each class (row in \code{y}}
+  \item{fun}{character. One of "abs" for the mean absolute difference, or "squared" for the mean squared difference. Or a true function like terra:::match_sqr}
+  \item{...}{additional arguments passed to \code{fun}. For the built-in functions this can be \code{na.rm=TRUE}}
   \item{filename}{character. Output filename}
-  \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
+  \item{overwrite}{logical. If \code{TRUE}, \code{filename} is overwritten}
+  \item{wopt}{additional arguments for writing files as in \code{\link{writeRaster}}}
 }
 
 \value{

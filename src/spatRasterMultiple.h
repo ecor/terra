@@ -125,11 +125,15 @@ class SpatRasterCollection {
 		void resize(size_t n);
 		void push_back(SpatRaster r, std::string name);
 		void erase(size_t i); 
+		
+		void readBlock(SpatRaster &r, std::vector<std::vector<double>> &v, BlockSize bs, size_t i, std::vector<unsigned> use, SpatOptions opt);
+		std::string make_vrt(std::vector<std::string> options, bool reverse, SpatOptions &opt);
+		
 		SpatRasterCollection crop(SpatExtent e, std::string snap, bool expand, std::vector<unsigned> use, SpatOptions &opt);
 		SpatRasterCollection cropmask(SpatVector v, std::string snap, bool touches, bool expand, std::vector<unsigned> use, SpatOptions &opt);
 		std::vector<int> getValueType(bool unique);
 
-		SpatRaster merge(bool first, bool narm, SpatOptions &opt);
+		SpatRaster merge(bool first, bool narm, int algo, std::string method, SpatOptions &opt);
 		SpatRaster morph(SpatRaster &x, SpatOptions &opt);
 		SpatRaster mosaic(std::string fun, SpatOptions &opt);
 		SpatRaster summary(std::string fun, SpatOptions &opt);
@@ -138,8 +142,13 @@ class SpatRasterCollection {
 		void set_names(std::vector<std::string> nms);
 		std::vector<std::string> filenames();
 		
-
 		SpatRasterStack read_into(SpatRaster &tmp, size_t row, size_t nrows);
+
+		std::map<std::string, std::string> tags;
+		bool addTag(std::string name, std::string value);
+		bool removeTag(std::string name);
+		std::string getTag(std::string name);
+		std::vector<std::string> getTags();
 
 };
 

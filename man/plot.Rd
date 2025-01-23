@@ -13,6 +13,7 @@
 \alias{plot,SpatVector,character-method}
 \alias{plot,SpatVectorProxy,missing-method}
 \alias{plot,SpatVectorCollection,missing-method}
+\alias{plot,SpatVectorCollection,numeric-method}
 
 
 
@@ -28,10 +29,10 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 
 \usage{
 \S4method{plot}{SpatRaster,numeric}(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
-    maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, 
-	levels=NULL, all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, 
-	colNA=NULL, alpha=NULL, sort=FALSE,  decreasing=FALSE, grid=FALSE, ext=NULL, 
-	reset=FALSE, add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, ...)
+    maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, 
+	all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, 
+	alpha=NULL, sort=FALSE,  decreasing=FALSE, grid=FALSE, ext=NULL, reset=FALSE, 
+	add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL, ...)
 
 \S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, ...)
 
@@ -47,6 +48,8 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 \S4method{plot}{SpatVector,missing}(x, y, values=NULL, ...)
 
 \S4method{plot}{SpatVectorCollection,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, ...)
+
+\S4method{plot}{SpatVectorCollection,numeric}(x, y, main, mar=NULL, ext=NULL, ...)
 }
 
 \arguments{
@@ -61,6 +64,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{background}{background color. Default is no color (white)}
   \item{box}{logical. Should a box be drawn around the map?}
   \item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
+  \item{overview}{logical. Should "overviews" be used for fast rendering? This can result in much faster plotting of raster files that have overviews (e.g. "COG" format) and are accessed over a http connection. However, these overviews generally show aggregate values, thus reducing the range of the actual values. If \code{NULL}, the argument is set to \code{TRUE} for rasters that are accessed over http and \code{FALSE} in other cases}
   \item{plg}{list with parameters for drawing the legend. For the classes and interval type legend see the arguments for \code{\link[graphics]{legend}}. For example \code{x} and \code{y} can be used to place the legend. You can also use keywords such as "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. 
   
   Some of these do not apply to a continuous legend, or they behave a little differently. For example, only the placement keywords "left", "right", "top", and "bottom" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. Additional parameters for continuous legends include: 
@@ -74,7 +78,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Arguments \code{side}, \code{tick} and \code{lab} can be used to indicate for which of the four axes to draw a line (side), tick-mark, and/or the tick-mark labels. The default is \code{c(1:4)} for side and \code{1:2} for the other two. If \code{side} is changed the other two default to that value. Logical argument \code{retro} can be used to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation}  
   \item{maxcell}{positive integer. Maximum number of cells to use for the plot}
   \item{smooth}{logical. If \code{TRUE} the cell values are smoothed (only if a continuous legend is used)}
-  \item{range}{numeric. minimum and maximum values to be used for the continuous legend }
+  \item{range}{numeric. minimum and maximum values to be used for the continuous legend. You can use \code{NA} for one of these to only set the minimum or maximum value}
   \item{fill_range}{logical. If \code{TRUE}, values outside of \code{range} get the colors of the extreme values; otherwise they get colored as \code{NA}}
   \item{levels}{character. labels for the legend when \code{type="classes"} }
   \item{all_levels}{logical. If \code{TRUE}, the legend shows all levels of a categorical raster, even if they are not present in the data}

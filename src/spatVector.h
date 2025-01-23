@@ -178,10 +178,10 @@ class SpatVector {
 		SpatVector project(std::string crs, bool partial);
 		std::vector<double> project_xy(std::vector<double> x, std::vector<double> y, std::string fromCRS, std::string toCRS);
 
-		SpatVector subset_cols(int i);
-		SpatVector subset_cols(std::vector<int> range);
-		SpatVector subset_rows(int i);
-		SpatVector subset_rows(std::vector<int> range);
+		SpatVector subset_cols(long i);
+		SpatVector subset_cols(std::vector<long> range);
+		SpatVector subset_rows(long i);
+		SpatVector subset_rows(std::vector<long> range);
 		SpatVector subset_rows(std::vector<unsigned> range);
 		SpatVector remove_rows(std::vector<unsigned> range);
 
@@ -194,7 +194,7 @@ class SpatVector {
 
 		void reserve(size_t n);
 		std::vector<double> length();
-		std::vector<double> edges();
+		std::vector<double> nseg();
 
 		std::vector<double> distance(bool sequential, std::string unit, const std::string method);
 		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method);
@@ -203,8 +203,7 @@ class SpatVector {
 //		std::vector<double> pointdistance_seq(const std::vector<double>& px, const std::vector<double>& py, double m, bool lonlat);
 
 
-		std::vector<double> linedistLonLat(SpatVector x);
-
+		std::vector<double> nearestDistLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method);
 		std::vector<std::vector<size_t>> knearest(size_t k);
 
 		size_t size();
@@ -329,7 +328,7 @@ class SpatVector {
 		SpatVector snap(double tolerance);
 		SpatVector snapto(SpatVector y, double tolerance);
 		SpatVector thin(double threshold);
-
+		SpatVector split_lines(SpatVector v);
 		SpatVector allerretour();
 		SpatVectorCollection bienvenue();
 		SpatVector aggregate(bool dissolve);
@@ -348,12 +347,16 @@ class SpatVector {
 
 		SpatVector centroid(bool check_lonlat);
 		SpatVector point_on_surface(bool check_lonlat);
+		std::vector<int> pointInPolygon(std::vector<double> &x, std::vector<double> &y);
 
 		SpatVector crop(SpatExtent e, bool wrap);
 		SpatVector crop(SpatVector e);
 		SpatVector voronoi(SpatVector bnd, double tolerance, int onlyEdges);		
-		SpatVector delaunay(double tolerance, int onlyEdges);		
-		SpatVector hull(std::string htype, std::string by="");
+		SpatVector voronoi_sphere(SpatVector bnd, double tolerance, int onlyEdges);
+
+		SpatVector delaunay(double tolerance, int onlyEdges, bool constrained=false);		
+		SpatVector hull(std::string htype, std::string by="", double param=1, bool allowHoles=true, bool tight=true);
+
 		SpatVector intersect(SpatVector v, bool values);
 		SpatVector unite(SpatVector v);
 		SpatVector unite();
@@ -380,8 +383,8 @@ class SpatVector {
 		std::vector<unsigned> equals_exact(SpatVector v, double tol);
 		std::vector<unsigned> equals_exact(bool symmetrical, double tol);
 
-		std::vector<double> geos_distance(SpatVector v, bool parallel, std::string fun);
-		std::vector<double> geos_distance(bool sequential, std::string fun);
+		std::vector<double> geos_distance(SpatVector v, bool parallel, std::string fun, double m);
+		std::vector<double> geos_distance(bool sequential, std::string fun, double m);
 
 		SpatVector nearest_point(SpatVector v, bool parallel, const std::string method);
 		SpatVector nearest_point(const std::string method);

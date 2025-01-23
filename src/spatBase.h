@@ -107,7 +107,7 @@ class SpatOptions {
 		bool todisk = false;
 		double memmax = -1;
 		double memmin = 134217728; // 1024^3 / 8
-		double memfrac = 0.6;
+		double memfrac = 0.5;
 		double tolerance = 0.1;
 		std::vector<double> offset = {0};
 		std::vector<double> scale = {1};
@@ -208,6 +208,11 @@ class SpatOptions {
 		std::vector<double> get_scale();
 
 		SpatMessages msg;
+		bool hasWarning() {return msg.has_warning;}
+		bool hasError() {return msg.has_error;}
+		std::vector<std::string> getWarnings() { return msg.getWarnings();}
+		std::string getError() { return msg.getError();}
+
 };
 
 
@@ -308,6 +313,7 @@ class SpatSRS {
 #endif		
 */
 		double to_meter();
+		bool m_dist(double &m, bool lonlat, std::string unit);
 
 		std::string get(std::string x) {
 			return (x == "proj4" ? proj4 : wkt); 

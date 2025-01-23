@@ -22,7 +22,7 @@
 # if GEOS_VERSION_MINOR >= 5
 #  define GEOS350
 # endif
-# if GEOS_VERSION_MINOR == 6
+# if GEOS_VERSION_MINOR >= 6
 #  if GEOS_VERSION_PATCH >= 1
 #   define GEOS361
 #  endif
@@ -32,15 +32,26 @@
 #  define GEOS370
 # endif
 # if GEOS_VERSION_MINOR >= 8
-#  define GEOS361
-#  define GEOS370
 #  define GEOS380
+# endif
+# if GEOS_VERSION_MINOR >= 10
+#  define GEOS3100
+# endif
+# if GEOS_VERSION_MINOR >= 11
+#  define GEOS3110
+# endif
+# if GEOS_VERSION_MINOR >= 12
+#  define GEOS3120
 # endif
 #else
 # if GEOS_VERSION_MAJOR > 3
 #  define GEOS350
-#  define GEOS370
 #  define GEOS361
+#  define GEOS370
+#  define GEOS380
+#  define GEOS310
+#  define GEOS3110
+#  define GEOS3120
 # endif
 #endif
 
