@@ -74,6 +74,7 @@
 <url><loc>https://rspatial.github.io/terra/reference/direction.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/disaggregate.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/distance.html</loc></url>
+<url><loc>https://rspatial.github.io/terra/reference/divide.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/dots.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/draw.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/elongate.html</loc></url>
@@ -154,6 +155,7 @@
 <url><loc>https://rspatial.github.io/terra/reference/normalize.longitude.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/north.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/not.na.html</loc></url>
+<url><loc>https://rspatial.github.io/terra/reference/nseg.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/origin.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/pairs.html</loc></url>
 <url><loc>https://rspatial.github.io/terra/reference/panel.html</loc></url>
