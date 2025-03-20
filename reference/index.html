@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-37</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -297,7 +297,7 @@
         <dd>Query by clicking on a map</dd>
       </dl><dl><dt>
 
-          <code><a href="coerce.html">as.vector(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.matrix(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.array(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.vector(<i>&lt;SpatExtent&gt;</i>)</a></code> <code><a href="coerce.html">as.matrix(<i>&lt;SpatExtent&gt;</i>)</a></code>
+          <code><a href="coerce.html">as.vector(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.matrix(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.array(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="coerce.html">as.array(<i>&lt;SpatRasterDataset&gt;</i>)</a></code> <code><a href="coerce.html">as.vector(<i>&lt;SpatExtent&gt;</i>)</a></code> <code><a href="coerce.html">as.matrix(<i>&lt;SpatExtent&gt;</i>)</a></code>
 
         </dt>
         <dd>Coercion to vector, matrix or array</dd>
@@ -417,7 +417,7 @@
         <dd>deprecated methods</dd>
       </dl><dl><dt>
 
-          <code><a href="depth.html">depth(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">`depth&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code>
+          <code><a href="depth.html">depth(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">`depth&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">depthName(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">`depthName&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">depthUnit(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="depth.html">`depthUnit&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code>
 
         </dt>
         <dd>depth of SpatRaster layers</dd>
@@ -525,7 +525,7 @@
         <dd>Extract values for a range of layers from a SpatRaster</dd>
       </dl><dl><dt>
 
-          <code><a href="factors.html">levels(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">`levels&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">cats(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">categories(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">droplevels(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">addCats(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">combineLevels()</a></code>
+          <code><a href="factors.html">levels(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">`levels&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">cats(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">categories(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">droplevels(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">simplifyLevels(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">addCats(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="factors.html">combineLevels()</a></code>
 
         </dt>
         <dd>Categorical rasters</dd>
@@ -621,7 +621,7 @@
         <dd>Find gaps between polygons</dd>
       </dl><dl><dt>
 
-          <code><a href="gdal.html">gdal()</a></code> <code><a href="gdal.html">gdalCache()</a></code> <code><a href="gdal.html">setGDALconfig()</a></code> <code><a href="gdal.html">getGDALconfig()</a></code> <code><a href="gdal.html">libVersion()</a></code>
+          <code><a href="gdal.html">gdal()</a></code> <code><a href="gdal.html">gdalCache()</a></code> <code><a href="gdal.html">setGDALconfig()</a></code> <code><a href="gdal.html">getGDALconfig()</a></code> <code><a href="gdal.html">clearVSIcache()</a></code> <code><a href="gdal.html">libVersion()</a></code>
 
         </dt>
         <dd>GDAL version, supported file formats, and cache size</dd>
@@ -747,7 +747,7 @@
         <dd>Intersection</dd>
       </dl><dl><dt>
 
-          <code><a href="is.bool.html">is.bool(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.bool(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">is.int(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.int(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">is.factor(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.factor(<i>&lt;SpatRaster&gt;</i>)</a></code>
+          <code><a href="is.bool.html">is.num(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">is.bool(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.bool(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">is.int(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.int(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">is.factor(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.bool.html">as.factor(<i>&lt;SpatRaster&gt;</i>)</a></code>
 
         </dt>
         <dd>Raster value types</dd>
@@ -757,6 +757,12 @@
 
         </dt>
         <dd>Check if a SpatExtent or SpatVector is empty</dd>
+      </dl><dl><dt>
+
+          <code><a href="is.flipped.html">is.flipped(<i>&lt;SpatRaster&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Check for rotation</dd>
       </dl><dl><dt>
 
           <code><a href="is.lonlat.html">is.lonlat(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="is.lonlat.html">is.lonlat(<i>&lt;SpatVector&gt;</i>)</a></code> <code><a href="is.lonlat.html">is.lonlat(<i>&lt;character&gt;</i>)</a></code>
@@ -1423,6 +1429,12 @@
 
         </dt>
         <dd>Add labels to a map</dd>
+      </dl><dl><dt>
+
+          <code><a href="thresh.html">thresh(<i>&lt;SpatRaster&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Thresholding</dd>
       </dl><dl><dt>
 
           <code><a href="time.html">has.time(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="time.html">time(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="time.html">`time&lt;-`(<i>&lt;SpatRaster&gt;</i>)</a></code> <code><a href="time.html">timeInfo(<i>&lt;SpatRaster&gt;</i>)</a></code>

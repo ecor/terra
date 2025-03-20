@@ -13,7 +13,7 @@ Use app for summarize functions such as sum, that take any number of arguments; 
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-37</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ Use app for summarize functions such as sum, that take any number of arguments; 
 <span></span>
 <span><span class="co"># S4 method for class 'SpatRasterDataset'</span></span>
 <span><span class="fu">lapp</span><span class="op">(</span><span class="va">x</span>, <span class="va">fun</span>, <span class="va">...</span>, usenames<span class="op">=</span><span class="cn">FALSE</span>, recycle<span class="op">=</span><span class="cn">FALSE</span>, </span>
-<span>    filename<span class="op">=</span><span class="st">""</span>, overwrite<span class="op">=</span><span class="cn">FALSE</span>, wopt<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>    cores<span class="op">=</span><span class="fl">1</span>, filename<span class="op">=</span><span class="st">""</span>, overwrite<span class="op">=</span><span class="cn">FALSE</span>, wopt<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -73,7 +73,7 @@ Use app for summarize functions such as sum, that take any number of arguments; 
 <dd><p>logical. Use the layer names (or dataset names if <code>x</code> is a SpatRasterDataset) to match the function arguments? If <code>FALSE</code>, argument matching is by position</p></dd>
 
   <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
-<dd><p>positive integer. If <code>cores &gt; 1</code>, a 'parallel' package cluster with that many cores is created and used. You can also supply a cluster object</p></dd>
+<dd><p>positive integer. If <code>cores &gt; 1</code>, a 'parallel' package cluster with that many cores is created and used. You can also supply a cluster object. The benefit of using this option is often small, if it is even positive. Using a fast function <code>fun</code> can be a much more effective way to speed things up</p></dd>
 
   <dt id="arg-recycle">recycle<a class="anchor" aria-label="anchor" href="#arg-recycle"></a></dt>
 <dd><p>logical. Recycle layers to match the subdataset with the largest number of layers</p></dd>
