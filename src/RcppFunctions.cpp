@@ -39,10 +39,19 @@
 #endif
 
 
+
+// [[Rcpp::export(name = ".have_TBB")]]
+bool have_TBB() {
+	#ifdef HAVE_TBB
+		return true;
+	#else 
+		return false;
+	#endif 
+}
+
+
 //from sf
-
 #ifdef projh
-
 // [[Rcpp::export]]
 std::string proj_version() {
 	std::stringstream buffer;
@@ -473,15 +482,42 @@ std::vector<double> percRank(std::vector<double> x, std::vector<double> y, doubl
 }
 
 
+// [[Rcpp::export(name = ".clearVSIcache")]]
+void clearVSIcache(bool vsi) {
+	//if (vsi)
+	VSICurlClearCache();
+}
+
 // [[Rcpp::export(name = ".setGDALCacheSizeMB")]]
-void setGDALCacheSizeMB(double x) {
-  GDALSetCacheMax64(static_cast<int64_t>(x) * 1024 * 1024);
+void setGDALCacheSizeMB(double x, bool vsi) {
+	if (vsi) {
+		int64_t v = x * 1024 * 1024;
+		CPLSetConfigOption("CPL_VSIL_CURL_CACHE_SIZE", std::to_string(v).c_str());
+	} else {
+		GDALSetCacheMax64(static_cast<int64_t>(x) * 1024 * 1024);
+	}
+
 }
 
 // [[Rcpp::export(name = ".getGDALCacheSizeMB")]]
-double getGDALCacheSizeMB() {
-  return static_cast<double>(GDALGetCacheMax64() / 1024 / 1024);
+double getGDALCacheSizeMB(bool vsi) {
+	if (vsi) {
+		std::string out = gdal_getconfig("CPLGetConfigOption");
+		Rcpp::Rcout << out << std::endl;
+		if (out == "") return NAN;
+		double v = -1; 
+		try {
+			v = stod(out) / (1024 * 1024);
+		} catch(...){
+			return(NAN);
+		}
+		return(v);
+		
+	} else {
+		return static_cast<double>(GDALGetCacheMax64() / 1024 / 1024);
+	}
 }
+
 
 // convert NULL-terminated array of strings to std::vector<std::string>
 std::vector<std::string> charpp2vect(char **cp) {
@@ -529,6 +565,7 @@ bool set_proj_search_paths(std::vector<std::string> paths) {
 	return false;
 #endif
 }
+
 
 // [[Rcpp::export(name = ".PROJ_network")]]
 std::string PROJ_network(bool enable, std::string url) {

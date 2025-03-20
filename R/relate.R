@@ -354,7 +354,7 @@ setMethod("nearest", signature(x="SpatVector"),
 		} else {
 			z@pntr <- x@pntr$near_between(y@pntr, pairs, method)
 		}
-		z <- messages(z, "nearest")
+		z <- terra:::messages(z, "nearest")
 		if (geomtype(z) == "points") { #lonlat points
 			if (lines) {
 				x <- z[,c(2,5), drop=TRUE]
@@ -379,6 +379,7 @@ setMethod("nearest", signature(x="SpatVector"),
 			to <- zz[seq(2, nrow(zz), 2), ]
 			values(to) <- data.frame(id=1:nrow(to))
 			to_int <- as.data.frame(intersect(to, y))
+			to_int <- to_int[!duplicated(to_int[,1]), ]
 			to_int <- as.data.frame(merge(to, to_int, by="id", all.x=TRUE))
 			if (any(is.na(to_int$to_id))) {
 				zz <- as.points(elongate(z, 1))

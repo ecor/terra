@@ -1,5 +1,5 @@
-.terra_environment <- new.env(parent=emptyenv())
 
+.terra_environment <- new.env(parent=emptyenv())
 
 .create_options <- function() {
 	opt <- methods::new("SpatOptions")
@@ -19,7 +19,7 @@
 }
 
 .option_names <- function() {
-	c("progress", "progressbar", "tempdir", "memfrac", "memmax", "memmin", "datatype", "filetype", "filenames", "overwrite", "todisk", "names", "verbose", "NAflag", "statistics", "steps", "ncopies", "tolerance", "tmpfile", "threads", "scale", "offset") #, "append")
+	c("progress", "progressbar", "tempdir", "memfrac", "memmax", "memmin", "datatype", "filetype", "filenames", "overwrite", "todisk", "names", "verbose", "NAflag", "statistics", "steps", "ncopies", "tolerance", "tmpfile", "threads", "scale", "offset", "parallel") #, "append")
 }
 
 
@@ -37,12 +37,26 @@
 		x$gdal_options <- gopt
 	}
 
+	i <- which(nms == "metadata")
+	if (length(i) > 0) {
+		m <- try(parse_tags(wopt[[i]], "USER_TAGS"))
+		if (!inherits(m, "try-error")) {
+			if (NROW(m) > 0) {
+				x$metadata <- apply(m, 1, function(i) paste(i, collapse="_#_"))
+			}
+		}
+		wopt <- wopt[-i]
+		nms <- nms[-i]
+	}
+
 	s <- nms %in% .option_names()
 
 	if (any(!s)) {
 		bad <- paste(nms[!s], collapse=",")
 		error("write", "unknown option(s): ", bad)
 	}
+
+
 
 	if (any(s)) {
 		nms <- nms[s]

@@ -16,6 +16,8 @@ Merge SpatRasters, or merge a SpatVector with a data.frame
 Merge multiple SpatRasters to create a new SpatRaster with a larger spatial extent. The SpatRasters should all have the same coordinate reference system. They should normally also have the same spatial origin and resolution, but automatic resampling can be done depending on the algorithm used (see argument \code{algo}). In areas where the SpatRasters overlap, the values of the SpatRaster that is first in the sequence of arguments (or in the SpatRasterCollection) will be retained (unless \code{first=FALSE}). 
 
 There is also a method for merging SpatVector with a data.frame; that is, to join the data.frame to the attribute table of the SpatVector.
+
+See \code{\link{classify}} to merge a SpatRaster with a \code{data.frame}.
 }
 
 \usage{
@@ -33,7 +35,7 @@ There is also a method for merging SpatVector with a data.frame; that is, to joi
   \item{...}{if \code{x} is a SpatRaster: additional objects of the same class as \code{x}. If \code{x} is a SpatRasterCollection: options for writing files as in \code{\link{writeRaster}}. If \code{x} is a SpatVector, the same arguments as in \code{\link[base]{merge}}}
   \item{first}{logical. If \code{TRUE}, in areas where rasters overlap, the first value is used. Otherwise the last value is used}
   \item{na.rm}{logical. If \code{TRUE} missing values are are ignored. This is only used for algo 1; the other two always ignore missing values}
-  \item{algo}{integer. You can use 1, 2 or 3 to pick a merge algorithm. algo 1 is generally faster than algo 2, but it may have poorer file compression. Algo 1 will resample input rasters (and that may slow it down), but algo 2 does not do that. You can increase the tolerance option to effectively get nearest neighbor resampling with, for example, \code{wopt=list(tolerance=.2)} allows misalignment of .2 times the resolution of the first input raster and effectively use nearest neighbor resampling. Algo 3 creates a virtual raster (see \code{\link{vrt}}) and returned if no filename is specified. This is very quick and can be a good approach if the merge raster is used as input to a next step in the analysis. It allows any amount of misalignment (and does not respond to the tolerance option). Otherwise its speed is like that of algo 2}
+  \item{algo}{integer. You can use 1, 2 or 3 to pick a merge algorithm. algo 1 is generally faster than algo 2, but it may have poorer file compression. Algo 1 will resample input rasters (and that may slow it down), but algo 2 does not do that. You can increase the tolerance option to effectively get nearest neighbor resampling with, for example, \code{wopt=list(tolerance=.2)} allows misalignment of .2 times the resolution of the first input raster and effectively use nearest neighbor resampling. Algo 3 creates a virtual raster (see \code{\link{vrt}}). This is very quick and can be a good approach if the merge raster is used as input to a next step in the analysis. It allows any amount of misalignment (and does not respond to the tolerance option). Otherwise its speed is similar to that of algo 2}
   \item{method}{character. The interpolation method to be used if resampling is necessary (see argument \code{algo}). One of "nearest", "bilinear", "cubic", "cubicspline", "lanczos", "average", "mode" as in \code{\link{resample}}. If \code{NULL}, "nearest" is used for categorical rasters and "bilinear" for other rasters} 
   \item{filename}{character. Output filename}
   \item{overwrite}{logical. If \code{TRUE}, \code{filename} is overwritten}

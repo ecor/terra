@@ -10,6 +10,16 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// have_TBB
+bool have_TBB();
+RcppExport SEXP _terra_have_TBB() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(have_TBB());
+    return rcpp_result_gen;
+END_RCPP
+}
 // proj_version
 std::string proj_version();
 RcppExport SEXP _terra_proj_version() {
@@ -244,23 +254,35 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// clearVSIcache
+void clearVSIcache(bool vsi);
+RcppExport SEXP _terra_clearVSIcache(SEXP vsiSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< bool >::type vsi(vsiSEXP);
+    clearVSIcache(vsi);
+    return R_NilValue;
+END_RCPP
+}
 // setGDALCacheSizeMB
-void setGDALCacheSizeMB(double x);
-RcppExport SEXP _terra_setGDALCacheSizeMB(SEXP xSEXP) {
+void setGDALCacheSizeMB(double x, bool vsi);
+RcppExport SEXP _terra_setGDALCacheSizeMB(SEXP xSEXP, SEXP vsiSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type x(xSEXP);
-    setGDALCacheSizeMB(x);
+    Rcpp::traits::input_parameter< bool >::type vsi(vsiSEXP);
+    setGDALCacheSizeMB(x, vsi);
     return R_NilValue;
 END_RCPP
 }
 // getGDALCacheSizeMB
-double getGDALCacheSizeMB();
-RcppExport SEXP _terra_getGDALCacheSizeMB() {
+double getGDALCacheSizeMB(bool vsi);
+RcppExport SEXP _terra_getGDALCacheSizeMB(SEXP vsiSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(getGDALCacheSizeMB());
+    Rcpp::traits::input_parameter< bool >::type vsi(vsiSEXP);
+    rcpp_result_gen = Rcpp::wrap(getGDALCacheSizeMB(vsi));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -374,6 +396,7 @@ END_RCPP
 RcppExport SEXP _rcpp_module_boot_spat();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_terra_have_TBB", (DL_FUNC) &_terra_have_TBB, 0},
     {"_terra_proj_version", (DL_FUNC) &_terra_proj_version, 0},
     {"_terra_hex2rgb", (DL_FUNC) &_terra_hex2rgb, 1},
     {"_terra_rgb2hex", (DL_FUNC) &_terra_rgb2hex, 1},
@@ -395,8 +418,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_terra_seed_init", (DL_FUNC) &_terra_seed_init, 1},
     {"_terra_gdal_init", (DL_FUNC) &_terra_gdal_init, 2},
     {"_terra_percRank", (DL_FUNC) &_terra_percRank, 5},
-    {"_terra_setGDALCacheSizeMB", (DL_FUNC) &_terra_setGDALCacheSizeMB, 1},
-    {"_terra_getGDALCacheSizeMB", (DL_FUNC) &_terra_getGDALCacheSizeMB, 0},
+    {"_terra_clearVSIcache", (DL_FUNC) &_terra_clearVSIcache, 1},
+    {"_terra_setGDALCacheSizeMB", (DL_FUNC) &_terra_setGDALCacheSizeMB, 2},
+    {"_terra_getGDALCacheSizeMB", (DL_FUNC) &_terra_getGDALCacheSizeMB, 1},
     {"_terra_get_proj_search_paths", (DL_FUNC) &_terra_get_proj_search_paths, 0},
     {"_terra_set_proj_search_paths", (DL_FUNC) &_terra_set_proj_search_paths, 1},
     {"_terra_PROJ_network", (DL_FUNC) &_terra_PROJ_network, 2},

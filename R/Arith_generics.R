@@ -368,7 +368,13 @@ setMethod("is.bool", signature(x="SpatRaster"),
 )
 setMethod("is.int", signature(x="SpatRaster"),
 	function(x) {
-		x@pntr$valueType(FALSE) == 1
+		(x@pntr$valueType(FALSE) == 1) & (!x@pntr$hasCategories())
+	}
+)
+
+setMethod("is.num", signature(x="SpatRaster"),
+	function(x) {
+		(x@pntr$valueType(FALSE) < 2) & (!x@pntr$hasCategories())
 	}
 )
 
@@ -728,7 +734,7 @@ setMethod("logic", signature(x="SpatRaster"),
 			error("logic", "oper must be a character value")
 		}
 		oper = oper[1]
-		ops <- c("!", "is.na", "allNA", "noNA", "is.infinite", "is.finite", "iSTRUE", "isFALSE")
+		ops <- c("!", "is.na", "allNA", "noNA", "is.infinite", "is.finite", "isTRUE", "isFALSE")
 		if (!(oper %in% ops)) {
 			error("compare", "oper must be a one of", ops)		
 		}

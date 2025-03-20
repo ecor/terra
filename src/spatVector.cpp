@@ -308,10 +308,20 @@ bool SpatVector::empty() {
 	return geoms.empty();
 }
 
+bool SpatVector::is_multipoint() {
+	if (geoms[0].gtype != points) return false;
+	for (size_t i=0; i<geoms.size(); i++) {
+		if (geoms[i].parts.size() > 1) {
+			return true;
+		}
+	}
+	return false;
+}
+
 bool SpatVector::is_lonlat() {
 	if (srs.is_lonlat()) {
 		SpatExtent e = getExtent();
-		if ((e.xmin < -181) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
+		if ((e.xmin < -361) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
 			addWarning("coordinates are out of range for lon/lat");
 		}
 		return true;
@@ -1352,12 +1362,14 @@ SpatVector SpatVector::rotate_longitude(double longitude, bool left) {
 		size_t np = out.geoms[i].size();
 		for (size_t j=0; j<np; j++) {
 			size_t nx = out.geoms[i].parts[j].x.size();
-			for (size_t k=0; k<nx; k++) {
-				if (left) {
+			if (left) {
+				for (size_t k=0; k<nx; k++) {
 					if (out.geoms[i].parts[j].x[k] > longitude) {
 						out.geoms[i].parts[j].x[k] = out.geoms[i].parts[j].x[k] - 360;
 					}
-				} else {
+				}
+			} else {
+				for (size_t k=0; k<nx; k++) {
 					if (out.geoms[i].parts[j].x[k] < longitude) {
 						out.geoms[i].parts[j].x[k] = out.geoms[i].parts[j].x[k] + 360;
 					}
@@ -1367,12 +1379,14 @@ SpatVector SpatVector::rotate_longitude(double longitude, bool left) {
 				size_t nh = out.geoms[i].parts[j].holes.size();
 				for (size_t k=0; k<nh; k++) {
 					size_t nx = out.geoms[i].parts[j].holes[k].x.size();
-					for (size_t h=0; h<nx; h++) {
-						if (left) {
+					if (left) {
+						for (size_t h=0; h<nx; h++) {
 							if (out.geoms[i].parts[j].holes[k].x[h] > longitude) {
 								out.geoms[i].parts[j].holes[k].x[h] = out.geoms[i].parts[j].holes[k].x[h] - 360;
 							} 
-						} else {
+						}
+					} else {
+						for (size_t h=0; h<nx; h++) {
 							if (out.geoms[i].parts[j].holes[k].x[h] < longitude) {
 								out.geoms[i].parts[j].holes[k].x[h] = out.geoms[i].parts[j].holes[k].x[h] + 360;
 							} 

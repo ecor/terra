@@ -166,7 +166,16 @@ setMethod("rast", signature(x="SpatExtent"),
 
 
 setMethod("rast", signature(x="SpatVector"),
-	function(x, ...) {
+	function(x, type="", ...) {
+	
+		if (type == "xyz") {
+			if (geomtype(x) != "points") {
+				error("rast", "xyz can only be used with points")
+			}
+			x <- data.frame(crds(x), data.frame(x))
+			return(rast(x, type="xyz", ...))
+		}
+	
 		dots <- list(...)
 		e <- ext(x)
 		dots$xmin=e[1]
@@ -218,8 +227,18 @@ setMethod("rast", signature(x="SpatVector"),
 	return(x)
 }
 
+clean_domains <- function(domains) {
+	if (is.null(domains)) {
+		domains <- ""[0]
+	} else {
+		domains <- unique(domains)
+		domains <- as.character(domains[!is.na(domains)])
+	}
+	domains
+}
+
 setMethod("rast", signature(x="character"),
-	function(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, win=NULL, snap="near", vsi=FALSE, raw=FALSE) {
+	function(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, win=NULL, snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, domains="") {
 
 		f <- .fullFilename(x, vsi=vsi)
 		if (length(f) == 0) {
@@ -233,7 +252,8 @@ setMethod("rast", signature(x="character"),
 			}
 			return(r)
 		}
-		
+
+		domains <- clean_domains(domains)
 		r <- methods::new("SpatRaster")
 		#subds <- subds[1]
 		if (is.null(opts)) opts <- ""[0]
@@ -242,9 +262,9 @@ setMethod("rast", signature(x="character"),
 		if (length(subds) == 0) subds = 0
 		if (is.character(subds)) {
 			#r@pntr <- SpatRaster$new(f, -1, subds, FALSE, 0[])
-			r@pntr <- SpatRaster$new(f, -1, subds, FALSE, drivers, opts, 0[])
+			r@pntr <- SpatRaster$new(f, -1, subds, FALSE, drivers, opts, 0[], noflip, domains)
 		} else {
-			r@pntr <- SpatRaster$new(f, subds-1, "", FALSE, drivers, opts, 0[])
+			r@pntr <- SpatRaster$new(f, subds-1, "", FALSE, drivers, opts, 0[], noflip, domains)
 		}
 		r <- messages(r, "rast")
 		if (r@pntr$getMessage() == "ncdf extent") {
@@ -278,6 +298,8 @@ setMethod("rast", signature(x="character"),
 
 multi <- function(x, subds=0, xyz=3:1, drivers=NULL, opts=NULL) {
 
+	noflip <- FALSE
+
 	x <- trimws(x)
 	x <- x[x!=""]
 	if (length(x) == 0) {
@@ -291,9 +313,9 @@ multi <- function(x, subds=0, xyz=3:1, drivers=NULL, opts=NULL) {
 	subds <- subds[1]
 
 	if (is.character(subds)) {
-		r@pntr <- SpatRaster$new(f, -1, subds, TRUE, drivers, opts, xyz-1)
+		r@pntr <- SpatRaster$new(f, -1, subds, TRUE, drivers, opts, xyz-1, isTRUE(noflip[1]))
 	} else {
-		r@pntr <- SpatRaster$new(f, subds-1, ""[0], TRUE, drivers, opts, xyz-1)
+		r@pntr <- SpatRaster$new(f, subds-1, ""[0], TRUE, drivers, opts, xyz-1, isTRUE(noflip[1]))
 	}
 	if (r@pntr$getMessage() == "ncdf extent") {
 		test <- try(r <- .ncdf_extent(r), silent=TRUE)
@@ -409,7 +431,10 @@ setMethod("rast", signature(x="ANY"),
 		xyz <- as.matrix(xyz)
 		xyz <- matrix(as.numeric(xyz), ncol=ncol(xyz), nrow=nrow(xyz))
 	}
+	
 	x <- sort(unique(xyz[,1]))
+#	x <- sort(unique(round(xyz[,1], digits+2)))
+	
 	if (length(x) == 1) {
 		error("rast", "cannot create a raster geometry from a single x coordinate")
 	}
@@ -428,13 +453,11 @@ setMethod("rast", signature(x="ANY"),
 	}
 
 	y <- sort(unique(xyz[,2]))
+#	y <- sort(unique(round(xyz[,2], digits+2)))
 	if (length(y) == 1) {
 		error("rast", "cannot create a raster geometry from a single y coordinate")
 	}
 	dy <- y[-1] - y[-length(y)]
-	# probably a mistake to use the line below
-	# Gareth Davies suggested that it be removed
-	# dy <- round(dy, digits)
 
 	ry <- min(dy)
 	for (i in 1:5) {

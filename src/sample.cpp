@@ -22,6 +22,130 @@
 #include <random>
 #include <unordered_set>
 #include "string_utils.h"
+#include "geodesic.h"
+#include "table_utils.h"
+#include "sort.h"
+
+std::vector<std::vector<double>> SpatRaster::sampleStratifiedCells(double size, bool each, bool replace, unsigned seed, SpatOptions &opt) {
+
+	std::vector<std::vector<double>> out;
+
+	if (!hasValues()) {
+		setError("raster has no values");
+		return out;
+	}
+
+	if (nlyr() > 1) {
+		SpatRaster r = subset({0}, opt);
+		addWarning("only the first layer of the raster is used");		
+		return r.sampleStratifiedCells(size, each, replace, seed, opt);
+	}
+
+	std::default_random_engine gen1(seed);
+
+	size_t szz=size;
+	std::set<double> add_set;
+	if (!each) {
+		std::vector<std::vector<double>> u = unique(false, NAN, true, opt);
+		size_t nuv = u[0].size();
+		szz = floor(size / nuv);
+		size_t d = size - szz * nuv;
+		if (d > 0) {
+			std::shuffle(u[0].begin(), u[0].end(), gen1);
+			u[0].erase(u[0].begin()+d, u[0].end());
+			add_set = std::set<double>(u[0].begin(), u[0].end());
+		} 
+	} 
+
+	if (!readStart()) {
+		return(out);
+	}
+
+	BlockSize bs = getBlockSize(opt);
+	std::vector<double> vals, vcell, vwght, outvals, outcell;
+	
+	for (size_t i=0; i<bs.n; i++) {
+		std::vector<double> v;
+		readBlock(v, bs, i);
+		std::vector<double> cells(v.size());
+		std::iota(cells.begin(), cells.end(), bs.row[i] * ncol());
+		std::vector<std::size_t> pm = sort_order_nan_a(v);
+		permute(v, pm);
+		permute(cells, pm);
+		std::map<double, unsigned long long int> tab = table(v);
+		std::vector<std::vector<double>> tv = table2vector2(tab);
+		size_t start = 0;
+		for (size_t j=0; j<tv[0].size(); j++) {
+			size_t size_j = add_set.count(tv[0][j]) ? szz + 1 : szz;
+			if (size_j == 0) continue;
+			std::vector<size_t> z;
+			z.resize(tv[1][j]);
+			std::iota(z.begin(), z.end(), 0);
+			if (tv[1][j] > size_j) {
+				std::shuffle(z.begin(), z.end(), gen1);
+				z.erase(z.begin()+size_j, z.end());
+			}
+			double weight_j = tv[1][j] / z.size();
+			for (size_t k=0; k<z.size(); k++) {
+				vals.push_back(tv[0][j]);
+				vwght.push_back(weight_j);
+				vcell.push_back(cells[start+z[k]]);
+			}
+			start += tv[1][j];		
+		}
+	}
+	readStop();
+
+	if (bs.n == 1) {
+		out.push_back(vcell);
+		out.push_back(vals);
+	} else {
+		std::vector<std::size_t> pm = sort_order_a(vals);
+		permute(vals, pm);
+		permute(vwght, pm);
+		permute(vcell, pm);
+		std::map<double, unsigned long long int> tab = table(vals);
+		std::vector<std::vector<double>> tv = table2vector2(tab);
+		size_t start = 0;
+				
+		std::mt19937 gen2(seed);
+		for (size_t j=0; j<tv[0].size(); j++) {
+			size_t size_j = add_set.count(tv[0][j]) ? szz + 1 : szz;
+			if (size_j == 0) continue;
+			size_t end = start + tv[1][j];
+			std::vector<size_t> z;
+			z.resize(tv[1][j]);
+			std::iota(z.begin(), z.end(), 0);
+			if (tv[1][j] > size_j) {
+				std::discrete_distribution<int> dist(vwght.begin()+start, vwght.begin()+end);
+				std::vector<size_t> Z;
+				if (replace) {
+					Z.resize(size_j);
+					for(auto & i: Z) i = dist(gen2);
+				} else {
+					std::unordered_set<size_t> z;
+					while (z.size() < size_j) {
+						z.insert(dist(gen2));
+					}
+					Z = std::vector<size_t>(z.begin(), z.end());
+				}
+				for (size_t k=0; k<z.size(); k++) {
+					outvals.push_back(tv[0][j]);
+					outcell.push_back(vcell[Z[k]+start]);
+				}
+			} else {
+				outvals.insert(outvals.end(), vals.begin()+start, vals.begin()+end);
+				outcell.insert(outcell.end(), vcell.begin()+start, vcell.begin()+end);				
+			}
+			start = end;		
+		}
+		out.push_back(outcell);
+		out.push_back(outvals);
+	}
+	return(out);
+}
+
+	
 
 
 void get_nx_ny(double size, size_t &nx, size_t &ny) {
@@ -255,22 +379,43 @@ std::vector<std::vector<double>> SpatRaster::sampleRegularValues(double size, Sp
 }
 
 
-std::vector<std::vector<double>> SpatRaster::sampleRowColValues(size_t nr, size_t nc, SpatOptions &opt) {
 
-	std::vector<std::vector<double>> out;
+std::vector<double> SpatRaster::sampleRowCol(size_t nr, size_t nc) {
+
+	std::vector<double> out;
 	if (!source[0].hasValues) return (out);
-
 	if ((nr == 0) || (nc ==0)) {
 		return(out);
 	}
-
 	nr = std::min(nr, nrow());
 	nc = std::min(nc, ncol());
+	
+	if ((nr == nrow()) && (nc == ncol())) {
+		out.resize(ncell());
+		std::iota(out.begin(), out.end(), 0);
+		return out;
+	}
 
-	size_t nsize = nc * nr;
-	std::vector<double> v;
-	if ((nc == ncol()) && (nr == nrow())) {
-		v = getValues(-1, opt) ;
+	std::vector<int_64> rows, cols;
+
+	double d = nrow()/nr;
+	for (size_t i=0; i<nr; i++) {
+		rows.push_back((i + .5) * d);
+	}
+	d = ncol()/nc;
+	for (size_t i=0; i<nc; i++) {
+		cols.push_back((i + .5) * d);
+	}
+	return cellFromRowColCombine(rows, cols);
+}
+
+
+std::vector<std::vector<double>> SpatRaster::sampleRowColValues(size_t nr, size_t nc, SpatOptions &opt) {
+	std::vector<std::vector<double>> out;
+
+	if ((nr >= nrow()) && (nc >= ncol())) {
+		std::vector<double> v = getValues(-1, opt);
+		size_t nsize = ncell();
 		if (hasError()) return out;
 		for (size_t i=0; i<nlyr(); i++) {
 			size_t offset = i * nsize;
@@ -279,23 +424,10 @@ std::vector<std::vector<double>> SpatRaster::sampleRowColValues(size_t nr, size_
 		}
 		return out;
 	}
-
-	for (size_t src=0; src<nsrc(); src++) {
-		if (source[src].memory) {
-			v = readSample(src, nr, nc);
-		} else {
-		    #ifdef useGDAL
-			v = readGDALsample(src, nr, nc, false);
-			#endif
-		}
-		if (hasError()) return out;
-		for (size_t i=0; i<source[src].nlyr; i++) {
-			size_t offset = i * nsize;
-			std::vector<double> vv(v.begin()+offset, v.begin()+offset+nsize);
-			out.push_back(vv);
-		}
-	}
-	return out;
+	
+	std::vector<double> cells = sampleRowCol(nr, nc);
+	if (cells.empty()) return out;
+	return extractCell(cells, opt);
 }
 
 
@@ -466,7 +598,8 @@ std::vector<std::vector<double>> SpatRaster::sampleRandomValues(double size, boo
 	}
 
 	std::vector<double> dcells(cells.begin(), cells.end());
-	std::vector<std::vector<double>> d = extractCell(dcells);
+	SpatOptions opt;
+	std::vector<std::vector<double>> d = extractCell(dcells, opt);
 	return d;
 }
 
@@ -659,6 +792,7 @@ std::vector<std::vector<double>> SpatExtent::sampleRegular(size_t size, bool lon
 }
 
 
+/*
 std::vector<size_t> SpatRaster::sampleCells(double size, std::string method, bool replace, unsigned seed) {
 
 	std::default_random_engine gen(seed);
@@ -681,17 +815,96 @@ std::vector<size_t> SpatRaster::sampleCells(double size, std::string method, boo
 	} // else "Cluster"
 	return out;
 }
-
+*/
 
 SpatVector SpatVector::sample(unsigned n, std::string method, unsigned seed) {
 
 	std::string gt = type();
 	SpatVector out;
-	if (gt != "polygons") {
-		out.setError("only implemented for polygons");
+	if (gt == "points") {
+		out.setError("only implemented for lines and polygons");
 		return out;
 	}
 	if (n == 0) {
+		out.srs = srs;
+		return out;
+	}
+	bool lonlat = is_lonlat();
+	bool random = (method == "random");
+
+	if (gt == "lines") {
+		
+		std::vector<double> x, y;
+		std::vector<double> steps;
+		steps.reserve(n);		
+		std::vector<double> pp = length();
+		double p = std::accumulate(pp.begin(), pp.end(), 0.0); 
+
+		if (random) {
+			std::default_random_engine gen(seed);
+			std::uniform_real_distribution<> U2(0, p);
+			for (size_t i=0; i<n; i++) {
+				steps.push_back(U2(gen));
+			}
+			std::sort(steps.begin(), steps.end());
+		} else {
+			double d = p/n;
+			for (size_t i=0; i<n; i++) {
+				steps.push_back((i + .5) * d);
+			}
+		}
+		size_t k = 0;
+		double length = 0;
+		double oldlength = 0;
+		if (lonlat) {
+			x.resize(n);
+			y.resize(n);
+			struct geod_geodesic gd;
+			double a = 6378137;
+			double f = 1 / 298.257223563;
+			geod_init(&gd, a, f);
+			double azi1, azi2, dist;
+			for (size_t g=0; g<geoms.size(); g++) {
+				for (size_t i=0; i<geoms[g].parts.size(); i++) {
+					for (size_t j=1; j<geoms[g].parts[i].x.size(); j++) {
+						geod_inverse(&gd, geoms[g].parts[i].y[j-1], geoms[g].parts[i].x[j-1], 
+											 geoms[g].parts[i].y[j], geoms[g].parts[i].x[j], &dist, &azi1, &azi2);
+						length += dist;
+						while (length > steps[k]) {
+							geod_direct(&gd, geoms[g].parts[i].y[j-1], geoms[g].parts[i].x[j-1], azi1, 
+										steps[k]-oldlength, &y[k], &x[k], &azi2);
+							k++;
+							if (k == n) { goto endloop; }
+						}
+						oldlength = length;
+					}
+				}
+			}
+		} else {
+			x.reserve(n);
+			y.reserve(n);
+
+			for (size_t g=0; g < geoms.size(); g++) {
+				for (size_t i=0; i < geoms[g].parts.size(); i++) {
+					for (size_t j=1; j<geoms[g].parts[i].x.size(); j++) {
+						length += sqrt(pow(geoms[g].parts[i].x[j-1] - geoms[g].parts[i].x[j], 2) +
+									   pow(geoms[g].parts[i].y[j-1] - geoms[g].parts[i].y[j], 2));
+						while (length > steps[k]) {
+							double bearing = direction_plane(geoms[g].parts[i].x[j-1], geoms[g].parts[i].y[j-1], 
+															geoms[g].parts[i].x[j], geoms[g].parts[i].y[j], false);
+							double distance = steps[k]-oldlength;
+							x.push_back(geoms[g].parts[i].x[j-1] + distance * sin(bearing));
+							y.push_back(geoms[g].parts[i].y[j-1] + distance * cos(bearing));
+							k++;
+							if (k == n) { goto endloop; }
+						}
+						oldlength = length;
+					}
+				}
+			}
+		}
+		endloop:
+		out = SpatVector(x, y, points, "");
 		out.srs = srs;
 		return out;
 	}
@@ -725,8 +938,6 @@ SpatVector SpatVector::sample(unsigned n, std::string method, unsigned seed) {
 		return out;
 	}
 */
-	bool lonlat = is_lonlat();
-	bool random = (method == "random");
 
 	std::vector<double> a = area("m", true, {});
 	if (hasError()) {

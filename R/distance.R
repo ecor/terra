@@ -3,7 +3,6 @@
 # Version 1.0
 # License GPL v3
 
-
 setMethod("buffer", signature(x="SpatRaster"),
 	function(x, width, background=0, filename="", ...) {
 		opt <- spatOptions(filename, ...)
@@ -39,12 +38,11 @@ setMethod("buffer", signature(x="SpatRaster"),
 #
 #)
 
-setMethod("distance", signature(x="SpatRaster", y="missing"),
-	function(x, y, target=NA, exclude=NULL, unit="m", method="haversine", filename="", ...) {
 
-		if (!(method %in% c("geo", "haversine", "cosine"))) {
-			error("distance", "not a valid method. Should be one of: 'geo', 'haversine', 'cosine'")
-		}
+setMethod("distance", signature(x="SpatRaster", y="missing"), 
+	function(x, y, target=NA, exclude=NULL, unit="m", method="haversine", maxdist=NA, values=FALSE, filename="", ...) {
+
+		method <- match.arg(tolower(method), c("cosine", "haversine", "geo"))
 		opt <- spatOptions(filename, ...)
 		target <- as.numeric(target[1])
 		keepNA <- FALSE
@@ -59,7 +57,7 @@ setMethod("distance", signature(x="SpatRaster", y="missing"),
 		} else {
 			exclude <- NA
 		}
-		x@pntr <- x@pntr$rastDistance(target, exclude, keepNA, tolower(unit), TRUE, method, opt)
+		x@pntr <- x@pntr$rastDistance(target, exclude, keepNA, tolower(unit), TRUE, method, isTRUE(values), maxdist, opt)	
 		messages(x, "distance")
 	}
 )
@@ -94,9 +92,7 @@ setMethod("distance", signature(x="SpatRaster", y="SpatVector"),
 		opt <- spatOptions(filename, ...)
 		unit <- as.character(unit[1])
 
-		if (!(method %in% c("geo", "haversine", "cosine"))) {
-			error("distance", "not a valid method. Should be one of: 'geo', 'haversine', 'cosine'")
-		}
+		method <- match.arg(tolower(method), c("cosine", "haversine", "geo"))
 
 		x@pntr <- x@pntr$vectDistance(y@pntr, rasterize, unit, method, opt)
 
@@ -144,15 +140,14 @@ setMethod("distance", signature(x="SpatVector", y="ANY"),
 			error("distance", "If 'x' is a SpatVector, 'y' should be a SpatVector or missing")
 		}
 
-		if (!(method %in% c("geo", "haversine", "cosine"))) {
-			error("distance", "not a valid method. Should be one of: 'geo', 'haversine', 'cosine'")
-		}
+		method <- match.arg(tolower(method), c("cosine", "haversine", "geo"))
+		opt <- spatOptions()
 
 		if (sequential) {
-			return( x@pntr$distance_self(sequential, unit, method))
+			return( x@pntr$distance_self(sequential, unit, method, opt))
 		}
 		unit <- as.character(unit[1])
-		d <- x@pntr$distance_self(sequential, unit, method)
+		d <- x@pntr$distance_self(sequential, unit, method, opt)
 		messages(x, "distance")
 		class(d) <- "dist"
 		attr(d, "Size") <- nrow(x)
@@ -172,7 +167,8 @@ setMethod("distance", signature(x="SpatVector", y="ANY"),
 setMethod("distance", signature(x="SpatVector", y="SpatVector"),
 	function(x, y, pairwise=FALSE, unit="m", method = "cosine") {
 		unit <- as.character(unit[1])
-		d <- x@pntr$distance_other(y@pntr, pairwise, unit, method)
+		opt <- spatOptions()
+		d <- x@pntr$distance_other(y@pntr, pairwise, unit, method, opt)
 		messages(x, "distance")
 		if (!pairwise) {
 			d <- matrix(d, nrow=nrow(x), ncol=nrow(y), byrow=TRUE)

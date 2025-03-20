@@ -722,6 +722,11 @@ SpatVector SpatVector::shared_paths(SpatVector x, bool index) {
 }
 
 
+#ifndef GEOS370
+bool find_segments(GEOSContextHandle_t hGEOSCtxt, std::vector<double> &x, std::vector<double> &y, std::vector<double> &cx, std::vector<double> &cy, std::vector<size_t> &si, std::vector<double> &sx, std::vector<double> &sy) {
+	return false;
+}	
+#else
 bool find_segments(GEOSContextHandle_t hGEOSCtxt, std::vector<double> &x, std::vector<double> &y, std::vector<double> &cx, std::vector<double> &cy, std::vector<size_t> &si, std::vector<double> &sx, std::vector<double> &sy) {
 	size_t n = x.size() - 1;
 	size_t m = cx.size() - 1;
@@ -740,18 +745,26 @@ bool find_segments(GEOSContextHandle_t hGEOSCtxt, std::vector<double> &x, std::v
 	}
 	return si.size() > 0;
 }
-
+#endif
 
 SpatVector SpatVector::split_lines(SpatVector v) {
 
-	SpatVector out = *this;
+// check GEOS version 
+
+	SpatVector out;
+	#ifndef GEOS370
+	out.setError("not available with GEOS < 3.7");
+	return out;
+	#endif
+
+/*
 	std::vector<size_t> si;
 	std::vector<double> sx, sy;
 	GEOSContextHandle_t hGEOSCtxt = geos_init();
 
 	for (size_t i=0; i<v.size(); i++) {
 		SpatVector tmp = v.subset_rows(i);
-		std::vector<int> x = out.relate(tmp, "intersects", true, true);
+		std::vector<int> x = relate(tmp, "intersects", true, true);
 		std::vector<std::vector<double>> xy1 = tmp.coordinates();
 		for (size_t j=0; j<x.size(); j++) {
 			if (x[j] == 1) {
@@ -762,7 +775,10 @@ SpatVector SpatVector::split_lines(SpatVector v) {
 			}
 		}
 	}
+	
+*/	
 	return out;
+
 }	
 
 
@@ -951,9 +967,7 @@ SpatVector SpatVector::crop(SpatVector v) {
 	ids.reserve(nx);
 
 	for (size_t i = 0; i < nx; i++) {
-	//	Rcpp::Rcout << "intersection " << i;
 		GEOSGeometry* geom = GEOSIntersection_r(hGEOSCtxt, x[i].get(), y[0].get());
-	//	Rcpp::Rcout << " done" << std::endl;
 		if (geom == NULL) {
 			out.setError("GEOS exception");
 			geos_finish(hGEOSCtxt);
@@ -971,8 +985,9 @@ SpatVector SpatVector::crop(SpatVector v) {
 
 	if (!result.empty()) {
 //		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt);
-		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt, ids);
-		out = coll.get(0);
+//		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt, ids);
+		SpatVectorCollection coll = coll_from_geos(result, hGEOSCtxt, ids, true, false);
+		out = coll.get(0);	
 //		std::vector<std::string> nms = out.get_names();
 //		out = out.aggregate(nms[0], true);
 		out.df = df.subset_rows(out.df.iv[0]);
@@ -1593,6 +1608,8 @@ std::vector<int> SpatVector::relate(SpatVector v, std::string relation, bool pre
 	std::vector<GeomPtr> y = geos_geoms(&v, hGEOSCtxt);
 	size_t nx = size();
 	size_t ny = v.size();
+
+	out.reserve(nx * ny);
 
 	if (!index) {
 		out.reserve(nx*ny);
@@ -2392,9 +2409,10 @@ bool get_dist_fun(dist_fn &f, std::string s) {
 		f = GEOSDistance_r;
 	else if (s == "Hausdorff")
 		f = GEOSHausdorffDistance_r;
-#ifdef GEOS370
+#ifdef GEOS380
 	else if (s == "Frechet")
 		f = GEOSFrechetDistance_r;
+		// GEOSFrechetDistanceDensify_r
 #endif
 	else {
 		return false;

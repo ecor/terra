@@ -67,7 +67,8 @@ parfun <- function(cls, d, fun, model, ...) {
 			r <- fun(model, d, ...)
 		}
 		if (is.list(r)) {
-			r <- as.data.frame(lapply(r, as.numeric))
+			r <- as.data.frame(r)
+			r <- data.frame(lapply(r, as.numeric))
 		} else if (is.factor(r)) {
 			r <- as.integer(r)
 		} else if (is.data.frame(r)) {
@@ -89,6 +90,8 @@ parfun <- function(cls, d, fun, model, ...) {
 	}
 	r
 }
+
+#r <- .runModel(model, fun, d, nl, const, na.rm, index, cores=NULL)
 
 
 .getFactors <- function(model, fun, d, nl, const, na.rm, index, ...) {
@@ -124,7 +127,7 @@ parfun <- function(cls, d, fun, model, ...) {
 		data.frame(value=1:length(levs), class=levs)
 	} else if (is.list(r) || is.data.frame(r)) {
 		r <- as.data.frame(r)
-		out <- sapply(r, levels)
+		out <- lapply(r, levels)
 		for (i in 1:length(out)) {
 			if (!is.null(out[[i]])) {
 				out[[i]] <- data.frame(value=1:length(out[[i]]), label=out[[i]])
@@ -229,7 +232,7 @@ setMethod("predict", signature(object="SpatRaster"),
 			const <- data.frame(const)[1,,drop=FALSE]
 			rownames(const) <- NULL
 		}
-		out <- terra:::find_dims(object, model, nc, fun, const, na.rm, index, ...)
+		out <- find_dims(object, model, nc, fun, const, na.rm, index, ...)
 		nl <- nlyr(out)
 		
 		doclust <- FALSE

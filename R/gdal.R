@@ -8,15 +8,19 @@ fileBlocksize <- function(x) {
 }
 
 
+clearVSIcache <- function() {
+	.clearVSIcache(TRUE)
+}
+
 gdalCache <- function(size=NA) {
-	if (is.na(size)) {
-		.getGDALCacheSizeMB()
-	} else {
-		if (size > 0) {
-			.setGDALCacheSizeMB(size)
-		}
+	vsi <- FALSE # vsi not working
+	if (is.null(size) || is.na(size)) {
+		.getGDALCacheSizeMB(vsi)
+	} else if (size > 0) {
+		.setGDALCacheSizeMB(size, vsi)
 	}
 }
+
 
 getGDALconfig <- function(option) {
 	sapply(option, .gdal_getconfig)

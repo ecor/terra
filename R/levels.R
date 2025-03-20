@@ -18,6 +18,31 @@ setMethod("droplevels", signature(x="SpatRaster"),
 	}
 )
 
+setMethod("simplifyLevels", signature(x="SpatRaster"),
+	function(x, filename="", overwrite=FALSE, ...) {
+
+		f <- function(r) {
+			v <- levels(r)[[1]]
+			s <- split(v, v[,2])
+			i <- sapply(s, nrow) > 1
+			if (any(i)) {
+				s <- s[i]
+				s <- lapply(s, \(i) cbind(i[-1,1], i[1,1])) 
+				s <- do.call(rbind, s)
+			}	
+			y <- classify(x, s)
+			v <- v[-s[,1], ]
+			levels(y) <- v
+			y
+		}
+		out <- rast(lapply(x, f))
+		if (filename != "") {
+			out <- writeRaster(out, filename, overwrite=overwrite, ...)
+		}	
+		out
+	}
+)
+
 
 setMethod("is.factor", signature(x="SpatRaster"),
 	function(x) {
@@ -238,7 +263,7 @@ setMethod ("set.cats" , "SpatRaster",
 
 
 setMethod ("categories" , "SpatRaster",
-	function(x, layer=1, value, active=1, ...) {
+	function(x, layer=1, value, active=1) {
 		#... to accept but ignore old argument "index"
 		x@pntr <- x@pntr$deepcopy()
 		set.cats(x, layer, value, active)

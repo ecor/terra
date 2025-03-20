@@ -64,7 +64,7 @@ baselayers <- function(tiles, wrap=TRUE) {
 }
 
 
-.get_leg <- function(v, type="", dig.lab=3, cols, breaks=NULL, breakby="eqint", sort=TRUE, decreasing=FALSE,  ...) {
+.get_leg <- function(v, type="", dig.lab=3, cols, breaks=NULL, breakby="eqint", sort=TRUE, reverse=FALSE,  ...) {
 	out <- list(v=v, leg=list())
 	
 	if (is.null(type)) type <- ""
@@ -89,8 +89,8 @@ baselayers <- function(tiles, wrap=TRUE) {
 	out$cols <- cols
 		
 	if (out$legend_type == "classes") {
-		out$legend_sort <- sort[1]
-		out$legend_sort_decreasing <- decreasing[1]
+		out$leg$sort <- sort[1]
+		out$leg$reverse <- reverse[1]
 		out <- .vect.legend.classes(out)
 	} else if (out$legend_type == "interval") {
 		out$breaks <- breaks
@@ -104,7 +104,7 @@ baselayers <- function(tiles, wrap=TRUE) {
 
 
 setMethod("plet", signature(x="SpatVector"),
-	function(x, y="", col, fill=0.2, main=y, cex=1, lwd=2, border="black", alpha=1, popup=TRUE, label=FALSE, split=FALSE, tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), wrap=TRUE, legend="bottomright", collapse=FALSE, type=NULL, breaks=NULL, breakby="eqint", sort=TRUE, decreasing=FALSE, map=NULL, ...)  {
+	function(x, y="", col, fill=0.2, main=y, cex=1, lwd=2, border="black", alpha=1, popup=TRUE, label=FALSE, split=FALSE, tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), wrap=TRUE, legend="bottomright", collapse=FALSE, type=NULL, breaks=NULL, breakby="eqint", sort=TRUE, reverse=FALSE, map=NULL, ...)  {
 
 		#checkLeafLetVersion()
 		y <- unique(y)
@@ -117,7 +117,7 @@ setMethod("plet", signature(x="SpatVector"),
 #				names(xvc) <- y			
 #			}
 #			plet(xvc, col=col, fill=0.2, alpha=alpha, cex=cex, lwd=lwd, border=border, popup=popup, label=label, split=split, tiles=tiles, wrap=wrap, legend=legend, collapse=collapse,  map=map, ...)	
-#type=type, breaks=breaks, breakby=breakby, sort=sort, decreasing=decreasing,
+#type=type, breaks=breaks, breakby=breakby, sort=sort, reverse=reverse,
 		}
 		
 		if (missing(col)) col <- function(n) grDevices::rainbow(n, start=.2)
@@ -201,7 +201,7 @@ setMethod("plet", signature(x="SpatVector"),
 				}
 			} else { # do not split
 				#vcols <- cols[1:length(v)]
-				leg <- .get_leg(v, type=type, dig.lab=3, cols=col, breaks=breaks, breakby=breakby, sort=sort, decreasing=decreasing, ...)
+				leg <- .get_leg(v, type=type, dig.lab=3, cols=col, breaks=breaks, breakby=breakby, sort=sort, reverse=reverse, ...)
 				pop <- lab <- NULL
 				if (isTRUE(popup[1])) pop <- popUp(x)
 				if (isTRUE(label[1])) lab <- v
@@ -463,12 +463,65 @@ make.panel <- function(x, maxcell) {
 }
 
 
+.get_cls <- function(x, type="", dig.lab=3, cols, breaks=NULL, breakby="eqint", sort=TRUE, reverse=FALSE,  ...) {
+
+
+	if (is.null(type) ||(type == "")) {
+		if (is.factor(x) || is.bool(x)) {
+			type <- "classes"		
+		} else if (is.null(breaks)) {
+			type <- "continuous"
+		} else {
+			type <- "interval"
+		}
+	} else {
+		type <- match.arg(type, c("continuous", "interval", "classes"))
+	}
+	if ((type == "interval") && (is.null(breaks))) {
+		
+	}
+	if (type == "continuous") {
+		if (inherits(cols, "function")) {
+			cols <- cols(100)
+		}
+		return(list(type=type, x=x, cols=cols))
+	}
+	if (type == "classes") {
+		if (!is.factor(x)) {
+			uv <- unique(values(x))
+			uv <- sort(uv)
+			uv <- uv[!is.na(uv)]
+			levels(x) <- data.frame(ID=uv, value=uv)
+		} else {
+			uv <- levels(x)[[1]][,2]
+		}
+		ncols <- length(uv)
+	} else {
+		if (is.null(breaks)) breaks <- 5
+		if (length(breaks) == 1) {
+			breaks <- .get_breaks(values(x), n=breaks, breakby, r=NULL)
+		}
+		x <- classify(x, breaks)
+		ncols <- length(breaks)-1
+	}
+
+	if (inherits(cols, "function")) {
+		cols <- cols(ncols)
+	} else {
+		cols <- grDevices::colorRampPalette(cols)(ncols)		
+	}
+	return(list(type=type, x=x, cols=cols))
+
+#	out$legend_type <- type
+#	out$uv <- unique(v)
+}
+
+
 
 setMethod("plet", signature(x="SpatRaster"),
 	function(x, y=1, col, alpha=0.8, main=names(x), tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
 		wrap=TRUE, maxcell=500000, stretch=NULL, legend="bottomright", shared=FALSE, panel=FALSE, collapse=TRUE, 
-		# type=NULL, breaks=NULL, breakby="eqint", sort=TRUE, decreasing=FALSE, 
-		map=NULL)  {
+		type=NULL, breaks=NULL, breakby="eqint", map=NULL, ...)  {
 
 		#checkLeafLetVersion()
 		
@@ -562,20 +615,26 @@ setMethod("plet", signature(x="SpatRaster"),
 			}
 			RGB(x) <- 1:length(y)
 			x <- colorize(x, "col")
-		} 
-		#else {
-		#	leg <- .get_leg(na.omit(values(x)), type=type, dig.lab=3, cols=col, breaks=breaks, breakby=breakby, sort=sort, decreasing=decreasing, ...)
-		#}
+		} else {
+			leg <- .get_cls(x, type=type, dig.lab=3, cols=col, breaks=breaks, breakby=breakby, ...)
+			x <- leg$x
+			col <- leg$cols
+		}
 		
 		if (nlyr(x) == 1) {
 			map <- leaflet::addRasterImage(map, x, colors=col, opacity=alpha, project=notmerc)
 			if (!is.null(legend)) {
-				if (!all(hasMinMax(x))) setMinMax(x)
-				r <- minmax(x)
-				v <- seq(r[1], r[2], length.out=5)
-				pal <- leaflet::colorNumeric(col, v, reverse = TRUE)
-				map <- leaflet::addLegend(map, legend, pal=pal, values=v, opacity=1, title=main[1],
-					  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
+				if (leg$type == "continuous") {
+					if (!all(hasMinMax(x))) setMinMax(x)
+					r <- minmax(x)
+					v <- seq(r[1], r[2], length.out=5)
+					pal <- leaflet::colorNumeric(col, v, reverse = TRUE)
+					map <- leaflet::addLegend(map, legend, pal=pal, values=v, opacity=1, title=main[1],
+						  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
+				} else {
+					map <- leaflet::addLegend(map, position=legend, colors=leg$cols, 
+							labels=levels(x)[[1]][,2], opacity=alpha, title=main)
+				}
 			}
 			if (panel) {
 				#map <- leaflet::addCircleMarkers(map, data=p, label=p$label, radius=1, opacity=1, col="red")

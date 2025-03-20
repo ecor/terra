@@ -39,10 +39,10 @@ class SpatRasterStack {
 		std::vector<std::string> long_names;
 		std::vector<std::string> units;
 		SpatRasterStack() {};
-		SpatRasterStack(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options);
+		SpatRasterStack(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options, std::vector<std::string> domains);
 		SpatRasterStack(SpatRaster r, std::string name, std::string longname, std::string unit, bool warn=false);
-		std::vector<std::vector<std::vector<double>>> extractXY(std::vector<double> &x, std::vector<double> &y, std::string method);
-		std::vector<std::vector<std::vector<double>>> extractCell(std::vector<double> &cell);
+		std::vector<std::vector<std::vector<double>>> extractXY(std::vector<double> &x, std::vector<double> &y, std::string method, SpatOptions &opt);
+		std::vector<std::vector<std::vector<double>>> extractCell(std::vector<double> &cell, SpatOptions &opt);
 		std::vector<std::vector<std::vector<std::vector<double>>>> extractVector(SpatVector v, bool touches, bool small, std::string method, SpatOptions &opt);
 
 		std::vector<double> resolution();
@@ -85,11 +85,12 @@ class SpatRasterStack {
 		SpatRaster summary(std::string fun, bool narm, SpatOptions &opt);
 		
 		
-		std::map<std::string, std::string> tags;
-		bool addTag(std::string name, std::string value);
-		bool removeTag(std::string name);
-		std::string getTag(std::string name);
-		std::vector<std::string> getTags();
+		//std::map<std::string, std::string> tags;
+		std::vector<std::vector<std::string>> tags;
+		bool addTag(std::string name, std::string value, std::string domain);
+		bool removeTag(std::string name, std::string domain);
+		std::string getTag(std::string name, std::string domain);
+		std::vector<std::vector<std::string>> getTags();
 		
 };
 
@@ -115,7 +116,7 @@ class SpatRasterCollection {
 //		SpatExtent extent;
 		std::vector<std::string> names;
 		SpatRasterCollection() {};
-		SpatRasterCollection(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options);
+		SpatRasterCollection(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options, std::vector<std::string> domains);
 //		void setExtent();
 		SpatExtent getExtent();
 		
@@ -144,11 +145,11 @@ class SpatRasterCollection {
 		
 		SpatRasterStack read_into(SpatRaster &tmp, size_t row, size_t nrows);
 
-		std::map<std::string, std::string> tags;
-		bool addTag(std::string name, std::string value);
-		bool removeTag(std::string name);
-		std::string getTag(std::string name);
-		std::vector<std::string> getTags();
+		std::vector<std::vector<std::string>> tags;
+		bool addTag(std::string name, std::string value, std::string domain);
+		bool removeTag(std::string name, std::string domain);
+		std::string getTag(std::string name, std::string domain);
+		std::vector<std::vector<std::string>> getTags();
 
 };
 

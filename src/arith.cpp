@@ -22,6 +22,12 @@
 #include "vecmath.h"
 #include <cmath>
 
+#if defined(HAVE_TBB) && !defined(__APPLE__)
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#endif 
+
+
 //#include "modal.h"
 
 /*
@@ -50,6 +56,7 @@ void operator*(std::vector<double>& a, const std::vector<double>& b) {
 }
 
 */
+
 
 //template <typename T>
 void operator%(std::vector<double>& a, const std::vector<double>& b) {
@@ -143,7 +150,7 @@ bool smooth_operator(std::string &oper, bool &logical, bool &reverse, bool &fals
 }
 
 
-
+//#include <execution>
 
 SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatOptions &opt) {
 
@@ -201,11 +208,14 @@ SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatO
 		return out;
 	}
 
+//	auto policy = std::execution::par;
+
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a, b;
 		readBlock(a, out.bs, i);
 		x.readBlock(b, out.bs, i);
 		recycle(a,b);
+		
 		if (oper == "+") {
 			std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::plus<double>());
 		} else if (oper == "-") {
@@ -309,8 +319,10 @@ SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool fals
 		std::vector<double> a;
 		readBlock(a, out.bs, i);
 		if (std::isnan(x)) {
-			for(double& d : a)  d = NAN;
+			std::fill(a.begin(), a.end(), NAN);
+			//for (double& d : a)  d = NAN;
 		} else if (oper == "+") {
+//			std::for_each(std::execution::par, a.begin(), a.end(), [&](double& d) {	d += x;	});
 			for (double& d : a)  d += x;
 		} else if (oper == "-") {
 			if (reverse) {
@@ -745,6 +757,7 @@ double dabs(double x) {
 	return (x < 0 ? -1 * x : x);
 }
 
+
 SpatRaster SpatRaster::math(std::string fun, SpatOptions &opt) {
 
 	SpatRaster out = geometry();
@@ -797,10 +810,25 @@ SpatRaster SpatRaster::math(std::string fun, SpatOptions &opt) {
 		readStop();
 		return out;
 	}
+
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a;
 		readBlock(a, out.bs, i);
-		for(double& d : a) if (!std::isnan(d)) d = mathFun(d);
+
+#if defined(HAVE_TBB) && !defined(__APPLE__)
+		if (opt.parallel) {
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
+				[&](const tbb::blocked_range<size_t>& range) {
+				for (size_t i = range.begin(); i != range.end(); i++) {
+					if (!std::isnan(a[i])) a[i] = mathFun(a[i]);
+				}
+			});
+		} else {
+			for (double& d : a) if (!std::isnan(d)) d = mathFun(d);
+		}
+#else
+		for (double& d : a) if (!std::isnan(d)) d = mathFun(d);	
+#endif
 		if (!out.writeBlock(a, i)) return out;
 	}
 	out.writeStop();
@@ -921,7 +949,23 @@ SpatRaster SpatRaster::trig(std::string fun, SpatOptions &opt) {
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a;
 		readValues(a, out.bs.row[i], out.bs.nrows[i], 0, ncol());
+#if defined(HAVE_TBB) && !defined(__APPLE__)
+		if (opt.parallel) {
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
+				[&](const tbb::blocked_range<size_t>& range) {
+				for (size_t i = range.begin(); i != range.end(); i++) {
+					if (!std::isnan(a[i])) {
+						a[i] = trigFun(a[i]);
+					}
+				}
+			});
+		} else {
+			for (double& d : a) if (!std::isnan(d)) d = trigFun(d);
+		}
+#else 
 		for (double& d : a) if (!std::isnan(d)) d = trigFun(d);
+#endif	
+
 		if (!out.writeBlock(a, i)) return out;
 	}
 	out.writeStop();

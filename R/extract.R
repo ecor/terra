@@ -54,7 +54,8 @@ getLyrNrs <- function(layer, nms, n) {
 
 
 extractCells <- function(x, y, raw=FALSE) {
-	e <- x@pntr$extractCell(y-1)
+	opt <- spatOptions()
+	e <- x@pntr$extractCell(y-1, opt)
 	e <- do.call(cbind, e)
 	colnames(e) <- names(x)
 	if (!raw) {
@@ -224,16 +225,24 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 
 	geo <- geomtype(y)
 	if (!is.null(layer)) {
-		if (length(layer) != nrow(y)) {
-			error("extract", "length(layer) != nrow(y)")
-		}
+#		if (length(layer) != nrow(y)) {
+#			error("extract", "length(layer) != nrow(y)")
+#		}
+
+		if (length(layer) > nrow(y)) {
+			error("extract", "length(layer) > nrow(y)")
+		} else { # recycle
+			layer <- rep(layer, length.out=nrow(y))
+		}		
 	}
+
+	opt <- spatOptions()
 
 	if (geo == "points") {
 		if (search_radius > 0) {
 			pts <- crds(y)
-			e <- x@pntr$extractBuffer(pts[,1], pts[,2], search_radius)
-			messages(x)
+			e <- x@pntr$extractBuffer(pts[,1], pts[,2], search_radius, opt)
+			messages(x, "extract")
 			e <- do.call(cbind, e)
 			colnames(e) <- c(names(x)[1], "distance", "cell")		
 			e[,3] <- e[,3] + 1
@@ -280,7 +289,6 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 	} 
 	
 
-	opt <- spatOptions()
 	e <- x@pntr$extractVectorFlat(y@pntr, "", FALSE, touches[1], small[1], method, isTRUE(cells[1]), isTRUE(xy[1]), isTRUE(weights[1]), isTRUE(exact[1]), opt)
 	x <- messages(x, "extract")
 
@@ -375,8 +383,16 @@ function(x, y, ...) {
 
 setMethod("extract", signature(x="SpatRaster", y="numeric"),
 function(x, y, xy=FALSE, raw=FALSE) {
+
+	if (isTRUE((length(y)  == 2) && (any((y%%1)!=0)))) {
+		warn("extract", "a vector of two decimal values is interpreted as referring to cell numbers, not to coordinates")
+	}
+
+	if (isTRUE(any((y < 1) | (y > ncell(x))))) {
+		warn("extract", "out of range cell numbers detected")	
+	}
+
 	y <- round(y)
-#	y[(y < 1) | (y > ncell(x))] <- NA
 	v <- .extract_cell(x, y, drop=TRUE, raw=raw)
 	if (xy) {
 		v <- cbind(xyFromCell(x, y), v)
@@ -407,14 +423,26 @@ function(x, y, cells=FALSE, xy=FALSE) {
 	if (cells) {
 		v <- cbind(cell=y, v)
 	}
+	v
 }
 )
 
 
 setMethod("extract", c("SpatVector", "SpatVector"),
-function(x, y) {
+function(x, y, count=FALSE) {
 
 	e <- relate(y, x, "coveredby", pairs=TRUE, na.rm=FALSE)
+	if (count) {
+		if ((geomtype(x) == "polygons") && (geomtype(y) == "points")) {
+			tab <- as.data.frame(table(e[,2]))
+			i <- match(tab[,1], 1:nrow(x))
+			count <- rep(NA, nrow(x))
+			count[i] <- tab[,2]
+			return(count)
+		} else {
+			error("extract", "count=TRUE is for point (y) in polygons (x) only")
+		}
+	}
 	if (ncol(x) > 0) {
 		d <- as.data.frame(x)
 		e <- data.frame(id.y=e[,1], d[e[,2], ,drop=FALSE])
@@ -555,12 +583,16 @@ extractAlong <- function(x, y, ID=TRUE, cells=FALSE, xy=FALSE, online=FALSE, bil
 
 setMethod("extractRange", signature(x="SpatRaster", y="ANY"),
 	function(x, y, first, last, lyr_fun=NULL, geom_fun=NULL, ID=FALSE, na.rm=TRUE, ...) {
-
-		first <- getLyrNrs(first, names(x), nrow(y)) + 1 
-		last  <- getLyrNrs(last,  names(x), nrow(y)) + 1	
-		e <- extract(x, y, geom_fun, ID=TRUE, na.rm=na.rm, ...)
-		if (nrow(e) != nrow(y)) {
-			error("range_extract", "geom_fun must return a single value for each geometry/layer")
+		
+		first <- getLyrNrs(first, names(x), NROW(y)) + 1 
+		last  <- getLyrNrs(last,  names(x), NROW(y)) + 1
+		if (inherits(y, "SpatVector")) {
+			e <- extract(x, y, geom_fun, ID=TRUE, na.rm=na.rm, ...)
+			if (nrow(e) != nrow(y)) {
+				error("extractRange", "geom_fun must return a single value for each geometry/layer")
+			}
+		} else {
+			e <- data.frame(ID=1:NROW(y), extract(x, y, ...))
 		}
 		a <- lapply(1:nrow(e), function(i) e[i, c(first[i]:last[i])])
 		if (!is.null(lyr_fun)) {
@@ -568,13 +600,12 @@ setMethod("extractRange", signature(x="SpatRaster", y="ANY"),
 		}
 		if (ID) {
 			if (is.list(a)) {
-				names(a) <- 1:nrow(y)
+				names(a) <- 1:NROW(y)
 			} else {
-				a <- data.frame(ID=1:nrow(y), value=a)
+				a <- data.frame(ID=1:nrow(a), value=a)
 			}
 		}
 		a
-		
 	}
 )
 

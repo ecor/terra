@@ -39,12 +39,11 @@ And then continue based on the OS you are using.
 
 #### Windows
 
-On Windows, you need to first install [Rtools](https://cran.r-project.org/bin/windows/Rtools/) to get a C++ compiler that R can use. You need a recent version of Rtools42 (rtools42-5355-5357).
+On Windows, you need to first install [Rtools](https://cran.r-project.org/bin/windows/Rtools/) to get, among other things, a C++ compiler that *R* can use. You need the current versions of *R* and *RTools*.
 
-Then, in R, install the package.
+Then, in *R*, install terra with:
 
 ```
-Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = "true")
 remotes::install_github("rspatial/terra")
 ```
 
@@ -58,11 +57,11 @@ With MacPorts you can do
 sudo port install R-terra
 ```
 
-With Homebrew, you need to first install GDAL:
+With Homebrew, you need to first install GDAL and PROJ:
 
 ```
 brew install pkg-config
-brew install gdal
+brew install gdal proj
 ```
 
 Followed by (note the additional configuration argument needed for Homebrew)
@@ -89,7 +88,7 @@ Install the system requirements GDAL (>= 2.2.3), GEOS (>= 3.4.0), PROJ (>= 4.9.3
 ```
 sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
 sudo apt-get update
-sudo apt-get install libgdal-dev libgeos-dev libproj-dev 
+sudo apt-get install libgdal-dev libgeos-dev libproj-dev libtbb-dev
 ```
 
 And now, in R, install the package

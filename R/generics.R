@@ -10,6 +10,13 @@ setMethod("is.rotated", signature(x="SpatRaster"),
 )
 
 
+setMethod("is.flipped", signature(x="SpatRaster"),
+	function(x)  {
+		x@pntr$is_flipped()
+	}
+)
+
+
 setMethod("rangeFill", signature(x="SpatRaster"),
 	function(x, limit, circular=FALSE, filename="", ...) {
 		opt <- spatOptions(filename, ...)
@@ -666,11 +673,7 @@ setMethod("project", signature(x="SpatRaster"),
 				method <- "bilinear"
 			}
 		} else {
-			method <- method[1]
-		}
-		if (method == "ngb") {
-			method <- "near"
-			warn("project", "argument 'method=ngb' is deprecated, it should be 'method=near'")
+			method <- match.arg(tolower(method[1]), c("near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "sum", "mode", "min", "q1", "median", "q3", "max", "rms"))			
 		}
 		opt <- spatOptions(filename, threads=threads, ...)
 
@@ -689,7 +692,10 @@ setMethod("project", signature(x="SpatRaster"),
 			}
 		} else {
 			if (!is.character(y)) {
-				warn("project,SpatRaster", "argument y (the crs) should be a character value")
+				#warn("project,SpatRaster", "argument y (the crs) should be a character value")
+				if (inherits(y, "numeric")) {
+					error("project,SpatRaster", "argument y (the crs) cannot be a number.\nFor EPSG codes use this format 'epsg:1234'")				
+				}
 				y <- as.character(crs(y))
 			}
 			if (!is.null(res) || !is.null(origin)) {
@@ -817,14 +823,16 @@ setMethod("rectify", signature(x="SpatRaster"),
 )
 
 setMethod("resample", signature(x="SpatRaster", y="SpatRaster"),
-	function(x, y, method, threads=FALSE, filename="", ...)  {
+	function(x, y, method, threads=FALSE, by_util=FALSE, filename="", ...)  {
 
 		if (missing(method)) {
-			method <- ifelse(is.factor(x)[1], "near", "bilinear")
-		}
-		if (method == "ngb") {
-			method <- "near"
-			warn("resample", "argument 'method=ngb' is deprecated, it should be 'method=near'")
+			if (is.factor(x)[1] || isTRUE(x@pntr$rgb)) {
+				method <- "near"
+			} else {
+				method <- "bilinear"
+			}
+		} else {
+			method <- match.arg(tolower(method[1]), c("near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "sum", "mode", "min", "q1", "median", "q3", "max", "rms"))			
 		}
 		xcrs = crs(x)
 		ycrs = crs(y)
@@ -835,11 +843,12 @@ setMethod("resample", signature(x="SpatRaster", y="SpatRaster"),
 			crs(y) <- xcrs
 		}
 		opt <- spatOptions(filename, threads=threads, ...)
-#		if (gdal) {
+
+		if (by_util) {
+			x@pntr <- x@pntr$warp_by_util(y@pntr, "", method, FALSE, FALSE, TRUE, opt)
+		} else {
 			x@pntr <- x@pntr$warp(y@pntr, "", method, FALSE, FALSE, TRUE, opt)
-#		} else {
-#			x@pntr <- x@pntr$resample(y@pntr, method, FALSE, TRUE, opt)
-#		}
+		}
 		messages(x, "resample")
 	}
 )
@@ -875,7 +884,7 @@ setMethod("rotate", signature(x="SpatRaster"),
 )
 
 setMethod("rotate", signature(x="SpatVector"),
-	function(x, longitude=0, split=FALSE, left=TRUE, normalize=FALSE) {
+	function(x, longitude=0, split=TRUE, left=TRUE, normalize=FALSE) {
 		if (split) {
 			e <- ext(x)
 			if ((longitude < e$xmin) || (longitude > e$xmax)) {
@@ -889,6 +898,8 @@ setMethod("rotate", signature(x="SpatVector"),
 			ew <- ext(c(e[1], longitude, e[3:4]))
 			ee <- ext(c(longitude, e[2:4]))
 			x$unique_id_for_aggregation <- 1:nrow(x)
+			xcrs <- crs(x)
+			crs(x) <- NULL  # avoid wrapping
 			xw <- crop(x, ew)
 			xe <- crop(x, ee)
 			if (left) {
@@ -904,6 +915,7 @@ setMethod("rotate", signature(x="SpatVector"),
 				x <- out
 			} 
 			x$unique_id_for_aggregation <- NULL
+			crs(x) <- xcrs
 		} else {
 			x@pntr <- x@pntr$rotate_longitude(longitude, left)
 			x <- messages(x, "rotate")

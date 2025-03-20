@@ -143,6 +143,7 @@ class SpatVector {
 		bool could_be_lonlat();
 		std::string type();
 		SpatGeomType getGType(std::string &type);
+		bool is_multipoint();
 
 		//std::vector<std::string> getCRS();
 		//void setCRS(std::vector<std::string> _crs);
@@ -196,14 +197,17 @@ class SpatVector {
 		std::vector<double> length();
 		std::vector<double> nseg();
 
-		std::vector<double> distance(bool sequential, std::string unit, const std::string method);
-		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method);
+		std::vector<double> distance(bool sequential, std::string unit, const std::string method, SpatOptions &opt);
+		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method, SpatOptions &opt);
 		std::vector<double> pointdistance(const std::vector<double>& px, const std::vector<double>& py, const std::vector<double>& sx, const std::vector<double>& sy, bool pairwise, double m, bool lonlat, std::string method);
 
 //		std::vector<double> pointdistance_seq(const std::vector<double>& px, const std::vector<double>& py, double m, bool lonlat);
 
+//		std::vector<std::vector<double>> get_index(SpatVector &p);
 
-		std::vector<double> nearestDistLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method);
+		std::vector<double> distLonLat(SpatVector p, std::string unit, std::string method, bool transp);
+//		std::vector<double> distLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method, bool transp);
+		//std::vector<double> nearestDistLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method);
 		std::vector<std::vector<size_t>> knearest(size_t k);
 
 		size_t size();
@@ -215,7 +219,7 @@ class SpatVector {
 		SpatVector set_holes(SpatVector x, size_t i);
 		SpatVector remove_duplicate_nodes(int digits);
 		
-		bool read(std::string fname, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::vector<std::string> options);
+		bool read(std::string fname, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::string dialect, std::vector<std::string> options);
 		
 		bool write(std::string filename, std::string lyrname, std::string driver, bool append, bool overwrite, std::vector<std::string>);
 
@@ -224,7 +228,7 @@ class SpatVector {
 #ifdef useGDAL
 		GDALDataset* write_ogr(std::string filename, std::string lyrname, std::string driver, bool append, bool overwrite, std::vector<std::string> options);
 		GDALDataset* GDAL_ds();
-		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what);
+		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::string dialect);
 		SpatVector fromDS(GDALDataset *poDS);
 		bool ogr_geoms(std::vector<OGRGeometryH> &ogrgeoms, std::string &message);		
 		bool delete_layers(std::string filename, std::vector<std::string> layers, bool return_error);		
@@ -416,13 +420,13 @@ class SpatVectorCollection {
 	public:
 		virtual ~SpatVectorCollection(){}
 		SpatVectorCollection();
-		SpatVectorCollection(std::string filename, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		SpatVectorCollection(std::string filename, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 		
 		
 		SpatVectorCollection deepCopy() { return *this; }
-		bool read(std::string fname, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		bool read(std::string fname, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 		
-		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 
 //		SpatVectorCollection create(std::string filename);
 

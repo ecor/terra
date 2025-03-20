@@ -31,16 +31,17 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 \S4method{plot}{SpatRaster,numeric}(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
     maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, 
 	all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, 
-	alpha=NULL, sort=FALSE,  decreasing=FALSE, grid=FALSE, ext=NULL, reset=FALSE, 
+	alpha=NULL, sort=FALSE,  reverse=FALSE, grid=FALSE, ext=NULL, reset=FALSE, 
 	add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL, ...)
 
-\S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, ...)
+\S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, 
+	plg=list(), pax=list(), ...)
 
 \S4method{plot}{SpatRaster,character}(x, y, ...)
 
 \S4method{plot}{SpatVector,character}(x, y, col=NULL, type=NULL, mar=NULL, add=FALSE, legend=TRUE, axes=!add, 
     main="", buffer=TRUE, background=NULL, grid=FALSE, ext=NULL, sort=TRUE, 
-	decreasing=FALSE, plg=list(), pax=list(), nr, nc, colNA=NA, alpha=NULL, 
+	reverse=FALSE, fun=NULL, plg=list(), pax=list(), nr, nc, colNA=NA, alpha=NULL, 
 	box=axes, clip=TRUE, ...)
 
 \S4method{plot}{SpatVector,numeric}(x, y, ...)
@@ -65,14 +66,17 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{box}{logical. Should a box be drawn around the map?}
   \item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
   \item{overview}{logical. Should "overviews" be used for fast rendering? This can result in much faster plotting of raster files that have overviews (e.g. "COG" format) and are accessed over a http connection. However, these overviews generally show aggregate values, thus reducing the range of the actual values. If \code{NULL}, the argument is set to \code{TRUE} for rasters that are accessed over http and \code{FALSE} in other cases}
-  \item{plg}{list with parameters for drawing the legend. For the classes and interval type legend see the arguments for \code{\link[graphics]{legend}}. For example \code{x} and \code{y} can be used to place the legend. You can also use keywords such as "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. 
+  \item{plg}{list with parameters for drawing the legend. See the arguments for \code{\link[graphics]{legend}}. In addition there are these parameters for the legend title: \code{title.srt} to rotate the title and \code{title.x} and \code{title.y} to place the title at specific coordinates. Parameter \code{digits} can be used to change the number of digits to print after the decimal point. 
   
-  Some of these do not apply to a continuous legend, or they behave a little differently. For example, only the placement keywords "left", "right", "top", and "bottom" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. Additional parameters for continuous legends include: 
+  A legend can be placed with \code{x} and keywords such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. "interval" and "classes" legends can also be placed with arguments \code{x} and \code{y}. For a continuous legend, only the placement keywords "left", "right", "top", and "bottom" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. You can use argument \code{ext} to place a continuous legend elsewhere.
+    
+  Additional parameters for continuous legends include: 
   
   \itemize{
-    \item \code{digits} to set the number of digits to print after the decimal point. \code{size} to change the height and/or width; the defaults are \code{c(1,1)}, negative values for size flip the order of the legend. 
+    \item \code{ext} to draw the legend in a location specified by a SpatExtent
+    \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
 	\item \code{at} to set the location of the tic-marks
-	\item \code{tic} One of these partially matched values: "through", "in", "out", or "none", to choose a tic-mark placement/length that is different from the default "through and out". 
+	\item \code{tic} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tic-mark placement/length that is different from the default "throughout". You can set \code{tic.col}, \code{tic.box.col} and \code{tic.lwd}
 	}
   }
   \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Arguments \code{side}, \code{tick} and \code{lab} can be used to indicate for which of the four axes to draw a line (side), tick-mark, and/or the tick-mark labels. The default is \code{c(1:4)} for side and \code{1:2} for the other two. If \code{side} is changed the other two default to that value. Logical argument \code{retro} can be used to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation}  
@@ -88,7 +92,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{colNA}{character. color for the NA values}
   \item{alpha}{Either a single numeric between 0 and 1 to set the transparency for all colors (0 is transparent, 1 is opaque) or a SpatRaster with values between 0 and 1 to set the transparency by cell. To set the transparency for a given color, set it to the colors directly}
   \item{sort}{logical. If \code{TRUE} legends with categorical values are sorted. If \code{x} is a \code{SpatVector} you can also supply a vector of the unique values, in the order in which you want them to appear in the legend}
-  \item{decreasing}{logical. If \code{TRUE}, legends are sorted in decreasing order}
+  \item{reverse}{logical. If \code{TRUE}, the legend order is reversed}
   \item{grid}{logical. If \code{TRUE} grid lines are drawn. Their properties such as type and color can be set with the \code{pax} argument}
   \item{nc}{positive integer. Optional. The number of columns to divide the plotting device in (when plotting multiple layers)}
   \item{nr}{positive integer. Optional. The number of rows to divide the plotting device in (when plotting multiple layers)}

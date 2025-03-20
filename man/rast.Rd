@@ -32,7 +32,7 @@ Note that there are operating system level limitations to the number of files th
 
 \usage{
 \S4method{rast}{character}(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, 
-		  win=NULL, snap="near", vsi=FALSE, raw=FALSE)
+		  win=NULL, snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, domains="")
 
 \S4method{rast}{missing}(x, nrows=180, ncols=360, nlyrs=1, xmin=-180, xmax=180, 
           ymin=-90, ymax=90, crs, extent, resolution, vals, names, time, units)
@@ -50,7 +50,7 @@ Note that there are operating system level limitations to the number of files th
 
 \S4method{rast}{SpatRasterDataset}(x)
 
-\S4method{rast}{SpatVector}(x, ...)
+\S4method{rast}{SpatVector}(x, type="", ...)
 									  
 \S4method{rast}{SpatExtent}(x, ...)
 }
@@ -63,8 +63,10 @@ Note that there are operating system level limitations to the number of files th
 \item{opts}{character. GDAL dataset open options}
 \item{win}{SpatExtent to set a \code{\link{window}} (area of interest)}
 \item{snap}{character. One of "near", "in", or "out", to indicate how the extent of \code{\link{window}} should be "snapped" to \code{x}}
-\item{vsi}{logical. If \code{TRUE}, "\\vsicurl\\" is prepended to filenames that start with "http"}
+\item{vsi}{logical. If \code{TRUE}, "\\vsicurl\\" is prepended to filenames that start with "http". There are many  \href{https://gdal.org/en/stable/user/virtual_file_systems.html}{VSI configuration options} that can be set with \code{\link{setGDALconfig}}}
 \item{raw}{logical. If \code{TRUE}, scale and offset values are ignored. See \code{\link{scoff}} to get these parameters}
+\item{noflip}{logical. If \code{TRUE}, a raster (e.g. JPEG image) that is not georeferenced and that GDAL assigns a flipped extent to (\code{ymax < ymin}), is not considered flipped. This avoids the need to \code{\link{flip}} the raster vertically}
+\item{domains}{character. Metadata domains to read (see \code{\link{metags}} to retreive their values if there are any. "" is the default domain}
 \item{nrows}{positive integer. Number of rows}
 \item{ncols}{positive integer. Number of columns}
 \item{nlyrs}{positive integer. Number of layers}
@@ -83,7 +85,7 @@ Note that there are operating system level limitations to the number of files th
 \item{names}{character. An optional vector with layer names (must match the number of layers)}
 \item{time}{time or date stamps for each layer}
 \item{units}{character. units for each layer}
-\item{type}{character. If the value is \code{"xyz"}, the matrix or data.frame \code{x} must have at least two columns, the first with \code{x} (or longitude) and the second with \code{y} (or latitude) coordinates that represent the centers of raster cells. The additional columns are the values associated with the raster cells. If the value is \code{"xylz"}, \code{x} must have four columns with the third representing the layer and the fourth the cell values. If the value is \code{""}, the resulting SpatRaster will have the same number of rows and columns as \code{x}. 
+\item{type}{character. If the value is \code{"xyz"}, \code{x} must be a SpatVector with point geometry, or a matrix or data.frame with at least two columns, the first with \code{x} (or longitude) and the second with \code{y} (or latitude) coordinates that represent the centers of raster cells. The additional columns are the values associated with the raster cells. If the value is \code{"xylz"}, \code{x} must have four columns with the third representing the layer and the fourth the cell values. If the value is \code{""}, the resulting SpatRaster will have the same number of rows and columns as \code{x}. 
 }
 \item{digits}{integer to set the precision for detecting whether points are on a regular grid (a low number of digits is a low precision). Only used when \code{type="xyz"}}
 \item{warn}{logical. If \code{TRUE}, a warnings about empty rasters may be emitted}
@@ -101,7 +103,7 @@ Files are read with the GDAL library. GDAL guesses the file format from the name
 These classes hold a C++ pointer to the data "reference class" and that creates some limitations. They cannot be recovered from a saved R session either or directly passed to nodes on a computer cluster. Generally, you should use \code{\link{writeRaster}} to save SpatRaster objects to disk (and pass a filename or cell values of cluster nodes). Also see \code{\link{wrap}}. 
 }
 
-\seealso{\code{\link{sds}} to create a SpatRasterDataset (4 dimensions) and \code{\link{vect}} for vector (points, lines, polygons) data}
+\seealso{\code{\link{sds}} to create a SpatRasterDataset (SpatRasters with the same geometry representing different variables or higher dimension), \code{\link{sprc}} to create a SpatRasterCollection (to combine SpatRasters with different geometries), and \code{\link{vect}} for vector (points, lines, polygons) data}
 
 \examples{
 # Create a SpatRaster from scratch

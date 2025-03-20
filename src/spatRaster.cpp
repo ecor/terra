@@ -29,16 +29,15 @@
 #endif
 
 
-SpatRaster::SpatRaster(std::string fname, std::vector<int> subds, std::vector<std::string> subdsname, std::vector<std::string> drivers, std::vector<std::string> options) {
+SpatRaster::SpatRaster(std::string fname, std::vector<int> subds, std::vector<std::string> subdsname, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<std::string> domains) {
 #ifdef useGDAL
-	constructFromFile(fname, subds, subdsname, drivers, options);
+	constructFromFile(fname, subds, subdsname, drivers, options, false, domains);
 #endif
 }
 
 
-SpatRaster::SpatRaster(std::vector<std::string> fname, std::vector<int> subds, std::vector<std::string> subdsname, bool multi, std::vector<std::string> drivers, std::vector<std::string> options,std::vector<size_t> xyz) {
-// argument "x" is ignored. It is only there to have four arguments such that the  module
-// can distinguish this constructor from another with three arguments.
+SpatRaster::SpatRaster(std::vector<std::string> fname, std::vector<int> subds, std::vector<std::string> subdsname, bool multi, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<size_t> xyz, bool noflip, std::vector<std::string> domains) {
+
 	if (fname.empty()) {
 		setError("no filename");
 		return;
@@ -50,14 +49,14 @@ SpatRaster::SpatRaster(std::vector<std::string> fname, std::vector<int> subds, s
 		return;
 	}
 
-	if (!constructFromFile(fname[0], subds, subdsname, drivers, options)) {
+	if (!constructFromFile(fname[0], subds, subdsname, drivers, options, noflip, domains)) {
 		//setError("cannot open file: " + fname[0]);
 		return;
 	}
 	SpatOptions opt;
 	for (size_t i=1; i<fname.size(); i++) {
 		SpatRaster r;
-		bool ok = r.constructFromFile(fname[i], subds, subdsname, drivers, options);
+		bool ok = r.constructFromFile(fname[i], subds, subdsname, drivers, options, noflip, domains);
 		if (r.msg.has_warning) {
 			addWarning(r.msg.warnings[0]);
 		}
@@ -458,10 +457,21 @@ std::vector<double> SpatRaster::range_max() {
 }
 
 
+std::vector<bool> SpatRaster::is_flipped() {
+	std::vector<bool> x;
+	size_t n = nsrc();
+	x.reserve(n);
+	for (size_t i=0; i<n; i++) {
+		x.push_back(source[i].flipped);
+	}
+	return(x);
+}
+
+
 bool SpatRaster::is_lonlat() {
 	if (source[0].srs.is_lonlat()) {
 		SpatExtent e = getExtent();
-		if ((e.xmin < -181) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
+		if ((e.xmin < -361) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
 			addWarning("coordinates are out of range for lon/lat");
 		}
 		return true;
@@ -720,6 +730,7 @@ bool SpatRaster::hasTime() {
 	return test;
 }
 
+
 /*
 std::vector<double> SpatRaster::getTimeDbl() {
 	std::vector<int_64> t64 = getTime();
@@ -850,6 +861,15 @@ bool SpatRaster::setTime(std::vector<int_64> time, std::string step, std::string
     return true;
 }
 
+bool SpatRaster::hasDepth() {
+	bool test = source[0].hasDepth;
+	for (size_t i=1; i<source.size(); i++) {
+		test = test && source[i].hasDepth;
+	}
+	return test;
+}
+
+
 
 std::vector<double> SpatRaster::getDepth() {
 	std::vector<double> x;
@@ -865,12 +885,12 @@ std::vector<double> SpatRaster::getDepth() {
 }
 
 
-
 bool SpatRaster::setDepth(std::vector<double> depths) {
 
 	if (depths.empty()) {
 		for (size_t i=0; i<source.size(); i++)	{
 			source[i].depth = std::vector<double>(source[i].nlyr);
+			source[i].hasDepth = false;
 		}
 		return true;
 	}
@@ -878,6 +898,7 @@ bool SpatRaster::setDepth(std::vector<double> depths) {
 	if (depths.size() == 1) {
         for (size_t i=0; i<source.size(); i++)	{
             source[i].depth = std::vector<double> (source[i].nlyr, depths[0]);
+			source[i].hasDepth = true;
         }
         return true;
 	} else if (depths.size() != nlyr()) {
@@ -888,9 +909,33 @@ bool SpatRaster::setDepth(std::vector<double> depths) {
             size_t end = begin + source[i].nlyr;
             source[i].depth = std::vector<double> (depths.begin() + begin, depths.begin() + end);
             begin = end;
+			source[i].hasDepth = true;
         }
         return true;
 	}
+}
+
+bool SpatRaster::setDepthName(std::string name) {
+	for (size_t i=0; i<source.size(); i++) {
+		source[i].depthname = name;
+	}	
+	return true;
+}
+
+
+std::string SpatRaster::getDepthName() {
+	return source[0].depthname;
+}
+
+bool SpatRaster::setDepthUnit(std::string unit) {
+	for (size_t i=0; i<source.size(); i++) {
+		source[i].depthunit = unit;
+	}	
+	return true;
+}
+
+std::string SpatRaster::getDepthUnit() {
+	return source[0].depthunit;
 }
 
 
@@ -2621,39 +2666,54 @@ std::vector<int> SpatRaster::getFileBlocksize() {
 }
 
 
-bool SpatRaster::addTag(std::string name, std::string value) {
+bool SpatRaster::addTag(std::string name, std::string value, std::string domain) {
 	lrtrim(name);
 	lrtrim(value);
 	if (value == "") {
-		return removeTag(name);
+		return removeTag(name, domain);
 	} else if (name != "") {
-		user_tags[name] = value;
+		if (user_tags.size() == 0) {
+			user_tags.resize(3);
+		}
+		for (size_t i =0; i<user_tags[0].size(); i++) {
+			if ((user_tags[0][i] == domain) && (user_tags[1][i] == name)) {
+				user_tags[2][i] = value;
+				return true;
+			}
+		}
+		user_tags[0].push_back(domain);
+		user_tags[1].push_back(name);
+		user_tags[2].push_back(value);
 		return true;
 	} 
 	return false;
 }
 
-bool SpatRaster::removeTag(std::string name) {
-	std::map<std::string, std::string>::iterator it = user_tags.find(name);
-	if (it == user_tags.end()) return false;
-	user_tags.erase(it);
-	return true;
+
+bool SpatRaster::removeTag(std::string name, std::string domain) {
+	if (user_tags.size() == 0) return true;
+	for (size_t i =0; i<user_tags[0].size(); i++) {
+		if ((user_tags[0][i] == domain) && (user_tags[1][i] == name)) {
+			user_tags[0].erase(user_tags[0].begin()+i);
+			user_tags[1].erase(user_tags[1].begin()+i);
+			user_tags[2].erase(user_tags[2].begin()+i);
+			return true;
+		}
+	}
+	return false;
 }
 
-std::string SpatRaster::getTag(std::string name) {
-	std::map<std::string, std::string>::iterator it = user_tags.find(name);
-	if (it != user_tags.end()) return it->second;
+std::string SpatRaster::getTag(std::string name, std::string domain) {
+	for (size_t i =0; i<user_tags[0].size(); i++) {
+		if ((user_tags[0][i] == domain) && (user_tags[1][i] == name)) {
+			return user_tags[2][i];
+		}
+	}
 	return "";
 }
 
-std::vector<std::string> SpatRaster::getTags() {
-	std::vector<std::string> out;
-	out.reserve(2 * user_tags.size());
-	for (auto e : user_tags) {
-		out.push_back(e.first);
-		out.push_back(e.second);
-	}
-	return out;
+std::vector<std::vector<std::string>> SpatRaster::getTags() {
+	return user_tags;
 }
 
 
