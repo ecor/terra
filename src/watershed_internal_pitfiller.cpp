@@ -122,139 +122,7 @@ void pitfiller(int nx,int ny,double ipit, double *pitf,double *e,double *eout,do
   }
   
 }
-    // Calcola la media escludendo il primo elemento
-   // double mean = sum / 
-    
-    
-    
-    
-   // if (*(pitf+jv[0])==ipit) {
-    //  is_one_pixel_pit=1;
-    //  for (int is = 0;is<jv.size();is++) {
-        
-   //       if (ev[is]<=ev[0]) is_one_pixel_pit=0;
-    //  }  
-     // if (is_one_pixel_pit==1) {
-      
-    //  
-     //   for (int is = 0;is<jv.size();is++) {
-     //     int yr=getRow(nx,ny,jv[is]); 
-    //      int xr=getCol(nx,ny,jv[is]);
-        //  nextv[is]=nextcell_point_conv1(nx,ny,xr,yr,*(flowdir+jv[is]),conv_type);
-          // CORRECTION 
-          //ev[is] = *(e+jv[is]);
-      //  }  
-        
-   //     if (nextv[is]==jv[0]) {
-            //jv[is]=jv[0]; // pixels draining onto the pit are not considered.
-    //        devm=ev[is]-ev[0];
-         /// fgh
-     //     if (iss==0) iss=is; 
-     //     if (ev[is]>=evm) {
-     //        iss=is;
-     //     }
-     //     
-   //     } 
-        ///
-        
-        
-     // }
-      
-      
-     
-   //   *(eout+jv[0])=ev[iss]+1; 
-    
-  //    }
-  //    printf("pit number %f : e=%f eout=%f\n",ipit,*(e+jv[0]),*(eout+jv[0]));
-      
-      // porre i pixels drenanti e farli drenare su quello a cui drena il pixel depitted. domani...
- //   }
-    
-//  } 
-//}  
-      
-  //     
-  //     
-  //   //  while (ev[0]==NAN_PITFILLER) {
-  //   //  while (jk==WINIT_JK) {
-  //     // loop to detect which pixel of the pit is abjacent with the lowest elevation neighboring pixel
-  //       for (int is = 1; is < jv.size()-1; is++) {
-  //         ev[is] = *(eout+jv[is]);
-  //         printf("ev=%f is=%d iv=%d\n",ev[is],is,jv[is]);
-  //         if ((ev[is]<=ev1)) {
-  //           
-  //           jk=jv[0];
-  //          
-  //           
-  //         }
-  //       }
-  //     } 
-  // } 
-  // printf("heref\n");
-  // int filled=FALSE_FILLED;
-  // while (filled==TRUE_FILLED) for (int x=0;x<nx;x++) for(int y=0;y<ny;y++) {
-  //   
-  //   jv[0]=offset(nx,ny,x,y);
-  //   jv[1]=offset(nx,ny,x-1,y-1);
-  //   jv[2]=offset(nx,ny,x,y-1);
-  //   jv[3]=offset(nx,ny,x+1,y-1);
-  //   jv[4]=offset(nx,ny,x+1,y);
-  //   jv[5]=offset(nx,ny,x+1,y+1);
-  //   jv[6]=offset(nx,ny,x,y+1);
-  //   jv[7]=offset(nx,ny,x,y-1);
-  //   ev[0] = *(eout+jv[0]);
-  //   for (int is = 0;is<jv.size();is++) {
-  //     int yr=getRow(nx,ny,jv[is]); 
-  //     int xr=getCol(nx,ny,jv[is]);
-  //     nextv[is]=nextcell_point_conv1(nx,ny,xr,yr,*(flowdir+jv[is]),conv_type);
-  //     // CORRECTION 
-  //     if (nextv[is]==jv[0]) {
-  //       jv[is]=jv[0]; // pixels draining onto the pit are not considered.
-  //     }
-  //   }
-  //   
-  //   
-  //   if ((jk==WINIT_JK) & (*(pitf+jv[0])==ipit)) jk=jv[0];
-  //   if ((jk==jv[0]) & (*(pitf+jv[0])==ipit)) {    
-  //       ev[0]=NAN_PITFILLER;
-  //   // loop to detect which pixel of the pit is abjacent with the lowest elevation neighouring pixel
-  //       for (int is = 1; is < jv.size()-1; is++) {
-  //         if ((ev[is]<=ev1)) {
-  //         ev1=ev[is];
-  //         }
-  //       }
-  //       if (ev1!=NAN_PITFILLER) for (int is = 1; is < jv.size()-1; is++) {
-  //         ev2=ev1+0.02; // experimental
-  //         if (ev[is]>ev1) {
-  //           if (ev[is]<=ev2) {
-  //             ev2=ev[is];
-  //           }
-  //         }
-  //       }
-  //       printf("ok1 e1=%f e2=%f \n ",ev1,ev2);
-  //       if (ev1!=NAN_PITFILLER) {
-  //         
-  //         if (*(pitf+jv[0])==ipit) {
-  //           *(eout+jv[0])=(ev1+ev2)/2;
-  //           jk=WINIT_JK;
-  //           filled=TRUE_FILLED;
-  //           printf("ok2 e=%f i=%d ipit=%f \n",*(eout+jv[0]),jv[0],ipit);
-  //         } 
-  //         
-  //       }  else {
-  //         
-  //         jk=WINIT_JK;
-  //         filled=FALSE_FILLED;
-  //         
-  //       }
-  //         
-  //     }
-  //   
-  //   
-  // } 
-  //   
-  //   
-//}
+  
         
 void pitfiller_all(int nx,int ny, double *pitf,double *pitftemp,double *e,double *eout,double *flowdir,int niter,double lambda,int use_lad,double L,
                    double U,double D,double beta,double theta_exp) // see // see reference doi:10.1016/j.advwatres.2006.11.016)    
@@ -346,7 +214,7 @@ SpatRaster  SpatRaster::pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter
     double Ly=yres();
     double L=Lx; // to check 
     
-    printf("pitfiller\n");
+  ////  printf("pitfiller\n");
     std::vector<double> e=getValues(0,opt); //EC 20211203 //see https://www.delftstack.com/howto/cpp/how-to-convert-vector-to-array-in-cpp/
     std::vector<double> pitf=pits.getValues(0,opt);
     std::vector<double> flowdirf=flowdirs.getValues(0,opt);
@@ -472,7 +340,7 @@ SpatRaster  SpatRaster::pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter
     
     double numerator = U * delta_l * dx2 + 4 * D * delta_l * z_avg + beta * pow(A, theta) * dx2 * z_d;
     double denominator = beta * pow(A, theta) * dx2 + 4 * D * delta_l;
-    printf("numerator = %f denominator = %f \n",numerator,denominator);
+   // printf("numerator = %f denominator = %f \n",numerator,denominator);
     
     
     double z = numerator / denominator;
