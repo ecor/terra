@@ -172,12 +172,6 @@
 }
 
 
-prettyNumbs <- function(x, digits) {
-	x <- formatC(x, digits=digits, format = "f", flag="#")
-	x <- substr(x, 1, digits+1)
-	gsub("\\.$", "", x)
-}
-
 .as.raster.classes <- function(out, x, Z=NULL, ...) {
 
 	if (is.null(Z)) {
@@ -389,61 +383,6 @@ prettyNumbs <- function(x, digits) {
 }
 
 
-# to be merged with the vector variant.
-.generic.interval <- function(out, Z) {
-	if (is.null(out$breaks)) {
-		out$breaks <- 5
-	}
-	if (length(out$breaks) == 1) {
-		out$breaks <- .get_breaks(Z, out$breaks, out$breakby, out$range)
-	}
-
-	if (!is.null(out$leg$digits)) {
-#		out$leg$legend <- substr(formatC(levs, digits=digits, format = "f", flag="#"), 1, digits+1)
-		fz <- cut(as.numeric(Z), out$breaks, include.lowest=TRUE, right=FALSE, dig.lab=out$leg$digits)
-	} else {
-		fz <- cut(as.numeric(Z), out$breaks, include.lowest=TRUE, right=FALSE)
-	}
-
-
-	out$vcut <- as.integer(fz)
-	levs <- levels(fz)
-	nlevs <- length(levs)
-
-	cols <- out$cols
-	ncols <- length(cols)
-	if (nlevs < ncols) {
-		i <- trunc((ncols / nlevs) * 1:nlevs)
-		cols <- cols[i]
-	} else {
-		cols <- rep_len(cols, nlevs)
-	}
-	
-	#out$cols <- cols
-	out$leg$fill <- cols
-	#out$leg$levels <- levels(fz)
-	if (!is.null(out$leg$legend)) {
-		stopifnot(length(out$leg$legend) == nlevs)
-	} else {
-		levs <- gsub("]", "", gsub(")", "", gsub("\\[", "", levs)))
-		levs <- paste(levs, collapse=",")
-		m <- matrix(as.numeric(unlist(strsplit(levs, ","))), ncol=2, byrow=TRUE)
-		if (!is.null(out$leg$digits)) {
-			m <- prettyNumbs(m, out$leg$digits)
-		}
-		m <- apply(m, 1, function(i) paste(i, collapse=" - "))
-		m <- gsub("-Inf -", "<=", m)
-		i <- grep("- Inf", m)
-		if (length(i) == 1) {
-			m[i] <- gsub("- Inf", "", m[i])
-			m[i] <- paste(">", m[i])				
-		}	
-		out$leg$legend <- m
-	}
-	out$leg$digits <- NULL
-	out
-}
-
 
 .as.raster.interval <- function(out, x, ...) {
 
@@ -505,7 +444,7 @@ prettyNumbs <- function(x, digits) {
 		arglist <- c(list(x=x$lim[1:2], y=x$lim[3:4], type="n", xlab="", ylab="", asp=x$asp, xaxs=x$xaxs, yaxs=x$yaxs, axes=FALSE), x$dots)
 		do.call(plot, arglist)
 		if (!is.null(x$background)) {
-			graphics::rect(x$lim[1], x$lim[3], x$lim[2], x$lim[4], col=x$background, border=TRUE)			
+			graphics::rect(x$lim[1], x$lim[3], x$lim[2], x$lim[4], col=x$background, border=x$box)			
 		}
 	}
 	if (!x$values) {
@@ -782,18 +721,20 @@ prettyNumbs <- function(x, digits) {
 						out$leg$x <- "default"
 						out$mar <- c(2, 2, 2, 5)
 					} else if (out$legend_type == "continuous") {
-						if (out$leg$x == "top") {
-							out$mar <- c(2, 2, 4, 2)
-						} else if (out$leg$x == "bottom") {
-							out$mar <- c(5, 2, 2, 2)
-						} else if (out$leg$x == "left") {
-							out$mar <- c(2, 5, 2, 1)
-						} else {
-							out$mar <- c(2, 2, 2, 5)
+						if (inherits(out$leg[["x"]], "character")) {
+							if (out$leg$x == "top") {
+								out$mar <- c(2, 2, 4, 2)
+							} else if (out$leg$x == "bottom") {
+								out$mar <- c(5, 2, 2, 2)
+							} else if (out$leg$x == "left") {
+								out$mar <- c(2, 5, 2, 1)
+							} else {
+								out$mar <- c(2, 2, 2, 5)
+							}
+						#} else if (out$leg$x == "default") {
+						#	out$mar <- c(2, 2, 2, 5)
 						}
-					} else if (out$leg$x == "default") {
-						out$mar <- c(2, 2, 2, 5)
-					}
+					}	
 				} 
 			}
 		} else {
@@ -947,7 +888,7 @@ setMethod("plot", signature(x="SpatRaster", y="missing"),
 
 		if (has.RGB(x)) {
 			if (missing(main)) main = ""
-			p <- plot(x, -1, main=main, mar=mar, maxcell=maxcell, add=add, ...)
+			p <- plot(x, -1, main=main, mar=mar, maxcell=maxcell, add=add, plg=plg, pax=pax, ...)
 			return(invisible(p))
 		}
 
@@ -960,7 +901,7 @@ setMethod("plot", signature(x="SpatRaster", y="missing"),
 
 		if (nl==1) {
 			if (missing(main)) main = ""
-			out <- plot(x, 1, maxcell=maxcell, main=main[1], mar=mar, add=add, ...)
+			out <- plot(x, 1, maxcell=maxcell, main=main[1], mar=mar, add=add, plg=plg, pax=pax, ...)
 			return(invisible(out))
 		}
 
