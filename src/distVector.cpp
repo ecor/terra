@@ -1199,7 +1199,7 @@ SpatGeom hullify(SpatVector b, bool ispoly) {
 	SpatVector part;
 	part.reserve(b.size());
 	for (size_t j =0; j<(b.size()-1); j++) {
-		std::vector<unsigned> range = {(unsigned)j, (unsigned)j+1};
+		std::vector<size_t> range = {j, j+1};
 		SpatVector g = b.subset_rows(range);
 		g = g.hull("convex");
 		part.addGeom(g.geoms[0]);
@@ -1283,7 +1283,7 @@ SpatVector lonlat_buf(SpatVector x, double dist, unsigned quadsegs, bool ispol, 
 SpatVector SpatVector::buffer_lonlat(std::string vt, std::vector<double> d, unsigned quadsegs) {
 
 	SpatVector out;
-	std::vector<unsigned> keep;
+	std::vector<size_t> keep;
 	keep.reserve(size());
 	if (vt == "points") {
 		return point_buffer(d, quadsegs, false, true);
@@ -1579,7 +1579,7 @@ std::vector<double> SpatVector::length() {
 
 
 double edges_geom(const SpatGeom &geom) {
-	double edges = 0;
+	size_t edges = 0;
 	if (geom.gtype == points) return edges;
 	for (size_t i=0; i<geom.parts.size(); i++) {
 		edges += geom.parts[i].y.size();
@@ -1590,10 +1590,10 @@ double edges_geom(const SpatGeom &geom) {
 	return edges-1;
 }
 
-std::vector<double> SpatVector::nseg() {
+std::vector<size_t> SpatVector::nseg() {
 
 	size_t s = size();
-	std::vector<double> r;
+	std::vector<size_t> r;
 	r.reserve(s);
 	for (size_t i=0; i<s; i++) {
 		r.push_back(edges_geom(geoms[i]));

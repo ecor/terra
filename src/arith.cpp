@@ -278,7 +278,7 @@ SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatO
 
 SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool falseNA, SpatOptions &opt) {
 
-	SpatRaster out = geometry(nlyr());
+	SpatRaster out = geometry();
 	if (!hasValues()) {
 		out.setError("raster has no values"); // or warn and treat as NA?
 		return out;
@@ -593,7 +593,7 @@ SpatRaster SpatRaster::arith_m(std::vector<double> x, std::string oper, std::vec
 	if (dim[0] < 2) {
 		return(arith(x, oper, reverse, false, opt));
 	}
-	if (dim[0] > ncell()) {
+	if ((double) dim[0] > ncell()) {
 		out.setError("incorrect matrix dimensions (nrow > ncell(x))"); 
 		return out;
 	}
@@ -1470,7 +1470,7 @@ SpatRaster SpatRaster::modal(std::vector<double> add, std::string ties, bool nar
 			for (size_t k=0; k<nl; k++) {
 				v[k] = a[j+k*nc];
 			}
-			b[j] = modal_value(v, ities, narm, rgen, dist);
+			b[j] = modal_value(v, (unsigned)ities, narm, rgen, dist);
 		}
 		if (!out.writeBlock(b, i)) return out;
 	}
@@ -1527,7 +1527,7 @@ SpatRaster SpatRaster::range(std::vector<double> add, bool narm, SpatOptions &op
 
 SpatRaster SpatRasterStack::summary_numb(std::string fun, std::vector<double> add, bool narm, SpatOptions &opt) {
 
-	std::vector<unsigned> vnl = nlyr();
+	std::vector<size_t> vnl = nlyr();
 	size_t nl = vmax(vnl, false);
 	SpatRaster out = ds[0].geometry(nl);
 	size_t ns = nsds();
@@ -1968,10 +1968,10 @@ std::vector<std::vector<double>> SpatRaster::where(std::string what, bool values
 						if (v[k] < val[j]) {
 							val[j] = v[k];
 							out[j].resize(0);
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						} else if (v[k] == val[j]) {
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						}
 					}
@@ -1982,10 +1982,10 @@ std::vector<std::vector<double>> SpatRaster::where(std::string what, bool values
 						if (v[k] > val[j]) {
 							val[j] = v[k];
 							out[j].resize(0);
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						} else if (v[k] == val[j]) {
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						}
 					}

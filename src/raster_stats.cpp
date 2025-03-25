@@ -43,7 +43,7 @@ std::vector<std::vector<double>> SpatRaster::freq(bool bylayer, bool round, int 
 
 	if (bylayer) {
 		out.resize(nl);
-		std::vector<std::map<double, unsigned long long int>> tabs(nl);
+		std::vector<std::map<double, size_t>> tabs(nl);
 		for (size_t i = 0; i < bs.n; i++) {
 			unsigned nrc = bs.nrows[i] * nc;
 			std::vector<double> v;
@@ -54,7 +54,7 @@ std::vector<std::vector<double>> SpatRaster::freq(bool bylayer, bool round, int 
 			for (size_t lyr=0; lyr<nl; lyr++) {
 				unsigned off = lyr*nrc;
 				std::vector<double> vv(v.begin()+off, v.begin() + off + nrc);
-				std::map<double, unsigned long long int> tab = table(vv);
+				std::map<double, size_t> tab = table(vv);
 				tabs[lyr] = combine_tables(tabs[lyr], tab);
 			}
 		}
@@ -63,14 +63,14 @@ std::vector<std::vector<double>> SpatRaster::freq(bool bylayer, bool round, int 
 		}
 	} else {
 		out.resize(1);
-		std::map<double, long long unsigned> tabs;
+		std::map<double, size_t> tabs;
 		for (size_t i = 0; i < bs.n; i++) {
 			std::vector<double> v;
 			readValues(v, bs.row[i], bs.nrows[i], 0, nc);
 			if (round) {
 				for (double& d : v) d = roundn(d, digits);
 			}
-			std::map<double, long long unsigned> tab = table(v);
+			std::map<double, size_t> tab = table(v);
 			tabs = combine_tables(tabs, tab);
 		}
 		out[0] = table2vector(tabs);
@@ -1348,7 +1348,7 @@ SpatDataFrame SpatRaster::zonal_poly(SpatVector x, std::string fun, bool weights
 
 std::vector<double> tabfun(std::vector<double> x, std::vector<double> w) {
 //	if (w.size() == 0) {
-		std::map<double, long long unsigned> tab = table(x);
+		std::map<double, size_t> tab = table(x);
 		return table2vector(tab);
 //	} else {
 		
