@@ -467,11 +467,7 @@ make.panel <- function(x, maxcell) {
 
 
 	if (is.null(type) ||(type == "")) {
-<<<<<<< HEAD
-		if (all(is.factor(x)) || all(is.bool(x))) { ## ecor EC 20250321
-=======
 		if (all(is.factor(x)) || all(is.bool(x))) {
->>>>>>> f87444419fb9e747ffc201e7b14f0375083e40dd
 			type <- "classes"		
 		} else if (is.null(breaks)) {
 			type <- "continuous"
