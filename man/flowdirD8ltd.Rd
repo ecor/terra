@@ -22,7 +22,7 @@ Computes non-disperive flow/draiage direction according to path-based methods ov
 \arguments{
   \item{x}{SpatRaster with elevation/terrain model , see \code{\link{terrain}}. }
   \item{lambda}{Parameter between 0 and 1.}  
-  \item{deviation_type}{Character string. Default is the first element of \code{=c("ltd","lad")}. If \code{"ltd"} (default) flow direction dispersion is deteceted with LTD criterion, if \code{"lad"} flow direction dispersion is deteceted with LTD criterion. See Orlandini et al,2003 fur further details.  }  
+  \item{deviation_type}{Character string. Default is the first element of \code{=c("ltd","lad")}. If \code{"ltd"} (default) flow direction dispersion is deteceted with LTD criterion, if \code{"lad"} flow direction dispersion is deteceted with LTD criterion. See Orlandini et al,2003 for further details.  }  
   \item{filename}{character. Output filename}
   \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
 }
