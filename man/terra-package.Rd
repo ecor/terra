@@ -16,9 +16,9 @@ The package implements two main classes (data types): \code{SpatRaster} and \cod
 
 Additional classes include \code{SpatExtent}, which is used to define a spatial extent (bounding box); \code{SpatRasterDataset}, which represents a collection of sub-datasets for the same area. Each sub-dataset is a SpatRaster with possibly many layers, and may, for example, represent different weather variables; and \code{SpatRasterCollection} and \code{SpatVectorCollection} that are equivalent to lists of \code{SpatRaster} or \code{SpatVector} objects. There is also a \code{SpatGraticule} class to assist in adding a longitude/latitude lines and labels to a map with another coordinate reference system.
 
-These classes hold a C++ pointer to the data "reference class" and that creates some limitations. They cannot be recovered from a saved R session either or directly passed to nodes on a computer cluster. Generally, you should use \code{\link{writeRaster}} to save \code{SpatRaster} objects to disk (and pass a filename or cell values to cluster nodes). Also see \code{\link{wrap}}. Also, package developers should not directly access this pointer, as its user-interface is not stable.
+These classes hold a C++ pointer to the data "reference class" and that creates some limitations. They cannot be recovered from a saved R session either or directly passed to nodes on a computer cluster. Generally, you should use \code{\link{writeRaster}} to save \code{SpatRaster} objects to disk (and pass a filename or cell values to cluster nodes). Also see \code{\link{wrap}} and \code{\link{saveRDS}}. You should not write scripts that directly access this pointer, as its user-interface is not stable.
 
-The \code{terra} package is conceived as a replacement of the \code{raster} package. \code{terra} has a very similar, but simpler, interface, and it is faster than \code{raster}. At the bottom of this page there is a table that shows differences in the methods between the two packages. 
+The "terra" package is a replacement of the "raster" package. "terra" has a very similar, but simpler, interface; it is faster, and it can do much more. At the bottom of this page there is a table that shows differences in the methods between the two packages. 
 
 Below is a list of some of the most important methods grouped by theme. 
 
@@ -420,6 +420,7 @@ A SpatRasterCollection is a vector of SpatRaster objects. Unlike for a SpatRaste
   \code{\link{buffer}} \tab buffer geometries \cr
   \code{\link{disagg}} \tab split multi-geometries into separate geometries \cr
   \code{\link{crop}} \tab clip geometries using a rectangle (SpatExtent) or SpatVector \cr
+  
   --------------------------- \tab ------------------------------------------------------------------------------------------ \cr  
 }}
 
@@ -678,12 +679,11 @@ Also note that even if function names are the same in \code{terra} and \code{ras
 }
 }
 
-\section{Authors}{
+\section{Contributors}{
 Except where indicated otherwise, the methods and functions in this package were written by Robert Hijmans. The configuration scripts were written by Roger Bivand. Some of code using the GEOS library was adapted from code by Edzer Pebesma for \code{sf}. Emanuele  Cordano contributed functionality for catchment related computations. Andrew Gene Brown, Márcia Barbosa, Michael Chirico, Krzysztof Dyba, Barry Rowlingson, and Michael D. Sumner also provided major contributions
-}
 
-\section{Acknowledgments}{
-This package is an attempt to climb on the shoulders of giants (GDAL, PROJ, GEOS, NCDF, GeographicLib, Rcpp, R). Many people have contributed by asking questions or \href{https://github.com/rspatial/terra}{raising issues}. Feedback and suggestions by Kendon Bell, Jean-Luc Dupouey, Sarah Endicott, Derek Friend, Alex Ilich, Gerald Nelson, Jakub Nowosad, and Monika Tomaszewska have been especially helpful.
+
+This package is an attempt to climb on the shoulders of giants (GDAL, PROJ, GEOS, NCDF, GeographicLib, Rcpp, R). Many people have contributed by asking questions or \href{https://github.com/rspatial/terra}{raising issues}. Feedback and suggestions by Kendon Bell, Jean-Luc Dupouey, Sarah Endicott, Derek Friend, Alex Ilich, Agustin Lobo, Gerald Nelson, Jakub Nowosad, and Monika Tomaszewska have been especially helpful.
 }
 
 

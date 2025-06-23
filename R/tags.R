@@ -1,4 +1,5 @@
 
+
 setMethod("meta", signature(x="SpatRaster"),
 	function(x, layers=FALSE) {
 		f <- function(i) {
@@ -67,14 +68,14 @@ parse_tags <- function(value, domain) {
 			}
 			i <- sapply(dom, length) == 2
 			dom <- do.call(rbind, dom[i])
-			cbind(dom, val[,2])
-			
 			value <- cbind(dom, val[,2])
 		}
+	} else if (NCOL(value) == 3) {
+		value <- value[, c(3,1,2), drop=FALSE]
 	} else if (NCOL(value) > 3) {
 		error("metags<-", "expecting a vector with 'name=value' or a two/three column matrix")
-	}
-	if (NCOL(value) == 2) value <- cbind(value, domain) 
+	} 
+	if (NCOL(value) == 2) value <- cbind(domain, value) 
 	value[is.na(value[,2]), 2] <- ""
 	na.omit(value)
 }
@@ -88,9 +89,9 @@ setMethod("metags<-", signature(x="SpatRaster"),
 				if (is.character(layer)) layer = match(layer, names(x))
 				value <- metags(x, layer)
 			} else {
-				value <- metags(x)
+				value <- metags(x)[, c(3,1:2)]
 			}
-			value[,2] <- ""
+			value[,3] <- ""
 			#value[is.na(value)] <- ""
 		} else {
 			value <- parse_tags(value, domain)
@@ -102,6 +103,7 @@ setMethod("metags<-", signature(x="SpatRaster"),
 				x@pntr$addLyrTags(layer-1, value[,2], value[,3])
 			} else {
 				sapply(1:nrow(value), function(i) {
+						# name, value, domain
 						x@pntr$addTag(value[i,2], value[i,3], value[i,1])
 					})
 			}

@@ -45,6 +45,10 @@ rgb2hex <- function(x) {
     .Call(`_terra_ginfo`, filename, options, oo)
 }
 
+.gdalmdinfo <- function(filename, options) {
+    .Call(`_terra_gmdinfo`, filename, options)
+}
+
 .sdinfo <- function(filename) {
     .Call(`_terra_sd_info`, filename)
 }
@@ -113,6 +117,10 @@ rgb2hex <- function(x) {
     .Call(`_terra_PROJ_network`, enable, url)
 }
 
+.removeDriver <- function(d) {
+    invisible(.Call(`_terra_removeDriver`, d))
+}
+
 .pearson <- function(x, y, narm) {
     .Call(`_terra_pearson_cor`, x, y, narm)
 }
@@ -123,6 +131,14 @@ rgb2hex <- function(x) {
 
 .unique_symmetric_rows <- function(x, y) {
     .Call(`_terra_uniqueSymmetricRows`, x, y)
+}
+
+.arnames <- function(filename, filter) {
+    .Call(`_terra_arnames`, filename, filter)
+}
+
+.dimfo <- function(filename, array_name) {
+    .Call(`_terra_dimfo`, filename, array_name)
 }
 
 dist2segmentPoint_geo <- function(plon, plat, lon1, lat1, lon2, lat2, ilon, ilat) {

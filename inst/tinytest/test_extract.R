@@ -233,3 +233,17 @@ values(x) <- rbind(11:13)
 xy <- data.frame(x=-1:1,y=-1:1)
 e <- extract(x, xy, ID=TRUE, layer=1:3)
 expect_equal(e$value, 11:13)
+
+
+r_win <- terra::rast(system.file("ex/elev.tif", package = "terra"), win = v[12])
+pnt <- centroids(v[12], inside = TRUE)
+expect_equal(extract(r, pnt, ID=FALSE)[[1]], 307)
+expect_equal(extract(r_win, pnt, ID=FALSE)[[1]], 307)
+
+xy <- data.frame(lon=c(50,80), lat=c(30, 60))
+e <- extractRange(s, xy, first=1:2, last=3:2, lyr_fun=sum)
+expect_equal(e, c(522, 67))
+e <- extractRange(s, xy, first=1:2, last=3:2, lyr_fun=sum, ID=T)
+expect_equal(e, data.frame(ID=1:2, value=c(522, 67)))
+ 
+

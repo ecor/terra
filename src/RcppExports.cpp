@@ -132,6 +132,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// gmdinfo
+std::string gmdinfo(std::string filename, std::vector<std::string> options);
+RcppExport SEXP _terra_gmdinfo(SEXP filenameSEXP, SEXP optionsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type options(optionsSEXP);
+    rcpp_result_gen = Rcpp::wrap(gmdinfo(filename, options));
+    return rcpp_result_gen;
+END_RCPP
+}
 // sd_info
 std::vector<std::vector<std::string>> sd_info(std::string filename);
 RcppExport SEXP _terra_sd_info(SEXP filenameSEXP) {
@@ -319,6 +331,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// removeDriver
+void removeDriver(std::vector<std::string> d);
+RcppExport SEXP _terra_removeDriver(SEXP dSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type d(dSEXP);
+    removeDriver(d);
+    return R_NilValue;
+END_RCPP
+}
 // pearson_cor
 double pearson_cor(std::vector<double> x, std::vector<double> y, bool narm);
 RcppExport SEXP _terra_pearson_cor(SEXP xSEXP, SEXP ySEXP, SEXP narmSEXP) {
@@ -355,6 +377,30 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<size_t> >::type x(xSEXP);
     Rcpp::traits::input_parameter< std::vector<size_t> >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(uniqueSymmetricRows(x, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// arnames
+std::vector<std::string> arnames(std::string filename, bool filter);
+RcppExport SEXP _terra_arnames(SEXP filenameSEXP, SEXP filterSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< bool >::type filter(filterSEXP);
+    rcpp_result_gen = Rcpp::wrap(arnames(filename, filter));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dimfo
+Rcpp::List dimfo(std::string filename, std::string array_name);
+RcppExport SEXP _terra_dimfo(SEXP filenameSEXP, SEXP array_nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type array_name(array_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(dimfo(filename, array_name));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -407,6 +453,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_terra_gdal_setconfig", (DL_FUNC) &_terra_gdal_setconfig, 2},
     {"_terra_gdal_getconfig", (DL_FUNC) &_terra_gdal_getconfig, 1},
     {"_terra_ginfo", (DL_FUNC) &_terra_ginfo, 3},
+    {"_terra_gmdinfo", (DL_FUNC) &_terra_gmdinfo, 2},
     {"_terra_sd_info", (DL_FUNC) &_terra_sd_info, 1},
     {"_terra_gdal_version", (DL_FUNC) &_terra_gdal_version, 0},
     {"_terra_geos_version", (DL_FUNC) &_terra_geos_version, 2},
@@ -424,9 +471,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_terra_get_proj_search_paths", (DL_FUNC) &_terra_get_proj_search_paths, 0},
     {"_terra_set_proj_search_paths", (DL_FUNC) &_terra_set_proj_search_paths, 1},
     {"_terra_PROJ_network", (DL_FUNC) &_terra_PROJ_network, 2},
+    {"_terra_removeDriver", (DL_FUNC) &_terra_removeDriver, 1},
     {"_terra_pearson_cor", (DL_FUNC) &_terra_pearson_cor, 3},
     {"_terra_weighted_pearson_cor", (DL_FUNC) &_terra_weighted_pearson_cor, 4},
     {"_terra_uniqueSymmetricRows", (DL_FUNC) &_terra_uniqueSymmetricRows, 2},
+    {"_terra_arnames", (DL_FUNC) &_terra_arnames, 2},
+    {"_terra_dimfo", (DL_FUNC) &_terra_dimfo, 2},
     {"_terra_dist2segmentPoint_geo", (DL_FUNC) &_terra_dist2segmentPoint_geo, 8},
     {"_terra_intermediate", (DL_FUNC) &_terra_intermediate, 6},
     {"_rcpp_module_boot_spat", (DL_FUNC) &_rcpp_module_boot_spat, 0},

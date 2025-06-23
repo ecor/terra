@@ -268,7 +268,7 @@ SpatRaster SpatRaster::distance_crds(std::vector<double>& x, std::vector<double>
 	size_t nc = ncol();
 	if (nrow() > 1000) {
 		opt.steps = std::max(opt.steps, (size_t) 4);
-		opt.progress = opt.progress * 1.5;
+		opt.progress = opt.progress * 2;
 	}
 	
  	if (!out.writeStart(opt, filenames())) {
@@ -278,7 +278,7 @@ SpatRaster SpatRaster::distance_crds(std::vector<double>& x, std::vector<double>
 	std::vector<double> cells;
 	std::vector<double> dlast;
 
-	std::vector<int_64> cols;
+	std::vector<int64_t> cols;
 	cols.resize(ncol());
 	std::iota(cols.begin(), cols.end(), 0);
 	std::vector<double> tox = xFromCol(cols);
@@ -289,7 +289,7 @@ SpatRaster SpatRaster::distance_crds(std::vector<double>& x, std::vector<double>
 		for (double &d : tox) d *= toRad;
 	}
 
-	double oldfirst = 0;
+	size_t oldfirst = 0;
 	size_t first = 0;
 	size_t last  = x.size();
 
@@ -373,15 +373,14 @@ SpatRaster SpatRaster::distance_vector(SpatVector p, bool rasterize, std::string
 		out.setError("invalid unit. Must be 'm' or 'km'");
 		return(out);
 	}
+	if ((method != "geo") && (method != "cosine") && (method != "haversine")) {
+		out.setError("invalid method. Must be 'geo', 'haversine' or 'cosine'");
+		return(out);
+	}
 
 	if (rasterize) {
 //SpatRaster SpatRaster::distance_rasterize(SpatVector p, double target, double exclude, std::string unit, const std::string& method, SpatOptions &opt) {
 //		double target = NAN;
-
-		if ((method != "geo") && (method != "cosine") && (method != "haversine")) {
-			out.setError("invalid method. Must be 'geo', 'cosine' or 'haversine'");
-			return(out);
-		}
 
 		double exclude = NAN;
 
@@ -419,11 +418,6 @@ SpatRaster SpatRaster::distance_vector(SpatVector p, bool rasterize, std::string
 	} else {
 
 		if ((p.type() == "polygons") || (p.type() == "lines")) {
-
-			if ((method != "geo") && (method != "cosine")) {
-				out.setError("invalid method. Must be 'geo' or 'cosine'");
-				return(out);
-			}
 			
 			if (p.nrow() > 1) {
 				p = p.aggregate(true);
@@ -448,7 +442,7 @@ SpatRaster SpatRaster::distance_vector(SpatVector p, bool rasterize, std::string
 				SpatVector pnts;
 				pnts.srs = source[0].srs;
 				pnts.setPointsGeometry(rxy[0], rxy[1]);
-				std::vector<double> d = pnts.distance(p, false, unit, method, opt);
+				std::vector<double> d = pnts.distance(p, false, unit, method, false, opt);
 					
 				if (!out.writeBlock(d, i)) return out;
 			}
@@ -752,8 +746,8 @@ inline double minCostDist(std::vector<double> &d) {
 }
 
 
-inline void DxDxyCost(const double &lat, const int &row, double xres, double yres, const int &dir, double &dx,  double &dy, double &dxy, double distscale, const double mult=2) {
-	double rlat = lat + row * yres * dir;
+inline void DxDxyCost(const double &lat, const size_t &row, double xres, double yres, const double &dir, double &dx,  double &dy, double &dxy, double distscale, const double mult=2) {
+	double rlat = lat + (double)row * yres * dir;
 	dx  = distance_lonlat(0, rlat, xres, rlat) / (mult * distscale);
 	yres *= -dir;
 	dy  = distance_lonlat(0, 0, 0, yres);
@@ -1322,8 +1316,8 @@ inline double minNArm(const double &a, const double &b) {
 }
 */
 
-inline void DxDxy(const double &lat, const int &row, const double &xres, double yres, const int &dir, const double &scale, double &dx,  double &dy, double &dxy) {
-	double rlat = lat + row * yres * dir;
+inline void DxDxy(const double &lat, const size_t &row, const double &xres, double yres, const double &dir, const double &scale, double &dx,  double &dy, double &dxy) {
+	double rlat = lat + (double)row * yres * dir;
 	dx  = distance_lonlat(0, rlat, xres, rlat) / scale;
 	yres *= -dir;
 	dy  = distance_lonlat(0, rlat, 0, rlat+yres);
@@ -2054,7 +2048,7 @@ SpatRaster SpatRaster::rst_area(bool mask, std::string unit, bool transform, int
 				out.writeStop();
 			}
 			if (resample) {
-				double divr = frow*fcol;
+				double divr = (double)(frow*fcol);
 				out = out.arith(divr, "/", false, false, xopt);
 				out = out.warper(target, "", "bilinear", false, false, true, opt);
 			}
@@ -2123,7 +2117,7 @@ std::vector<std::vector<double>> SpatRaster::sum_area(std::string unit, bool tra
 		if (!hasValues()) {
 			out.resize(1);
 			for (size_t i=0; i<ar.size(); i++) {
-				out[0] += ar[i] * nc;
+				out[0] += ar[i] * (double)nc;
 			}
 		} else {
 			for (size_t i=0; i<bs.n; i++) {
@@ -2476,7 +2470,7 @@ std::vector<std::vector<double>> SpatRaster::sum_area_group(SpatRaster group, st
 		for (auto& it1:m[i]) {
 			std::map<double, double> gm = it1.second;
 			for (auto& it2:gm) {
-				out[i].push_back(i);
+				out[i].push_back((double)i);
 				out[i].push_back(it1.first);
 				out[i].push_back(it2.first);
 				out[i].push_back(it2.second);
@@ -2716,7 +2710,7 @@ void do_roughness(std::vector<double> &val, const std::vector<double> &d, size_t
 		val.resize(val.size() + ncol, NAN);
 	}
 
-	int incol = ncol;
+	int incol = (int)ncol;
 	int a[9] = { -1-incol, -1, -1+incol, -incol, 0, incol, 1-incol, 1, 1+incol };
 	double min, max, v;
 	for (size_t row=1; row< (nrow-1); row++) {
@@ -2758,7 +2752,7 @@ void to_degrees(std::vector<double>& x, size_t start) {
 }
 
 
-void do_slope(std::vector<double> &val, const std::vector<double> &d, unsigned ngb, unsigned nrow, unsigned ncol, double dx, double dy, bool geo, std::vector<double> &gy, bool degrees, bool before, bool after) {
+void do_slope(std::vector<double> &val, const std::vector<double> &d, size_t ngb, size_t nrow, size_t ncol, double dx, double dy, bool geo, std::vector<double> &gy, bool degrees, bool before, bool after) {
 
 	size_t start = val.size();
 	if (!before) {
@@ -2882,7 +2876,7 @@ double dmod(double x, double n) {
 
 
 
-void do_aspect(std::vector<double> &val, const std::vector<double> &d, unsigned ngb, unsigned nrow, unsigned ncol, double dx, double dy, bool geo, std::vector<double> &gy, bool degrees, bool before, bool after) {
+void do_aspect(std::vector<double> &val, const std::vector<double> &d, size_t ngb, size_t nrow, size_t ncol, double dx, double dy, bool geo, std::vector<double> &gy, bool degrees, bool before, bool after) {
 
 	size_t start = val.size();
 	if (!before) {
@@ -3084,7 +3078,7 @@ SpatRaster SpatRaster::terrain(std::vector<std::string> v, unsigned neighbors, b
 		}
 		readValues(d, rrow, rnrw, 0, nc);
 		if (lonlat && aspslope) {
-			std::vector<int_64> rows(rnrw);
+			std::vector<int64_t> rows(rnrw);
 			std::iota(rows.begin(), rows.end(), rrow);
 			y = yFromRow(rows);
 			yr = distance_lonlat(0, 0, 0, yres());

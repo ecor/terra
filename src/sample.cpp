@@ -61,6 +61,7 @@ std::vector<std::vector<double>> SpatRaster::sampleStratifiedCells(double size, 
 		return(out);
 	}
 
+	opt.ncopies *= 2;
 	BlockSize bs = getBlockSize(opt);
 	std::vector<double> vals, vcell, vwght, outvals, outcell;
 	
@@ -396,7 +397,7 @@ std::vector<double> SpatRaster::sampleRowCol(size_t nr, size_t nc) {
 		return out;
 	}
 
-	std::vector<int_64> rows, cols;
+	std::vector<int64_t> rows, cols;
 
 	double d = nrow()/nr;
 	for (size_t i=0; i<nr; i++) {

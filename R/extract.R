@@ -65,19 +65,20 @@ extractCells <- function(x, y, raw=FALSE) {
 }
 
 
-use_layer <- function(e, y, layer, nl) {
+use_layer <- function(e, y, layer, nl, keepID) {
  	if (is.null(layer)) {
 		return(e)
 	}
 	layer <- getLyrNrs(layer, colnames(e)[-1], nrow(y)) 
 	idx <- cbind(1:nrow(e), layer[e[,1]] + 1)
-	ee <- data.frame(e[,1,drop=FALSE], colnames(e)[idx[,2]], value=e[idx])
-	colnames(ee)[2] <- "layer"
+	ee <- data.frame(e[,1,drop=FALSE], layer=colnames(e)[idx[,2]], value=e[idx])
 	if (ncol(e) > (nl+1)) {
-		cbind(ee, e[,(nl+1):ncol(e), drop=FALSE])
-	} else {
-		ee
+		ee <- cbind(ee, e[,(nl+2):ncol(e), drop=FALSE])
+	} 
+	if (!keepID) {
+		ee <- ee[,-1]
 	}
+	ee
 }
 
 
@@ -180,7 +181,7 @@ extract_fun <- function(x, y, fun, ID=TRUE, weights=FALSE, exact=FALSE, touches=
 	}
 	if (!is.null(layer)) {
 		e <- cbind(ID=1:nrow(e), e)
-		e <- use_layer(e, y, layer, nlyr(x))
+		e <- use_layer(e, y, layer, nlyr(x), ID)
 		if (!ID || bind) {
 			e$ID <- NULL
 		}
@@ -225,15 +226,14 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 
 	geo <- geomtype(y)
 	if (!is.null(layer)) {
-#		if (length(layer) != nrow(y)) {
-#			error("extract", "length(layer) != nrow(y)")
-#		}
-
 		if (length(layer) > nrow(y)) {
 			error("extract", "length(layer) > nrow(y)")
 		} else { # recycle
+			x <- x[[unique(layer)]]
 			layer <- rep(layer, length.out=nrow(y))
-		}		
+		}
+		keepID <- ID
+		ID <- TRUE
 	}
 
 	opt <- spatOptions()
@@ -345,7 +345,7 @@ function(x, y, fun=NULL, method="simple", cells=FALSE, xy=FALSE, ID=TRUE, weight
 		}
 	}
 	
-	e <- use_layer(e, y, layer, nl)
+	e <- use_layer(e, y, layer, nl, keepID)
 
 	if (bind) {
 		if (nrow(e) == nrow(y)) {
@@ -582,27 +582,37 @@ extractAlong <- function(x, y, ID=TRUE, cells=FALSE, xy=FALSE, online=FALSE, bil
 
 
 setMethod("extractRange", signature(x="SpatRaster", y="ANY"),
-	function(x, y, first, last, lyr_fun=NULL, geom_fun=NULL, ID=FALSE, na.rm=TRUE, ...) {
+	function(x, y, first, last, lyr_fun=NULL, geom_fun=NULL, ID=FALSE, na.rm=TRUE, bind=FALSE, ...) {
 		
 		first <- getLyrNrs(first, names(x), NROW(y)) + 1 
 		last  <- getLyrNrs(last,  names(x), NROW(y)) + 1
 		if (inherits(y, "SpatVector")) {
-			e <- extract(x, y, geom_fun, ID=TRUE, na.rm=na.rm, ...)
+			e <- extract(x, y, geom_fun, ID=TRUE, na.rm=na.rm, bind=FALSE, ...)
 			if (nrow(e) != nrow(y)) {
 				error("extractRange", "geom_fun must return a single value for each geometry/layer")
 			}
 		} else {
-			e <- data.frame(ID=1:NROW(y), extract(x, y, ...))
+			e <- data.frame(extract(x, y, ID=TRUE, ...))
 		}
-		a <- lapply(1:nrow(e), function(i) e[i, c(first[i]:last[i])])
+		a <- lapply(1:nrow(e), function(i) e[i, c(first[i]:last[i]), drop=FALSE])
 		if (!is.null(lyr_fun)) {
 			a <- sapply(a, lyr_fun, na.rm=na.rm)
 		}
-		if (ID) {
+		if (isTRUE(ID)) {
 			if (is.list(a)) {
-				names(a) <- 1:NROW(y)
+				a <- lapply(1:length(a), function(i) cbind(ID=i, a[[i]]))
 			} else {
-				a <- data.frame(ID=1:nrow(a), value=a)
+				a <- data.frame(ID=1:NROW(a), value=a)
+			}
+		}
+		if (isTRUE(bind)) {
+			if (is.list(a)) {
+				warn("extractRange", "cannot bind these values")
+			} else {
+				if (is.vector(a)) {
+					a <- data.frame(value=a)
+				}
+				a <- cbind(y, a)
 			}
 		}
 		a

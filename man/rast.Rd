@@ -27,18 +27,19 @@ A SpatRaster represents a spatially referenced surface divided into three dimens
 
 When a SpatRaster is created from one or more files, it does not load the cell (pixel) values into memory (RAM). It only reads the parameters that describe the geometry of the SpatRaster, such as the number of rows and columns and the coordinate reference system. The actual values will be read when needed.
 
-Note that there are operating system level limitations to the number of files that can be opened simultaneously. Using a SpatRaster of very many files (e.g. 10,000) may cause R to crash when you use it in a computation. In situations like that you may need to split up the task or combine data into fewer (multi-layer) files. Also note that the GTiff format used for temporary files cannot store more than 65535 layers in a single file.
+Note that there are operating system level limitations to the number of files that can be opened simultaneously. Using a SpatRaster of very many files (e.g. 10,000) may cause R to crash when you use it in a computation. In situations like that you may need to split up the task or combine data into fewer (multi-layer) files. Also note that the GTiff format used for temporary files cannot store more than 65,535 layers in a single file.
 }
 
 \usage{
-\S4method{rast}{character}(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, 
-		  win=NULL, snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, domains="")
+\S4method{rast}{character}(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, win=NULL, 
+		snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, 
+		guessCRS=TRUE, domains="", md=FALSE, dims=NULL)
 
-\S4method{rast}{missing}(x, nrows=180, ncols=360, nlyrs=1, xmin=-180, xmax=180, 
-          ymin=-90, ymax=90, crs, extent, resolution, vals, names, time, units)
+\S4method{rast}{missing}(x, nrows=180, ncols=360, nlyrs=1, xmin=-180, xmax=180, ymin=-90,
+		ymax=90, crs, extent, resolution, vals, names, time, units)
 
 \S4method{rast}{SpatRaster}(x, nlyrs=nlyr(x), names, vals, keeptime=TRUE, 
-		  keepunits=FALSE, props=FALSE, tags=FALSE) 
+		keepunits=FALSE, props=FALSE, tags=FALSE) 
 
 \S4method{rast}{matrix}(x, type="", crs="", digits=6, extent=NULL)
 
@@ -58,7 +59,7 @@ Note that there are operating system level limitations to the number of files th
 \arguments{
 \item{x}{filename (character), missing, SpatRaster, SpatRasterDataset, SpatExtent, SpatVector, matrix, array, list of SpatRasters. For other types it will be attempted to create a SpatRaster via (`as(x, "SpatRaster")`}
 \item{subds}{positive integer or character to select a sub-dataset. If zero or "", all sub-datasets are returned (if possible)}
-\item{lyrs}{positive integer or character to select a subset of layers (a.k.a. "bands")}
+\item{lyrs}{positive integer or character to select a subset of layers (a.k.a. "bands"). If \code{x} has multiple filenames, the same layer numbers are selected from each of the files, unless numbers larger than the number of layers of the first data source are included}
 \item{drivers}{character. GDAL drivers to consider}
 \item{opts}{character. GDAL dataset open options}
 \item{win}{SpatExtent to set a \code{\link{window}} (area of interest)}
@@ -66,7 +67,10 @@ Note that there are operating system level limitations to the number of files th
 \item{vsi}{logical. If \code{TRUE}, "\\vsicurl\\" is prepended to filenames that start with "http". There are many  \href{https://gdal.org/en/stable/user/virtual_file_systems.html}{VSI configuration options} that can be set with \code{\link{setGDALconfig}}}
 \item{raw}{logical. If \code{TRUE}, scale and offset values are ignored. See \code{\link{scoff}} to get these parameters}
 \item{noflip}{logical. If \code{TRUE}, a raster (e.g. JPEG image) that is not georeferenced and that GDAL assigns a flipped extent to (\code{ymax < ymin}), is not considered flipped. This avoids the need to \code{\link{flip}} the raster vertically}
-\item{domains}{character. Metadata domains to read (see \code{\link{metags}} to retreive their values if there are any. "" is the default domain}
+\item{guessCRS}{logical. If \code{TRUE} and the the file does not specify a CRS but has an extent that is within longitude/latitude bounds, the longitude/latitude crs is assigned to the SpatRaster}
+\item{domains}{character. Metadata domains to read (see \code{\link{metags}} to retrieve their values if there are any. "" is the default domain}
+\item{md}{logical. If \code{TRUE}, the multi-dimensional GDAL interface is used under the hood for file reading. This interface can only be used for a few file formats (netCDF/HDF5) and can sometimes (not always) provide notably faster reading of data with many (time) steps in the third or higher dimension. Support for this is new and experimental (June 2025)}
+\item{dims}{numeric. Specify the order of the dimensions to read atypical files. See \code{\link{ar_info}}. Only relevant if \code{md=TRUE}. Not used yet}
 \item{nrows}{positive integer. Number of rows}
 \item{ncols}{positive integer. Number of columns}
 \item{nlyrs}{positive integer. Number of layers}

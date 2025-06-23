@@ -15,7 +15,7 @@
 \title{Plot with leaflet}
 
 \description{
-Plot the values of a SpatRaster or SpatVector to make an interactive leaflet map that is displayed in a browser.
+Plot the SpatRaster or SpatVector(s) to make an interactive leaflet map that is displayed in a browser.
 }
 
 \usage{
@@ -26,16 +26,18 @@ Plot the values of a SpatRaster or SpatVector to make an interactive leaflet map
 	breakby="eqint", map=NULL, ...) 
 
 
-\S4method{plet}{SpatVector}(x, y="", col,fill=0.2, main=y, cex=1, lwd=2, 
+\S4method{plet}{SpatVector}(x, y="", col, fill=0.2, main=y, cex=1, lwd=2, 
 	border="black", alpha=1, popup=TRUE, label=FALSE, split=FALSE,
 	tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
 	wrap=TRUE, legend="bottomright", collapse=FALSE, type=NULL, breaks=NULL,
 	breakby="eqint", sort=TRUE, reverse=FALSE, map=NULL, ...)
 
 
-\S4method{plet}{SpatVectorCollection}(x, col, fill=0, cex=1, lwd=2, border="black", alpha=1, popup=TRUE, 
-   label=FALSE, tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), wrap=TRUE,
-   legend="bottomright", collapse=FALSE, map=NULL)
+\S4method{plet}{SpatVectorCollection}(x, y="", col, fill=0.2, main=y, cex=1, lwd=2, 
+	border="black", alpha=1, popup=TRUE, label=FALSE, 
+	tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
+	wrap=TRUE, legend="bottomright", collapse=FALSE, type=NULL, breaks=NULL, 
+	breakby="eqint", sort=TRUE, reverse=FALSE, map=NULL, ...)
 
 
 \S4method{lines}{leaflet}(x, y, col, lwd=2, alpha=1, ...)
@@ -100,7 +102,7 @@ lines(m, v, lwd=1, col="white")
 
 plet(v, "NAME_1", split=TRUE, alpha=.2) |> 
   points(p, col="gray", cex=2, popup=TRUE,
-  	clusterOptions = markerClusterOptions())
+  	clusterOptions = leaflet::markerClusterOptions())
 
 s <- svc(v, p)
 names(s) <- c("the polys", "set of points")

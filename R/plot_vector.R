@@ -261,7 +261,7 @@ setMethod("dots", signature(x="SpatVector"),
 		}
 	}
 
-	if (is.null(out$leg$loc)) out$leg$loc <- "right"
+#	if (is.null(out$leg$loc)) out$leg$loc <- "right"
 
 	brks <- seq(out$range[1], out$range[2], length.out = length(out$cols))
 	grps <- cut(out$v, breaks = brks, include.lowest = TRUE)
@@ -416,12 +416,14 @@ setMethod("dots", signature(x="SpatVector"),
 			lines(ext(graphics::par("usr")))		
 		}
 	}
+	
+	plot_main(out)
 
-	if (out$main != "") {
-		posx <- out$lim[1] + diff(out$lim[1:2])/2
-		text(posx, out$lim[4], out$main, pos=3, offset=out$line.main, cex=out$cex.main, 
-			font=out$font.main, col=out$col.main, xpd=TRUE)
-	}
+#	if (out$main != "") {
+#		posx <- out$lim[1] + diff(out$lim[1:2])/2
+#		text(posx, out$lim[4], out$main, pos=3, offset=out$line.main, cex=out$cex.main, 
+#			font=out$font.main, col=out$col.main, xpd=TRUE)
+#	}
 
 	if (!out$add) {
 		try(set.clip(out$lim, out$lonlat))
@@ -434,12 +436,17 @@ setMethod("dots", signature(x="SpatVector"),
 	legend.only=FALSE, levels=NULL, add=FALSE, range=NULL, fill_range=FALSE, breaks=NULL, breakby="eqint",
 	xlim=NULL, ylim=NULL, colNA=NA, alpha=NULL, axes=TRUE, buffer=TRUE, background=NULL,
 	pax=list(), plg=list(), ext=NULL, grid=FALSE, las=0, sort=TRUE, reverse=FALSE, values=NULL,
-	box=TRUE, xlab="", ylab="", cex.lab=0.8, line.lab=1.5, yaxs="i", xaxs="i", main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, 
+	box=TRUE, xlab="", ylab="", cex.lab=0.8, line.lab=1.5, yaxs="i", xaxs="i", 
+	main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, loc.main=NULL, 
+    sub = "", font.sub=1, cex.sub=0.8*cex.main, line.sub =1.75,  col.sub=col.main, loc.sub=NULL,
+	halo=FALSE, hc="white", hw=0.1, 
 	density=NULL, angle=45, border="black", dig.lab=3, cex=1, clip=TRUE, leg_i=1, asp=NULL, xpd=NULL, 
-	decreasing = FALSE, ...) {
+#catch and kill
+	decreasing=FALSE, font=NULL,
+	...) {
 
 	# backwards compatibility
-	reverse <- reverse | decreasing
+	reverse <- isTRUE(reverse) || isTRUE(decreasing)
 
 	out <- list()
 	out$blank <- FALSE
@@ -499,11 +506,25 @@ setMethod("dots", signature(x="SpatVector"),
 	}
 	
 	out$main <- main
-	if ((!is.expression(main)) && (is.null(out$main) || any(is.na(out$main)))) out$main <- ""
+#	if ((!is.expression(main)) && (is.null(out$main) || any(is.na(out$main)))) out$main <- ""
+
+	out$halo.main <- halo
+	out$halo.main.hc <- hc
+	out$halo.main.hw <- hw
+
 	out$cex.main  <- cex.main
+	out$loc.main  <- loc.main
 	out$font.main <- font.main
 	out$col.main  <- col.main
 	out$line.main <- line.main
+
+	out$sub <- sub
+	out$loc.sub <- loc.sub
+	out$cex.sub <- cex.sub
+	out$font.sub <- font.sub
+	out$col.sub <- col.sub
+	out$line.sub <- line.sub
+
 	out$dig.lab <- dig.lab
 
 	out$box <- isTRUE(box)
@@ -635,16 +656,17 @@ setMethod("dots", signature(x="SpatVector"),
 	out$legend_only <- isTRUE(legend.only)
 	out$leg$leg_i <- leg_i
 
+	out$mar <- mar
+	out <- get_mar(out)
 
-	if (is.null(mar)) {
-		if (out$legend_draw) {
-			mar=c(3.1, 3.1, 2.1, 7.1)
-		} else {
-			mar=c(3.1, 3.1, 2.1, 2.1)
-		}
-	}
-	out$mar <- rep_len(mar, 4)
-
+#	if (is.null(mar)) {
+#		if (out$legend_draw) {
+#			mar=c(3.1, 3.1, 2.1, 7.1)
+#		} else {
+#			mar=c(3.1, 3.1, 2.1, 2.1)
+#		}
+#	}
+#	out$mar <- rep_len(mar, 4)
 	out$skipNA <- TRUE
 	if (!is.null(colNA)) {
 		if (!is.na(colNA)) {
@@ -661,10 +683,10 @@ setMethod("dots", signature(x="SpatVector"),
 
 
 setMethod("plot", signature(x="SpatVector", y="character"),
-	function(x, y, col=NULL, type=NULL, mar=NULL, add=FALSE, legend=TRUE, axes=!add,
-	main, buffer=TRUE, background=NULL, grid=FALSE, ext=NULL, 
-	sort=TRUE, reverse=FALSE, fun=NULL, plg=list(), pax=list(), nr, nc, colNA=NA, 
-	alpha=NULL, box=axes, clip=TRUE, ...) {
+	function(x, y, col=NULL, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
+    main="", grid=FALSE, ext=NULL, sort=TRUE, reverse=FALSE, fun=NULL,
+	colNA=NA, alpha=NULL, nr, nc, add=FALSE, buffer=TRUE, background=NULL, 
+	box=axes, clip=TRUE, ...) {
 
 		old.mar <- graphics::par()$mar
 		on.exit(graphics::par(mar=old.mar))

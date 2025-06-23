@@ -15,8 +15,6 @@
 \alias{plot,SpatVectorCollection,missing-method}
 \alias{plot,SpatVectorCollection,numeric-method}
 
-
-
 \title{Make a map}
 
 \description{
@@ -39,9 +37,9 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 
 \S4method{plot}{SpatRaster,character}(x, y, ...)
 
-\S4method{plot}{SpatVector,character}(x, y, col=NULL, type=NULL, mar=NULL, add=FALSE, legend=TRUE, axes=!add, 
-    main="", buffer=TRUE, background=NULL, grid=FALSE, ext=NULL, sort=TRUE, 
-	reverse=FALSE, fun=NULL, plg=list(), pax=list(), nr, nc, colNA=NA, alpha=NULL, 
+\S4method{plot}{SpatVector,character}(x, y, col=NULL, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
+    main="", grid=FALSE, ext=NULL, sort=TRUE, reverse=FALSE, fun=NULL,
+	colNA=NA, alpha=NULL, nr, nc, add=FALSE, buffer=TRUE, background=NULL, 
 	box=axes, clip=TRUE, ...)
 
 \S4method{plot}{SpatVector,numeric}(x, y, ...)
@@ -69,20 +67,30 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
  
  \item{plg}{list with parameters for drawing the legend. See the arguments for \code{\link[graphics]{legend}}. 
  
- In addition there are these parameters for the legend title: \code{title.srt} to rotate the title and \code{title.x} and \code{title.y} to place the title at specific coordinates. Parameter \code{digits} can be used to change the number of digits to print after the decimal point. 
-  
-  A legend can be placed with placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can have be a keyword such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. For a continuous legend, only the placement keywords "left", "right", "top", "bottom", "topright", "bottomright" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that move the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax).
+  A legend can be placed with placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can have be a keyword such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. For a continuous legend, only the placement keywords "left", "right", "top", "bottom", "topright", "bottomright" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that move the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax). When supplying coordinates, use \code{horiz=TRUE} to get a horizontal legend.
     
   Additional parameters for continuous legends include: 
-  
+
   \itemize{
-    \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
-	\item \code{at} to set the location of the tic-marks
-	\item \code{tic} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tic-mark placement/length that is different from the default "throughout". You can also set \code{tic.col}, \code{tic.box.col} and \code{tic.lwd}
-	}
-  }
+	\item \code{digits} integer. The number of digits to print after the decimal point
+    \item \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
+	\item \code{at} to set the location of the tickmarks
+	\item \code{tick} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout". 
+	\item \code{tick.col}, \code{tick.box.col} and \code{tick.lwd} to change the appearance of the tickmarks
+	\item \code{title.srt} to rotate the legend title
+	\item \code{title.x} and \code{title.y} to place the legend title at specific coordinates  
+  }}
   
-  \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Arguments \code{side}, \code{tick} and \code{lab} can be used to indicate for which of the four axes to draw a line (side), tick-mark, and/or the tick-mark labels. The default is \code{c(1:4)} for side and \code{1:2} for the other two. If \code{side} is changed the other two default to that value. Logical argument \code{retro} can be used to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation}  
+  \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Additional parameters include: 
+  \itemize{
+    \item \code{side} numeric to indicate for which of the axes to draw a line. Default is \code{1:4} (only noticble when \code{box=FALSE}. 
+    \item \code{tick} numeric to indicate for which of the axes to draw tickmarks. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
+    \item \code{lab} numeric to indicate for which of the axes to draw labels. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
+    \item \code{xat}/\code{yat} numeric with the values at which tickmarks are to be drawn on the horizontal/vertical axis.
+    \item \code{xlab}/\code{ylab} this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis. 
+    \item \code{retro} a logical value that can be set to \code{TRUE} to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation. For longitude/latitude data only. See \code{\link{graticule}} for projected data.
+  }}
+  
   \item{maxcell}{positive integer. Maximum number of cells to use for the plot}
   \item{smooth}{logical. If \code{TRUE} the cell values are smoothed (only if a continuous legend is used)}
   \item{range}{numeric. minimum and maximum values to be used for the continuous legend. You can use \code{NA} for one of these to only set the minimum or maximum value}
@@ -99,11 +107,11 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{grid}{logical. If \code{TRUE} grid lines are drawn. Their properties such as type and color can be set with the \code{pax} argument}
   \item{nc}{positive integer. Optional. The number of columns to divide the plotting device in (when plotting multiple layers)}
   \item{nr}{positive integer. Optional. The number of rows to divide the plotting device in (when plotting multiple layers)}
-  \item{main}{character. Main plot titles (one for each layer to be plotted). You can use arguments \code{cex.main}, \code{font.main}, \code{col.main} to change the appearance; and \code{loc.main} to change the location of the main title (either two coordinates, or a character value such as "topleft")}
-  \item{maxnl}{positive integer. Maximum number of layers to plot (for a multi-layer object)}
+  \item{main}{character. Main plot titles (one for each layer to be plotted). You can use arguments \code{cex.main}, \code{font.main}, \code{col.main} to change the appearance; and \code{loc.main} to change the location of the main title (either two coordinates, or a character value such as "topleft"). You can also use \code{sub=""} for a subtitle. See \code{\link{title}}}
+  \item{maxnl}{positive integer. Maximum number of layers to plot (for a multi-layer object).}
   \item{add}{logical. If \code{TRUE} add the object to the current plot}
   \item{ext}{SpatExtent. Can be use instead of xlim and ylim to set the extent of the plot}
-  \item{reset}{logical. If \code{TRUE} add the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link{lines}})}
+  \item{reset}{logical. If \code{TRUE} the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link{lines}})}
   \item{values}{Either a vector with values to be used for plotting or a two-column data.frame, where the first column matches a variable in \code{x} and the second column has the values to be plotted}
   \item{...}{arguments passed to \code{plot("SpatRaster", "numeric")} and additional graphical arguments}  
 }

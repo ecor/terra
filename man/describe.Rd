@@ -32,6 +32,8 @@ Describe the properties of spatial data in a file as generated with the "GDALinf
 character (invisibly, if \code{print=FALSE})
 }
 
+\seealso{\code{\link{ar_info}}}
+
 \examples{
 f <- system.file("ex/elev.tif", package="terra")
 describe(f)

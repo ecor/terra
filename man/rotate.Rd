@@ -15,19 +15,19 @@ Rotate a SpatVector as for a SpatRaster with, or with \code{split=FALSE} to corr
 }
 
 \usage{
-\S4method{rotate}{SpatRaster}(x, left=TRUE, filename="", ...)
+\S4method{rotate}{SpatRaster}(x, filename="", ...)
 
 \S4method{rotate}{SpatVector}(x, longitude=0, split=TRUE, left=TRUE, normalize=FALSE)
 }
 
 \arguments{
  \item{x}{SpatRaster or SpatVector}
- \item{left}{logical. If \code{TRUE}, rotate to the left, else to the right}
  \item{filename}{character. Output filename}
  \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
 
  \item{longitude}{numeric. The longitude around which to rotate}
  \item{split}{logical. Should geometries be split at \code{longitude}?}
+ \item{left}{logical. Rotate to the left or to the right?}
  \item{normalize}{logical. Should the output be normalized to longitudes between -180 and 180? See \code{\link{normalize.longitude}}}
 }
 

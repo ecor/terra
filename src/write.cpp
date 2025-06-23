@@ -131,7 +131,7 @@ SpatRaster SpatRaster::writeRaster(SpatOptions &opt) {
 				}
 				fnames[i] = out.source[0].filename;
 			}
-			SpatRaster out(fnames, {-1}, {""}, false, {}, {}, {}, false, {});
+			SpatRaster out(fnames, {-1}, {""}, false, {}, {}, {}, false, false, {});
 			return out;
 		}
 	}
@@ -362,10 +362,10 @@ bool SpatRaster::writeValuesRectRast(SpatRaster &r, SpatOptions& opt) {
 	double hyr = yres() / 2;
 
 	SpatExtent e = r.getExtent();
-	int_64 row1  = rowFromY(e.ymax - hyr);
-	int_64 row2  = rowFromY(e.ymin + hyr);
-	int_64 col1  = colFromX(e.xmin + hxr);
-	int_64 col2  = colFromX(e.xmax - hxr);
+	int64_t row1  = rowFromY(e.ymax - hyr);
+	int64_t row2  = rowFromY(e.ymin + hyr);
+	int64_t col1  = colFromX(e.xmin + hxr);
+	int64_t col2  = colFromX(e.xmax - hxr);
 	if ((row1 < 0) || (row2 < 0) || (col1 < 0) || (col2 < 0)) {
 		setError("block outside raster");
 		return(false);		

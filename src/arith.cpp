@@ -22,7 +22,8 @@
 #include "vecmath.h"
 #include <cmath>
 
-#if defined(HAVE_TBB) && !defined(__APPLE__)
+#if defined(USE_TBB)
+#include <tbb/tbb.h>
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 #endif 
@@ -58,6 +59,20 @@ void operator*(std::vector<double>& a, const std::vector<double>& b) {
 */
 
 
+
+inline double R_modulo(const double &x, const double &y) { 
+	double m = std::fmod(x, y);
+	if (y < 0) {
+		if (m > 0) {
+			m += y; 
+		}
+	} else if (m < 0) {
+        m += y; 
+    }
+	return m;
+}
+
+
 //template <typename T>
 void operator%(std::vector<double>& a, const std::vector<double>& b) {
 //    std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::modulus<T>());
@@ -65,7 +80,7 @@ void operator%(std::vector<double>& a, const std::vector<double>& b) {
 		if (std::isnan(a[i]) || std::isnan(b[i])) {
 			a[i] = NAN;
 		} else {
-			a[i] = std::abs(std::fmod(a[i], b[i]));
+			a[i] = R_modulo(a[i], b[i]);
 		}
 	}
 }
@@ -348,11 +363,11 @@ SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool fals
 		} else if (oper == "%") {
 			if (reverse) {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::abs(std::fmod(x, a[i]));
+					a[i] = R_modulo(x, a[i]);
 				}
 			} else {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::abs(std::fmod(a[i], x));
+					a[i] = R_modulo(a[i], x);
 				}
 			}
 		} else if (oper == "%/%") {
@@ -516,11 +531,11 @@ SpatRaster SpatRaster::arith(std::vector<double> x, std::string oper, bool rever
 			} else if (oper == "%") {
 				if (reverse) {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(x[j], v[s+k]);
+						v[s+k] = R_modulo(x[j], v[s+k]);
 					}
 				} else {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(v[s+k], x[j]);
+						v[s+k] = R_modulo(v[s+k], x[j]);
 					}
 				}
 			} else if (oper == "==") {
@@ -704,11 +719,11 @@ SpatRaster SpatRaster::arith_m(std::vector<double> x, std::string oper, std::vec
 			} else if (oper == "%") {
 				if (reverse) {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(xj[k], v[s+k]);
+						v[s+k] = R_modulo(xj[k], v[s+k]);
 					}
 				} else {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(v[s+k], xj[k]);
+						v[s+k] = R_modulo(v[s+k], xj[k]);
 					}
 				}
 			} else if (oper == "==") {
@@ -815,7 +830,7 @@ SpatRaster SpatRaster::math(std::string fun, SpatOptions &opt) {
 		std::vector<double> a;
 		readBlock(a, out.bs, i);
 
-#if defined(HAVE_TBB) && !defined(__APPLE__)
+#if defined(USE_TBB)
 		if (opt.parallel) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
 				[&](const tbb::blocked_range<size_t>& range) {
@@ -949,7 +964,7 @@ SpatRaster SpatRaster::trig(std::string fun, SpatOptions &opt) {
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a;
 		readValues(a, out.bs.row[i], out.bs.nrows[i], 0, ncol());
-#if defined(HAVE_TBB) && !defined(__APPLE__)
+#if defined(USE_TBB) 
 		if (opt.parallel) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
 				[&](const tbb::blocked_range<size_t>& range) {

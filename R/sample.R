@@ -1,4 +1,40 @@
 
+.km_regular <- function(x, n, ...) {
+	x <- x[[1]]
+	crs(x) <- "local" # for the search_radius
+	z <- init(x, "xy")
+	if (hasValues(x)) {
+		z <- mask(z, x)
+	}
+	km <- k_means(z, n, ...)
+	kpols <- as.polygons(km)
+	a <- centroids(kpols, inside=FALSE)
+	cds <- crds(a)
+	cells <- cellFromXY(x, cds)
+	i <- is.na(x[cells])
+	if (any(i)) {
+		j <- which(i)
+		opt <- spatOptions()
+		zz <- deepcopy(x)
+		crs(zz) <- crs(kpols) <- "local" 
+		for (k in j) {
+			y <- crop(zz, kpols[k], mask=TRUE)
+			ye <- as.vector(ext(y))
+			sr <- max(diff(ye[1:2]), diff(ye[3:4]))
+			e <- y@pntr$extractBuffer(cds[k,1], cds[k,2], sr, opt)
+			if (!is.na(e[[1]])) {
+				cells[k] <- cellFromXY(x, xyFromCell(y, e[[3]] + 1))
+			} else {
+				b <- centroids(kpols[k], inside=TRUE)
+				bcds <- crds(b)
+				cells[k] <- cellFromXY(x, bcds)
+			}
+		}
+	}
+	cells
+}
+
+
 regular_exact <- function(r, size) {
 	size <- round(size)
 	stopifnot(size > 0)
@@ -812,17 +848,38 @@ sampleRegular <- function(x, size, replace=FALSE, na.rm=FALSE, as.raster=FALSE, 
 		}
 		v <- set_factors(v, ff, lv, as.df)
 	}
+	if (na.rm) {
+		v <- na.omit(v)
+	}
 	return(v)
 }
 
 
-setMethod("spatSample", signature(x="SpatRaster"),
-	function(x, size, method="random", replace=FALSE, na.rm=FALSE, as.raster=FALSE, as.df=TRUE, as.points=FALSE, values=hasValues(x), cells=FALSE, xy=FALSE, ext=NULL, warn=TRUE, weights=NULL, exp=5, exhaustive=FALSE, exact=FALSE, each=TRUE) {
+sampleRegularKM <- function(x, size, as.df=TRUE, as.points=FALSE, values=TRUE, cells=FALSE, xy=FALSE, ext=NULL, ...) {
 
-# , strata=NULL
+	ff <- is.factor(x)
+	lv <- levels(x)
+	cnrs <- .km_regular(x, size, ...)
+
+	if (cells || xy || as.points) {
+		return(add_cxyp(x, cnrs, cells, xy, as.points, values, na.rm=FALSE))
+	}
+	
+	if (!hasValues(x)) {
+		error("spatSample", "SpatRaster has no values")
+	}
+
+	if (!is.null(ext)) x <- crop(x, ext)
+	x[cnrs]
+}
+
+
+
+setMethod("spatSample", signature(x="SpatRaster"),
+	function(x, size, method="random", replace=FALSE, na.rm=FALSE, as.raster=FALSE, as.df=TRUE, as.points=FALSE, values=hasValues(x), cells=FALSE, xy=FALSE, ext=NULL, warn=TRUE, weights=NULL, exp=5, exhaustive=FALSE, exact=FALSE, each=TRUE, ...) {
 
 		if (method == "display") return(sampleRaster(x, size, "regular", FALSE, ext=ext, warn=FALSE, overview=TRUE))
-		method <- match.arg(tolower(method), c("random", "regular", "stratified", "weights"))
+		method <- match.arg(tolower(method), c("random", "regular", "spread", "stratified", "weights"))
 
 		if (!as.points) {
 			if (!(values || cells || xy)) {
@@ -853,6 +910,8 @@ setMethod("spatSample", signature(x="SpatRaster"),
 
 		if (method == "regular") {
 			sampleRegular(x, size, replace=replace, na.rm=na.rm, as.df=as.df, as.points=as.points, values=values, cells=cells, xy=xy, ext=ext, exact=exact)
+		} else if (method == "spread") {
+			sampleRegularKM(x, size, as.df=as.df, as.points=as.points, values=values, cells=cells, xy=xy, ext=ext, ...)
 		} else if (method == "stratified") {
 			if (!is.null(weights)) {  # use old method
 				return( sampleStratified_old(x, size, replace=replace, as.df=as.df, as.points=as.points, cells=cells, values=values, xy=xy, ext=ext, warn=warn, exp=exp, weights=weights, exhaustive=exhaustive, lonlat=lonlat, each=each) )

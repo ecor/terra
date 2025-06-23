@@ -1,77 +1,4 @@
 
-.as.raster.rgb <- function(out, x) {
-
-	if (is.null(out$rgb$scale)) {
-		scale <- 255
-		if ( all(hasMinMax(x)) ) {
-			rng <- minmax(x)[, 1:3]
-			scale <- max(max(rng[2]), 255)
-		}
-	} else {
-		scale <- out$rgb$scale
-	}
-	
-	if (!is.null(out$rgb$zlim)) {
-		if (length(out$rgb$zlim) == 2) {
-			out$rgb$zlim <- sort(out$rgb$zlim)
-			if (isTRUE(out$rgb$zcol)) {
-				x <- clamp(x, out$rgb$zlim[1], out$rgb$zlim[2], values=TRUE)
-			} else { #if (is.na(zlimcol)) {
-				x <- clamp(x, out$rgb$zlim[1], out$rgb$zlim[2], values=FALSE)
-			}
-		} else if (NROW(out$rgb$zlim) == 3 & NCOL(out$rgb$zlim) == 2) {
-			for (i in 1:3) {
-				zmin <- min(out$rgb$zlim[i,])
-				zmax <- max(out$rgb$zlim[i,])
-				if (isTRUE(out$rgb$zcol)) {
-					x[[i]] <- clamp(x[[i]], zmin, zmax, values=TRUE)
-				} else { #if (is.na(zlimcol)) {
-					x[[i]] <- clamp(x[[i]], zmin, zmax, values=FALSE)
-				}
-			}
-		} else {
-			error('zlim should be a vector of two numbers or a 3x2 matrix (one row for each color)')
-		}
-	}
-
-	if (!is.null(out$rgb$stretch)) {
-		if (out$rgb$stretch == "lin") {
-			if ((!is.null(out$rgb$zlim)) && (length(out$rgb$zlim) == 2)) {
-				x <- stretch(x, smin=out$rgb$zlim[1], smax=out$rgb$zlim[2])
-			} else {
-				x <- stretch(x, minq=0.02, maxq=0.98)
-			}
-		} else {
-			x <- stretch(x, histeq=TRUE, scale=255)
-		}
-		scale <- 255
-	}
-
-	RGB <- values(x)
-	RGB <- stats::na.omit(RGB)
-	naind <- as.vector( attr(RGB, "na.action") )
-
-	if (ncol(RGB) == 4) {
-		alpha <- RGB[,4]
-		RGB <- RGB[,-4]
-	} else {
-		alpha <- out$alpha
-	}
-
-	if (!is.null(naind)) {
-		bg <- grDevices::col2rgb(out$rgb$colNA)
-		if (is.null(out$rgb$bgalpha)) out$rgb$bgalpha <- 255
-		bg <- grDevices::rgb(bg[1], bg[2], bg[3], alpha=out$rgb$bgalpha, maxColorValue=255)
-		z <- rep( bg, times=ncell(x))
-		z[-naind] <- grDevices::rgb(RGB[,1], RGB[,2], RGB[,3], alpha=alpha, maxColorValue=scale)
-	} else {
-		z <- grDevices::rgb(RGB[,1], RGB[,2], RGB[,3], alpha=alpha, maxColorValue=scale)
-	}
-	
-	out$r <- matrix(z, nrow=nrow(x), ncol=ncol(x), byrow=TRUE)
-	out
-}
-
 
 .as.raster.continuous <- function(out, x, type) {
 
@@ -231,7 +158,8 @@
 
 
 	if (NCOL(out$cols) == 2) {
-		i <- match(Z, as.numeric(levs))
+		#i <- match(Z, as.numeric(levs))
+		i <- match(Z, as.numeric(out$cols[,1]))
 		Z[] <- out$cols[,2][i]
 		i <- match(as.numeric(levs), out$cols[,1])
 		out$leg$fill <- out$cols[i,2]
@@ -452,9 +380,7 @@
 		return(x)
 	}
 	if (!x$legend_only) {
-		graphics::rasterImage(x$r, x$ext[1], x$ext[3], x$ext[2], x$ext[4],
-			angle = 0, interpolate = x$interpolate)
-
+		graphics::rasterImage(x$r, x$ext[1], x$ext[3], x$ext[2], x$ext[4], angle = 0, interpolate = x$interpolate)
 		if (x$axes) x <- .plot.axes(x)
 	}
 	
@@ -490,27 +416,8 @@
 		}
 	}
 	
-	if ((x$main != "") && (!x$add) && (!x$legend_only)) {
-		pos <- 3
-		if (is.null(x$loc.main)) {
-			if (isTRUE(x$clip)) {
-				x$loc.main <- c(x$lim[1] + diff(x$lim[1:2]) / 2, x$lim[4])
-			} else {
-				usr <- graphics::par("usr")			
-				x$loc.main <- c(usr[1] + diff(usr[1:2]) / 2, usr[4])			
-			}
-		} else if (inherits(x$loc.main, "character")) {
-			xyp <- .txt.loc(x)
-			x$loc.main <- xyp[1:2]
-			pos <- xyp[3]
-		}
-		if (isTRUE(x$halo.main)) {
-			.halo(x$loc.main[1], x$loc.main[2], x$main, pos=pos, offset=x$line.main, cex=x$cex.main, 
-				font=x$font.main, col=x$col.main, xpd=TRUE, hc=x$halo.main.hc, hw=x$halo.main.hw)
-		} else {
-			text(x$loc.main[1], x$loc.main[2], x$main, pos=pos, offset=x$line.main, cex=x$cex.main, 
-				font=x$font.main, col=x$col.main, xpd=TRUE)
-		}
+	if ((!x$add) && (!x$legend_only)) {
+		plot_main(x)
 	}
 	if (!x$add) {
 		try(set.clip(x$lim, x$lonlat))
@@ -525,13 +432,14 @@
   levels=NULL, add=FALSE, range=NULL, fill_range=FALSE, breaks=NULL, breakby="eqint",
   coltab=NULL, cats=NULL, xlim=NULL, ylim=NULL, ext=NULL, colNA=NA, alpha=NULL, reset=FALSE,
   sort=TRUE, reverse=FALSE, grid=FALSE, las=0, all_levels=FALSE, decimals=NULL, background=NULL,
-  xlab="", ylab="", cex.lab=0.8, line.lab=1.5, asp=NULL, yaxs="i", xaxs="i", main="", cex.main=1.2, 
-  line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, loc.main=NULL, 
+  xlab="", ylab="", cex.lab=0.8, line.lab=1.5, asp=NULL, yaxs="i", xaxs="i", 
+  main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, loc.main=NULL, 
+  sub = "", font.sub=1, cex.sub=0.8*cex.main, line.sub =1.75,  col.sub=col.main, loc.sub=NULL,
   halo=FALSE, hc="white", hw=0.1, axes=TRUE, box=TRUE, maxcell=500000, buffer=FALSE, clip=TRUE, 
   # for rgb 
   stretch=NULL, scale=NULL, bgalpha=NULL, zlim=NULL, zcol=NULL, overview=NULL, 
 #catch and kill
-  cex=1, decreasing=FALSE,
+  cex=1, decreasing=FALSE, font=NULL,
   ...) {
 
 
@@ -634,7 +542,7 @@
 				warn("plot", "alpha should be between 0 and 1")
 				out$alpha <- 255
 			} else {
-				out$alpha <- out$alpha[1]
+				out$alpha <- out$alpha[1] * 255
 			}
 			out <- hexcols(out)
 		}
@@ -666,6 +574,14 @@
 	out$font.main <- font.main
 	out$col.main  <- col.main
 	out$line.main <- line.main
+
+	out$sub <- sub
+	out$loc.sub <- loc.sub
+	out$cex.sub <- cex.sub
+	out$font.sub <- font.sub
+	out$col.sub <- col.sub
+	out$line.sub <- line.sub
+
 	out$axes <- axes
 	out$xaxs <- xaxs
 	out$yaxs <- yaxs
@@ -688,10 +604,10 @@
 	out$leg$reverse <- isTRUE(reverse)
 	out$box <- isTRUE(box)
 	
-	if (!is.null(out$leg$loc)) {
-		out$leg$x <- out$leg$loc
-		out$leg$loc <- NULL
-	}
+#	if (!is.null(out$leg$loc)) {
+#		out$leg$x <- out$leg$loc
+#		out$leg$loc <- NULL
+#	}
 
 
 	if (!hasValues(x)) {
@@ -720,34 +636,9 @@
 			out <- .as.raster.continuous(out, x, type)
 		}
 
-		if (is.null(mar)) {
-			out$mar <- c(2, 2, 2, 2)
-			if (out$legend_draw) {
-				if (is.null(out$leg$ext)) {
-					if (is.null(out$leg$x)) {
-						out$leg$x <- "default"
-						out$mar <- c(2, 2, 2, 5)
-					} else if (out$legend_type == "continuous") {
-						if (inherits(out$leg[["x"]], "character")) {
-							if (out$leg$x == "top") {
-								out$mar <- c(2, 2, 4, 2)
-							} else if (out$leg$x == "bottom") {
-								out$mar <- c(5, 2, 2, 2)
-							} else if (out$leg$x == "left") {
-								out$mar <- c(2, 5, 2, 1)
-							} else {
-								out$mar <- c(2, 2, 2, 5)
-							}
-						#} else if (out$leg$x == "default") {
-						#	out$mar <- c(2, 2, 2, 5)
-						}
-					}	
-				} 
-			}
-		} else {
-			out$mar <- rep_len(mar, 4)
-		}
-
+		out$mar <- mar
+		out <- get_mar(out)
+		
 		if (!is.null(colNA)) {
 			if (!is.na(colNA) && out$values) {
 				out$colNA <- grDevices::rgb(t(grDevices::col2rgb(colNA)), alpha=out$alpha, maxColorValue=255)

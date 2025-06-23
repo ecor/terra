@@ -269,6 +269,12 @@ setMethod("unwrap", signature(x="PackedSpatExtent"),
 	}
 )
 
+setMethod("ext", signature(x="PackedSpatExtent"),
+	function(x) {
+		ext(x@extent)
+	}
+)
+
 	
 
 setMethod("wrap", signature(x="SpatRaster"),
@@ -352,7 +358,7 @@ setMethod("unwrap", signature(x="PackedSpatRaster"),
 			if (any(nms=="colors")) {
 				for (i in seq_along(x@attributes$colors)) {
 					if (!is.null(x@attributes$colors[[i]])) {
-						d <- terra:::.makeSpatDF(x@attributes$colors[[i]])
+						d <- .makeSpatDF(x@attributes$colors[[i]])
 						if (!r@pntr$setColors(i-1, d)) messages("cols<-", r)
 					}
 				}
@@ -406,8 +412,6 @@ setMethod("rast", signature(x="PackedSpatRaster"),
 		unwrap(x)
 	}
 )
-
-
 
 setMethod("unwrap", signature(x="ANY"),
 	function(x) {

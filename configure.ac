@@ -827,7 +827,7 @@ _EOCONF]
         AC_SUBST(TBBLIBS, [""])
       else
         AC_MSG_RESULT(yes)
-	    TBB_CFLAGS="${TBB_CFLAGS} -DHAVE_TBB -ltbb"
+	    TBB_CFLAGS="${TBB_CFLAGS} -DHAVE_TBB"  
       fi
     fi
     rm -f libtbb_test.cpp libtbb_test errors.txt
@@ -838,8 +838,10 @@ _EOCONF]
 PKG_CPPFLAGS="${PKG_CPPFLAGS} ${TBB_CFLAGS}"
 AC_SUBST([PKG_LIBS], ["${TBBLIBS} ${PKG_LIBS}"])
 
-####
+##netcdf 
+# AC_SUBST([PKG_LIBS], ["$(nc-config --libs) ${PKG_LIBS}"])
 
+####
 #
 # concluding substitution
 #

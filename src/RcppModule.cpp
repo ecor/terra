@@ -9,6 +9,7 @@
 //static void SpatRaster_finalizer( SpatRaster* ptr ){
 //}
 
+
 /*
 Rcpp::List getBlockSizeR(SpatRaster* r, unsigned n, double frac) {
 	SpatOptions opt;
@@ -480,7 +481,7 @@ RCPP_MODULE(spat){
 		.method("polygonsList", &SpatVector::polygonsList)
 		.method("linesNA", &SpatVector::linesNA)
 
-		.method("add_column_empty", (void (SpatVector::*)(size_t dtype, std::string name))( &SpatVector::add_column))
+		.method("add_column_empty", (void (SpatVector::*)(unsigned dtype, std::string name))( &SpatVector::add_column))
 		.method("add_column_double", (bool (SpatVector::*)(std::vector<double>, std::string name))( &SpatVector::add_column))
 		.method("add_column_long", (bool (SpatVector::*)(std::vector<long>, std::string name))( &SpatVector::add_column))
 		.method("add_column_string", (bool (SpatVector::*)(std::vector<std::string>, std::string name))( &SpatVector::add_column))
@@ -511,8 +512,8 @@ RCPP_MODULE(spat){
 
 //		.method("get_index", &SpatVector::get_index)
 
-		.method("distance_self", (std::vector<double> (SpatVector::*)(bool, std::string, const std::string, SpatOptions&))( &SpatVector::distance))
-		.method("distance_other", (std::vector<double> (SpatVector::*)(SpatVector, bool, std::string, const std::string, SpatOptions&))( &SpatVector::distance))
+		.method("distance_self", (std::vector<double> (SpatVector::*)(bool, std::string, const std::string, bool, SpatOptions&))( &SpatVector::distance))
+		.method("distance_other", (std::vector<double> (SpatVector::*)(SpatVector, bool, std::string, const std::string, bool, SpatOptions&))( &SpatVector::distance))
 		.method("point_distance", &SpatVector::pointdistance)
 
 //		.method("geosdist_self", (std::vector<double> (SpatVector::*)(bool, std::string))( &SpatVector::geos_distance))
@@ -665,10 +666,12 @@ RCPP_MODULE(spat){
 	class_<SpatRaster>("SpatRaster")
 		.constructor()
 	 // .constructor<std::string, int>()
-		.constructor<std::vector<std::string>, std::vector<int>, std::vector<std::string>, bool, std::vector<std::string>, std::vector<std::string>, std::vector<size_t>, bool, std::vector<std::string>>()
+		.constructor<std::vector<std::string>, std::vector<int>, std::vector<std::string>, bool, std::vector<std::string>, std::vector<std::string>, std::vector<int>, bool, bool, std::vector<std::string>>()
 		
 		.constructor<std::vector<size_t>, std::vector<double>, std::string>()
 		//.finalizer(&SpatRaster_finalizer)
+
+		.method("test", &SpatRaster::writeRasterM)
 
 		//.method("fromFiles", &SpatRaster::fromFiles)
 		.method("has_error", &SpatRaster::hasError)
@@ -766,6 +769,8 @@ RCPP_MODULE(spat){
 		.method("setNAflag", &SpatRaster::setNAflag)
 		.method("getNAflag", &SpatRaster::getNAflag)
 
+		.property("isMD", &SpatRaster::isMD)
+
 		.property("hasUnit", &SpatRaster::hasUnit)
 		.property("hasDepth", &SpatRaster::hasDepth)
 		.property("hasTime", &SpatRaster::hasTime)
@@ -785,6 +790,10 @@ RCPP_MODULE(spat){
 
 		.property("units", &SpatRaster::getUnit)
 		.method("set_units", &SpatRaster::setUnit)
+
+		.property("is_multidim", &SpatRaster::is_multidim)
+		.method("dim_names", &SpatRaster::dim_names)
+		.method("dim_size", &SpatRaster::dim_size)
 
 		.method("size", &SpatRaster::size, "size")
 		.method("nrow", &SpatRaster::nrow, "nrow")
@@ -823,15 +832,15 @@ RCPP_MODULE(spat){
 		.method("wmean_rast", (SpatRaster (SpatRaster::*)(SpatRaster, bool, SpatOptions&))( &SpatRaster::weighted_mean ))
 		.method("wmean_vect", (SpatRaster (SpatRaster::*)(std::vector<double>, bool, SpatOptions&))( &SpatRaster::weighted_mean ))
 
-		.method("cellFromRowCol", ( std::vector<double> (SpatRaster::*)(std::vector<int_64>,std::vector<int_64>) )( &SpatRaster::cellFromRowCol ))
-		.method("cellFromRowColCombine", ( std::vector<double> (SpatRaster::*)(std::vector<int_64>,std::vector<int_64>) )( &SpatRaster::cellFromRowColCombine ))
-		.method("yFromRow", ( std::vector<double> (SpatRaster::*)(const std::vector<int_64>&) )( &SpatRaster::yFromRow ))
-		.method("xFromCol", ( std::vector<double> (SpatRaster::*)(const std::vector<int_64>&) )( &SpatRaster::xFromCol ))
-		.method("colFromX", ( std::vector<int_64> (SpatRaster::*)(const std::vector<double>&) )( &SpatRaster::colFromX ))
-		.method("rowFromY", ( std::vector<int_64> (SpatRaster::*)(const std::vector<double>&) )( &SpatRaster::rowFromY ))
+		.method("cellFromRowCol", ( std::vector<double> (SpatRaster::*)(std::vector<int64_t>,std::vector<int64_t>) )( &SpatRaster::cellFromRowCol ))
+		.method("cellFromRowColCombine", ( std::vector<double> (SpatRaster::*)(std::vector<int64_t>,std::vector<int64_t>) )( &SpatRaster::cellFromRowColCombine ))
+		.method("yFromRow", ( std::vector<double> (SpatRaster::*)(const std::vector<int64_t>&) )( &SpatRaster::yFromRow ))
+		.method("xFromCol", ( std::vector<double> (SpatRaster::*)(const std::vector<int64_t>&) )( &SpatRaster::xFromCol ))
+		.method("colFromX", ( std::vector<int64_t> (SpatRaster::*)(const std::vector<double>&) )( &SpatRaster::colFromX ))
+		.method("rowFromY", ( std::vector<int64_t> (SpatRaster::*)(const std::vector<double>&) )( &SpatRaster::rowFromY ))
 		.method("xyFromCell", ( std::vector< std::vector<double> > (SpatRaster::*)(std::vector<double>&) )( &SpatRaster::xyFromCell ))
 		.method("crds", &SpatRaster::coordinates)
-		.method("rowColFromCell", ( std::vector< std::vector<int_64> > (SpatRaster::*)(std::vector<double>) )( &SpatRaster::rowColFromCell ))
+		.method("rowColFromCell", ( std::vector< std::vector<int64_t> > (SpatRaster::*)(std::vector<double>) )( &SpatRaster::rowColFromCell ))
 		.method("readStart", &SpatRaster::readStart)
 		.method("readStop", &SpatRaster::readStop)
 		.method("readAll", &SpatRaster::readAll)
@@ -1047,7 +1056,7 @@ RCPP_MODULE(spat){
 
 	class_<SpatRasterCollection>("SpatRasterCollection")
 		.constructor()
-		.constructor<std::string, std::vector<int>, bool, std::vector<std::string>, std::vector<std::string>>()
+		.constructor<std::string, std::vector<int>, bool, std::vector<std::string>, bool, bool, std::vector<std::string>>()
 
 		.property("names", &SpatRasterCollection::get_names, &SpatRasterCollection::set_names)
 
@@ -1076,7 +1085,7 @@ RCPP_MODULE(spat){
 
 	class_<SpatRasterStack>("SpatRasterStack")
 		.constructor()
-		.constructor<std::string, std::vector<int>, bool, std::vector<std::string>, std::vector<std::string>>()
+		.constructor<std::string, std::vector<int>, bool, std::vector<std::string>, bool, bool, std::vector<std::string>>()
 		.constructor<SpatRaster, std::string, std::string, std::string>()
 		.method("deepcopy", &SpatRasterStack::deepCopy)
 

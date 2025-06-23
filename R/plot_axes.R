@@ -15,10 +15,13 @@ retro_labels <- function(x, lat=TRUE) {
 
 	if (lat) {
 		h <- c("S", "", "N")[sign(d)+2]
+		d <- abs(d)
 	} else {
+		d <- (d + 180) %% 360 - 180
 		h <- c("W", "", "E")[sign(d)+2]
-	}
-	d <- abs(d)
+		d <- abs(d)
+		h[d == 180] <- ""
+	} 
 	i <- (s == 0) & (m == 0)
 	j <- (s == 0) & (m != 0)
 
@@ -64,15 +67,16 @@ retro_labels <- function(x, lat=TRUE) {
 	}
 	
 	xat <- yat <- NULL
+	# na.omit(x$axs$at) breaks eva3dm
 	if (!is.null(x$axs$at)) {
-		xat <- yat <- x$axs$at
+		xat <- yat <- (x$axs$at)
 	}
 	if (!is.null(x$axs$xat)) {
-		xat <- x$axs$xat
+		xat <- (x$axs$xat)
 		x$axs$xat <- NULL
 	}
 	if (!is.null(x$axs$yat)) {
-		yat <- x$axs$yat
+		yat <- (x$axs$yat)
 		x$axs$yat <- NULL
 	}
 

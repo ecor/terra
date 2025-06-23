@@ -127,18 +127,28 @@ function(x, index, fun, ..., cores=1, filename="", overwrite=FALSE, wopt=list())
 			transpose = TRUE
 			nlout <- nrow(test)
 			addnms <- rownames(test)
+			if (is.null(addnms)) {
+				addnms <- 1:nrow(test)
+			}
 		} else {
 			nlout <- ncol(test)
 			addnms <- colnames(test)
+			if (is.null(addnms)) {
+				addnms <- 1:ncol(test)
+			}
 		}
 		nms <- paste(rep(nms, each=length(addnms)), rep(addnms, length(nms)), sep="_")
 	}
 
 	out <- rast(x)
 	nlyr(out) <- nlout * length(uin)
-	names(out) <- nms
+	if (length(nms) == nlyr(out)) {
+		names(out) <- nms
+	}
 	if (out_tstep != "") {
-		time(out, out_tstep) <- out_time 
+		if (length(out_time) == nlyr(out)) {
+			time(out, out_tstep) <- out_time 
+		}
 	}
 	doclust <- FALSE
 	if (inherits(cores, "cluster")) {

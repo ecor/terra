@@ -109,12 +109,12 @@ void SpatRaster::combine(SpatRaster &x) {
 
 void SpatRaster::checkTime(SpatRaster &x) {
 	if (!hasTime()) {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		x.setTime(time, "remove", "");
 		return;
 	}
 	if (!x.hasTime()) {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		setTime(time, "remove", "");
 		return;
 	}
@@ -128,7 +128,7 @@ void SpatRaster::checkTime(SpatRaster &x) {
 			source[i].timestep = "days";
 		}
 	} else {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		setTime(time, "remove", "");
 		x.setTime(time, "remove", "");
 	}
@@ -326,10 +326,12 @@ void SpatRasterSource::appendValues(std::vector<double> &v, size_t lyr) {
 }
 
 
-bool SpatRasterSource::in_order() {
+bool SpatRasterSource::in_order(bool all) {
 	if (memory) return true;
-	if (nlyr != nlyrfile) return false;
-	for (size_t i=0; i<layers.size(); i++) {
+	if (nlyr != nlyrfile) {
+		if (all) return false;
+	}
+	for (size_t i=layers[0]; i<layers.size(); i++) {
 		if (layers[i] != i) {
 			return false;
 		}

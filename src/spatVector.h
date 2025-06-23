@@ -197,8 +197,8 @@ class SpatVector {
 		std::vector<double> length();
 		std::vector<size_t> nseg();
 
-		std::vector<double> distance(bool sequential, std::string unit, const std::string method, SpatOptions &opt);
-		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method, SpatOptions &opt);
+		std::vector<double> distance(bool sequential, std::string unit, const std::string method, bool by_node, SpatOptions &opt);
+		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method, bool by_node, SpatOptions &opt);
 		std::vector<double> pointdistance(const std::vector<double>& px, const std::vector<double>& py, const std::vector<double>& sx, const std::vector<double>& sy, bool pairwise, double m, bool lonlat, std::string method);
 
 //		std::vector<double> pointdistance_seq(const std::vector<double>& px, const std::vector<double>& py, double m, bool lonlat);
@@ -242,7 +242,7 @@ class SpatVector {
 		std::vector<size_t> getItype();
 		std::vector<size_t> getIplace();
 
-		void add_column(size_t dtype, std::string name) {
+		void add_column(unsigned dtype, std::string name) {
 			df.add_column(dtype, name);
 		};
 		template <typename T>

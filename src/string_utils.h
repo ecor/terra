@@ -34,7 +34,7 @@ std::string lower_case(std::string s);
 
 
 std::string is_in_set_default(std::string s, std::vector<std::string> ss, std::string defvalue, bool tolower);
-int where_in_set(std::string s, std::vector<std::string> ss, bool tolower);
+//int where_in_set(std::string s, std::vector<std::string> ss, bool tolower);
 bool is_in_vector(std::string s, std::vector<std::string> ss);
 int where_in_vector(std::string s, const std::vector<std::string> &ss, const bool &tolower);
 
@@ -42,6 +42,7 @@ std::vector<std::string> getlastpart (std::vector<std::string> s, std::string de
 
 std::vector<std::string> strsplit(std::string s, std::string delimiter);
 std::vector<std::string> strsplit_first(std::string s, std::string delimiter);
+std::vector<std::string> strsplit_last(std::string s, std::string delimiter);
 
 std::vector<double> str2dbl(std::vector<std::string> s);
 std::vector<int> str2int(std::vector<std::string> s);
