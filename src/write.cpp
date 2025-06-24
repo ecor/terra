@@ -131,7 +131,7 @@ SpatRaster SpatRaster::writeRaster(SpatOptions &opt) {
 				}
 				fnames[i] = out.source[0].filename;
 			}
-			SpatRaster out(fnames, {-1}, {""}, false, {}, {}, {});
+			SpatRaster out(fnames, {-1}, {""}, false, {}, {}, {}, false, false, {});
 			return out;
 		}
 	}
@@ -193,6 +193,17 @@ bool SpatRaster::writeStart(SpatOptions &opt, const std::vector<std::string> src
 			//opt.gdal_options = {"COMPRESS=NONE"};
 		}
 	}
+
+	if (!opt.tags.empty()) {
+		user_tags = std::vector<std::vector<std::string>>(3);
+		for (size_t i=0; i<opt.tags.size(); i++) {
+			std::vector<std::string> s = strsplit(opt.tags[i], "_#_");
+			if (s.size() == 3) {
+				addTag(s[0], s[1], s[2]);
+			}
+		}
+	} 
+	
 	size_t nl = nlyr();
 	bs = getBlockSize(opt);
 	if (!filename.empty()) {
@@ -351,10 +362,10 @@ bool SpatRaster::writeValuesRectRast(SpatRaster &r, SpatOptions& opt) {
 	double hyr = yres() / 2;
 
 	SpatExtent e = r.getExtent();
-	int_64 row1  = rowFromY(e.ymax - hyr);
-	int_64 row2  = rowFromY(e.ymin + hyr);
-	int_64 col1  = colFromX(e.xmin + hxr);
-	int_64 col2  = colFromX(e.xmax - hxr);
+	int64_t row1  = rowFromY(e.ymax - hyr);
+	int64_t row2  = rowFromY(e.ymin + hyr);
+	int64_t col1  = colFromX(e.xmin + hxr);
+	int64_t col2  = colFromX(e.xmax - hxr);
 	if ((row1 < 0) || (row2 < 0) || (col1 < 0) || (col2 < 0)) {
 		setError("block outside raster");
 		return(false);		
@@ -523,12 +534,13 @@ void SpatRaster::setRange(SpatOptions &opt, bool force) {
 	}
 }
 
+
 void SpatRasterSource::setRange() {
 	range_min.resize(nlyr);
 	range_max.resize(nlyr);
 	hasRange.resize(nlyr);
 	if (nlyr==1) {
-		minmax(values.begin(), values.end(), range_min[0], range_max[0]);
+		minmax(values.begin(), values.end(), range_min[0], range_max[0], NAN);
 		hasRange[0] = true;
 		return;
 	}
@@ -536,7 +548,7 @@ void SpatRasterSource::setRange() {
 	if (values.size() == (nc * nlyr)) {
 		for (size_t i=0; i<nlyr; i++) {
 			size_t start = nc * i;
-			minmax(values.begin()+start, values.begin()+start+nc, range_min[i], range_max[i]);
+			minmax(values.begin()+start, values.begin()+start+nc, range_min[i], range_max[i], NAN);
 			hasRange[i] = true;
 		}
 	}

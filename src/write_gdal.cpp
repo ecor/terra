@@ -18,6 +18,7 @@
 #include "spatRaster.h"
 #include "math_utils.h"
 #include "string_utils.h"
+
 #include "file_utils.h"
 #include "vecmath.h"
 #include "recycle.h"
@@ -287,6 +288,9 @@ bool checkFormatRequirements(const std::string &driver, std::string &filename, s
 			msg = "SAGA filenames must end on '.sdat'";
 			return false;
 		}
+	} else if (driver == "VRT") {
+		msg = "Cannot directly write to VRT (see '?vrt')";
+		return false;
 	}
 
 	return true;
@@ -351,6 +355,13 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		setError("invalid driver");
 		return (false);
 	}
+	if (driver == "GTiff") {
+		if (nlyr() > 65535) {
+			setError("cannot write more than 65535 layers");
+			return(false);
+		}
+	}
+	
     char **papszMetadata;
     papszMetadata = poDriver->GetMetadata();
     if (!CSLFetchBoolean( papszMetadata, GDAL_DCAP_RASTER, FALSE)) {
@@ -607,14 +618,14 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 
 	bool scoffwarning = false;
 
-	if (driver == "GTiff") {
-		std::vector<std::string> m = getTags();
-		if (m.size() > 0) {
-			for (size_t i=0; i<m.size(); i+=2) {
-				poDS->SetMetadataItem(m[i].c_str(), m[i+1].c_str(), "USER_TAGS");
-			}
+	// if (driver == "GTiff") {
+	std::vector<std::vector<std::string>> m = getTags();
+	if (m.size() == 3) {
+		for (size_t i=0; i<m[0].size(); i++) {
+			poDS->SetMetadataItem(m[1][i].c_str(), m[2][i].c_str(), m[0][i].c_str());
 		}
 	}
+	// }
 
 	std::vector<std::string> tstr, ustr;
 	bool wtime = false;
@@ -623,7 +634,8 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 	if (hasTime()) {
 		tstr = getTimeStr(false, "T");
 		wtime = true;	
-		have_date_time = (tstep == "seconds") || (tstep == "days") || (tstep == "years") || (tstep == "yearmonths");
+		have_date_time = true;
+//		have_date_time = (tstep == "seconds") || (tstep == "days") || (tstep == "years") || (tstep == "yearmonths");
  	}
 	bool wunit = false;
 	if (hasUnit()) {
@@ -668,7 +680,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 		*/
 		poBand->SetDescription(nms[i].c_str());
 
-		if (driver == "GTiff") {
+		// if (driver == "GTiff") {
 			std::vector<std::string> m = getLyrTags({i});
 			if (m.size() > 0) {
 				for (size_t j=0; j<m.size(); j+=3) {
@@ -686,7 +698,7 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 			if (wunit) {
 				poBand->SetMetadataItem("UNIT", ustr[i].c_str());				
 			}
-		}
+		// }
 
 
 		if ((i==0) || (driver != "GTiff")) {
@@ -835,25 +847,44 @@ void tmp_min_max_na(std::vector<T> &out, const std::vector<double> &v, const dou
 
 
 template <typename Iterator>
-void minmaxlim(Iterator start, Iterator end, double &vmin, double &vmax, const double &lmin, const double &lmax, bool& outrange) {
+void minmaxlim(Iterator start, Iterator end, double &vmin, double &vmax, const double &lmin, const double &lmax, bool& outrange, double exclude=NAN) {
     vmin = std::numeric_limits<double>::max();
     vmax = std::numeric_limits<double>::lowest();
     bool none = true;
-	for (Iterator v = start; v !=end; ++v) {
-		if (!std::isnan(*v)) {
-			if (*v >= lmin && *v <= lmax) {
-				if (*v > vmax) {
-					vmax = *v;
-					none = false;
+	
+	if (!std::isnan(exclude)) {
+		for (Iterator v = start; v !=end; ++v) {
+			if (!std::isnan(*v) && (exclude != *v)) {
+				if (*v >= lmin && *v <= lmax) {
+					if (*v > vmax) {
+						vmax = *v;
+						none = false;
+					}
+					if (*v < vmin) {
+						vmin = *v;
+					}
+				} else {
+					outrange = true;
 				}
-				if (*v < vmin) {
-					vmin = *v;
-				}
-			} else {
-				outrange = true;
 			}
 		}
-    }
+	} else {
+		for (Iterator v = start; v !=end; ++v) {
+			if (!std::isnan(*v)) {
+				if (*v >= lmin && *v <= lmax) {
+					if (*v > vmax) {
+						vmax = *v;
+						none = false;
+					}
+					if (*v < vmin) {
+						vmin = *v;
+					}
+				} else {
+					outrange = true;
+				}
+			}
+		}
+	}
     if (none) {
         vmin = NAN;
         vmax = NAN;
@@ -882,33 +913,37 @@ bool SpatRaster::writeValuesGDAL(std::vector<double> &vals, size_t startrow, siz
 		}
 	}
 
+	int hasNA = 0;
+	double na = source[0].gdalconnection->GetRasterBand(1)->GetNoDataValue(&hasNA);
+	if (!hasNA) na = NAN;
+
 	if ((compute_stats) && (!gdal_stats)) {
 		bool invalid = false;
 		for (size_t i=0; i < nl; i++) {
 			size_t start = nc * i;
 			if (datatype == "INT8S") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT64_MIN, (double)INT64_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT64_MIN, (double)INT64_MAX, invalid, na);
 			} else if (datatype == "INT4S") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT32_MIN, (double)INT32_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT32_MIN, (double)INT32_MAX, invalid, na);
 			} else if (datatype == "INT2S") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT16_MIN, (double)INT16_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, (double)INT16_MIN, (double)INT16_MAX, invalid, na);
 			} else if (datatype == "INT8U") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT64_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT64_MAX, invalid, na);
 			} else if (datatype == "INT4U") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT32_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT32_MAX, invalid, na);
 			} else if (datatype == "INT2U") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT16_MAX, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, (double)UINT16_MAX, invalid, na);
 			} else if (datatype == "INT1U") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, 255.0, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, 0.0, 255.0, invalid, na);
 			} else if (datatype == "INT1S") {
-				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, -128.0, 127.0, invalid);
+				minmaxlim(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, -128.0, 127.0, invalid, na);
 			} else {
-				minmax(vals.begin()+start, vals.begin()+start+nc, vmin, vmax);
+				minmax(vals.begin()+start, vals.begin()+start+nc, vmin, vmax, na);
 			}
-			if (source[0].has_scale_offset[i]) {
-				vmin = vmin * source[0].scale[i] + source[0].offset[i];
-				vmax = vmax * source[0].scale[i] + source[0].offset[i];
-			}
+//			if (source[0].has_scale_offset[i]) {
+//				vmin = vmin * source[0].scale[i] + source[0].offset[i];
+//				vmax = vmax * source[0].scale[i] + source[0].offset[i];
+//			}
 			if (!std::isnan(vmin)) {
 				if (std::isnan(source[0].range_min[i])) {
 					source[0].range_min[i] = vmin;
@@ -924,8 +959,6 @@ bool SpatRaster::writeValuesGDAL(std::vector<double> &vals, size_t startrow, siz
 		}
 	}
 
-	int hasNA = 0;
-	double na = source[0].gdalconnection->GetRasterBand(1)->GetNoDataValue(&hasNA);
 	if ((datatype == "FLT8S") || (datatype == "FLT4S")) {
 		if (hasNA) {
 			size_t n = vals.size();
@@ -1139,7 +1172,6 @@ bool SpatRaster::update_meta(bool names, bool crs, bool ext, SpatOptions &opt) {
 		return false;
 	}
 	GDALDatasetH hDS;
-	GDALRasterBandH poBand;
 	size_t n=0;
 	for (size_t i=0; i<nsrc(); i++) {
 		if (source[i].memory) continue;
@@ -1150,12 +1182,12 @@ bool SpatRaster::update_meta(bool names, bool crs, bool ext, SpatOptions &opt) {
 		}
 		if (names) {
 			for (size_t b=0; b < source[i].nlyr; b++) {
-				poBand = GDALGetRasterBand(hDS, b+1);
+				GDALRasterBandH poBand = GDALGetRasterBand(hDS, b+1);
 				if (GDALGetRasterAccess(poBand) == GA_Update) {
 					GDALSetDescription(poBand, source[i].names[b].c_str());
 				}
 			}
-		} 
+		}
 		if (crs) {
 			std::string crs = source[i].srs.wkt;
 			OGRSpatialReference oSRS;

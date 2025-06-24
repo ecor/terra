@@ -202,6 +202,7 @@ setMethod("as.raster", signature(x="SpatRaster"),
 			#col <- rev(grDevices::terrain.colors(255))
 			col <- .default.pal()
 		}
+		
 		x <- spatSample(x, maxcell, method="regular", as.raster=TRUE, warn=FALSE)
 		x <- as.matrix(x, wide=TRUE)
 		r <- range(x, na.rm=TRUE)
@@ -312,8 +313,9 @@ setMethod("as.lines", signature(x="matrix"),
 		if (ncol(x) == 2) {
 			nr <- nrow(x)
 			p@pntr$setGeometry("lines", rep(1, nr), rep(1, nr), x[,1], x[,2], rep(FALSE, nr))
+			crs(p) <- crs
 		} else if (ncol(x) == 4) {
-			p@pntr$setLinesStartEnd(x, crs)
+			p@pntr$setLinesStartEnd(x, crs(crs))
 		} else {
 			error("expecting a two or four column matrix", "as.lines")
 		}
@@ -327,6 +329,9 @@ setMethod("as.polygons", signature(x="SpatVector"),
 		if (extent) {
 			as.polygons(ext(x), crs=crs(x))
 		} else {
+			if (geomtype(x) == "points") {
+				x <- as.lines(x)
+			}
 			x@pntr <- x@pntr$polygonize()
 			messages(x, "as.polygons")
 		}
@@ -500,6 +505,29 @@ setMethod("as.array", signature(x="SpatRaster"),
 		a
 	}
 )
+
+setMethod("as.array", signature(x="SpatRasterDataset"),
+	function(x) {
+		n <- length(x)
+		if (n < 2) return(as.array(x[1]))
+		
+		dm <- sapply(x, dim)
+		udm <- apply(dm, 1, function(i)length(unique))
+		if (!all(udm) == 1) {
+			error("as.array", "cannot make an array from rasters with different dimensions")
+		}
+		
+		a <- array(NA, c(dm[,1], n))
+		dimnames(a) <- list(NULL, NULL, NULL, names(x))
+
+		for (i in 1:n) {
+			a[,,,i] <- as.array(x[i])
+		}
+		a
+	}
+)
+
+
 
 
 # to sf from SpatVector

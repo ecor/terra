@@ -129,7 +129,7 @@ bool SpatGeom::addHole(SpatHole h) {
 }
 
 
-bool SpatGeom::setPart(SpatPart p, unsigned i) {
+bool SpatGeom::setPart(SpatPart p, size_t i) {
 	parts[i] = p;
 	if (parts.size() > 1) {
 		extent.unite(p.extent);
@@ -148,7 +148,7 @@ bool SpatGeom::reSetPart(SpatPart p) {
 
 
 
-SpatPart SpatGeom::getPart(unsigned i) {
+SpatPart SpatGeom::getPart(size_t i) {
 	return parts[i];
 }
 
@@ -263,23 +263,23 @@ SpatVector::SpatVector(std::vector<double> x, std::vector<double> y, SpatGeomTyp
 	setSRS( {crs} );
 }
 
-std::vector<double> SpatVector::getDv(unsigned i) {
+std::vector<double> SpatVector::getDv(size_t i) {
 	return df.getD(i);
 }
 
-std::vector<long> SpatVector::getIv(unsigned i){
+std::vector<long> SpatVector::getIv(size_t i){
 	return df.getI(i);
 }
 
-std::vector<std::string> SpatVector::getSv(unsigned i){
+std::vector<std::string> SpatVector::getSv(size_t i){
 	return df.getS(i);
 }
 
-std::vector<unsigned> SpatVector::getItype(){
+std::vector<size_t> SpatVector::getItype(){
 	return df.itype;
 }
 
-std::vector<unsigned> SpatVector::getIplace(){
+std::vector<size_t> SpatVector::getIplace(){
 	return df.iplace;
 }
 
@@ -292,11 +292,11 @@ void SpatVector::set_names(std::vector<std::string> s){
 	df.set_names(s);
 }
 
-unsigned SpatVector::ncol() {
+size_t SpatVector::ncol() {
 	return df.ncol();
 }
 
-unsigned SpatVector::nrow() {
+size_t SpatVector::nrow() {
 	return geoms.size();
 }
 
@@ -308,10 +308,20 @@ bool SpatVector::empty() {
 	return geoms.empty();
 }
 
+bool SpatVector::is_multipoint() {
+	if (geoms.empty() || (geoms[0].gtype != points)) return false;
+	for (size_t i=0; i<geoms.size(); i++) {
+		if (geoms[i].parts[0].x.size() > 1) {
+			return true;
+		}
+	}
+	return false;
+}
+
 bool SpatVector::is_lonlat() {
 	if (srs.is_lonlat()) {
 		SpatExtent e = getExtent();
-		if ((e.xmin < -181) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
+		if ((e.xmin < -361) || (e.xmax > 361) || (e.ymin < -90.001) || (e.ymax > 90.001)) {
 			addWarning("coordinates are out of range for lon/lat");
 		}
 		return true;
@@ -364,7 +374,7 @@ std::string SpatVector::type(){
 
 
 
-SpatGeom SpatVector::getGeom(unsigned i) {
+SpatGeom SpatVector::getGeom(size_t i) {
 	return geoms[i];
 }
 
@@ -399,8 +409,8 @@ void SpatVector::computeExtent() {
 	}
 }
 
-std::vector<unsigned> SpatVector::nullGeoms(){
-	std::vector<unsigned> ids;
+std::vector<size_t> SpatVector::nullGeoms(){
+	std::vector<size_t> ids;
 	for (size_t i=0; i<geoms.size(); i++) {
 		if (geoms[i].gtype == null) {
 			ids.push_back(i);
@@ -430,7 +440,7 @@ std::vector<bool> SpatVector::naGeoms(){
 }
 
 
-bool SpatVector::replaceGeom(SpatGeom p, unsigned i) {
+bool SpatVector::replaceGeom(SpatGeom p, size_t i) {
 	if (i < geoms.size()) {
 		if ((geoms[i].extent.xmin == extent.xmin) || (geoms[i].extent.xmax == extent.xmax) ||
 			(geoms[i].extent.ymin == extent.ymin) || (geoms[i].extent.ymax == extent.ymax)) {
@@ -446,8 +456,8 @@ bool SpatVector::replaceGeom(SpatGeom p, unsigned i) {
 }
 
 
-unsigned SpatVector::nxy() {
-	unsigned n = 0;
+size_t SpatVector::nxy() {
+	size_t n = 0;
 	for (size_t i=0; i < size(); i++) {
 		SpatGeom g = getGeom(i);
 		if (g.empty()) {
@@ -560,7 +570,7 @@ SpatDataFrame SpatVector::getGeometryDF() {
 	out.add_column(0, "y");
 	out.add_column(1, "hole");
 
-	unsigned n = nxy();
+	size_t n = nxy();
 	out.resize_rows(n);
 
 	size_t idx = 0;
@@ -607,7 +617,7 @@ SpatDataFrame SpatVector::getGeometryDF() {
 
 std::vector<std::vector<double>> SpatVector::getGeometry() {
 
-	unsigned n = nxy();
+	size_t n = nxy();
 	std::vector<std::vector<double>> out(5);
 	for (size_t i=0; i>out.size(); i++) {
 		out[i].reserve(n);
@@ -736,12 +746,12 @@ SpatGeomType SpatVector::getGType(std::string &type) {
 }
 
 
-void SpatVector::setGeometry(std::string type, std::vector<unsigned> gid, std::vector<unsigned> part, std::vector<double> x, std::vector<double> y, std::vector<unsigned> hole) {
+void SpatVector::setGeometry(std::string type, std::vector<size_t> gid, std::vector<size_t> part, std::vector<double> x, std::vector<double> y, std::vector<size_t> hole) {
 
 // it is assumed that values are sorted by gid, part, hole
-	unsigned lastgeom = gid[0];
-	unsigned lastpart = part[0];
-	unsigned lasthole = hole[0];
+	size_t lastgeom = gid[0];
+	size_t lastpart = part[0];
+	size_t lasthole = hole[0];
 	bool isHole = lasthole > 0;
 	bool isPoly = type == "polygons";
 
@@ -863,7 +873,7 @@ void SpatVector::setPointsGeometry(std::vector<double> &x, std::vector<double> &
 
 
 
-void SpatVector::setPointsDF(SpatDataFrame &x, std::vector<unsigned> geo, std::string crs, bool keepgeom) {
+void SpatVector::setPointsDF(SpatDataFrame &x, std::vector<size_t> geo, std::string crs, bool keepgeom) {
 	if (x.nrow() == 0) return;
 	if ((x.itype[geo[0]] != 0) || (x.itype[geo[1]] != 0)) {
 		setError("coordinates must be numeric");
@@ -914,11 +924,11 @@ void SpatVector::setLinesStartEnd(std::vector<double> &x, std::string crs) {
 
 
 
-SpatVector SpatVector::subset_rows(std::vector<int> range) {
+SpatVector SpatVector::subset_rows(std::vector<long> range) {
 
 	SpatVector out;
-	int n = nrow();
-	std::vector<unsigned> r;
+	long n = nrow();
+	std::vector<size_t> r;
 	r.reserve(range.size());
 	for (size_t i=0; i<range.size(); i++) {
 		if ((range[i] >= 0) && (range[i] < n)) {
@@ -936,11 +946,11 @@ SpatVector SpatVector::subset_rows(std::vector<int> range) {
 }
 
 
-SpatVector SpatVector::subset_rows(std::vector<unsigned> range) {
+SpatVector SpatVector::subset_rows(std::vector<size_t> range) {
 
 	SpatVector out;
-	unsigned n = nrow();
-	std::vector<unsigned> r;
+	size_t n = nrow();
+	std::vector<size_t> r;
 	out.reserve(r.size());
 	for (size_t i=0; i<range.size(); i++) {
 		if (range[i] < n) {
@@ -959,21 +969,20 @@ SpatVector SpatVector::subset_rows(std::vector<unsigned> range) {
 
 
 
-SpatVector SpatVector::subset_rows(int i) {
-	std::vector<int> range(1, i);
-	SpatVector out = subset_rows(range);
-	return out;
+SpatVector SpatVector::subset_rows(long i) {
+	std::vector<long> range(1, i);
+	return subset_rows(range);
 }
 
 
-SpatVector SpatVector::remove_rows(std::vector<unsigned> range) {
+SpatVector SpatVector::remove_rows(std::vector<size_t> range) {
 
 	std::sort(range.begin(), range.end());
 	range.erase(std::unique(range.begin(), range.end()), range.end());
 	std::reverse(range.begin(), range.end());
-	std::vector<unsigned> id(size());
+	std::vector<size_t> id(size());
 	std::iota(id.begin(), id.end(), 0);
-	unsigned n = size();
+	size_t n = size();
 	for (size_t i=0; i<range.size(); i++) {
 		if (range[i] < n) {
 			id.erase(id.begin()+range[i]);
@@ -986,9 +995,9 @@ SpatVector SpatVector::remove_rows(std::vector<unsigned> range) {
 
 
 
-SpatVector SpatVector::subset_cols(std::vector<int> range) {
-	int nc = ncol();
-	std::vector<unsigned> valid;
+SpatVector SpatVector::subset_cols(std::vector<long> range) {
+	long nc = ncol();
+	std::vector<size_t> valid;
 	valid.reserve(range.size());
 	for (size_t i=0; i<range.size(); i++) {
 		if ((range[i] >= 0) && (range[i] < nc)) {
@@ -1001,14 +1010,14 @@ SpatVector SpatVector::subset_cols(std::vector<int> range) {
 }
 
 
-SpatVector SpatVector::subset_cols(int i) {
+SpatVector SpatVector::subset_cols(long i) {
 	if (i < 0) {
 		SpatVector out;
 		out.geoms = geoms;
 		out.srs = srs;
 		return out;
 	}
-	std::vector<int> range = {i};
+	std::vector<long> range = {i};
 	return subset_cols(range);
 }
 
@@ -1045,7 +1054,7 @@ SpatVector SpatVector::append(SpatVector x, bool ingnorecrs) {
 	if (x.df.nrow() == 0) {
 		out.df.add_rows(x.size());
 	} else {
-		std::vector<unsigned> i;
+		std::vector<size_t> i;
 		out.df = x.df.subset_rows(i);
 		out.df.add_rows(size());
 		out.df.rbind(x.df);
@@ -1071,9 +1080,9 @@ SpatVector SpatVector::cbind(SpatDataFrame d) {
 
 
 SpatVector SpatVector::as_points(bool multi, bool skiplast) {
-	if (nrow() == 0) {
-		SpatVector v;
-		v.setError("input has no geometries");
+	if (geoms.empty()) {
+		SpatVector v = *this;
+		v.addWarning("input has no geometries");
 		return v;
 	}
 	
@@ -1134,27 +1143,33 @@ SpatVector SpatVector::as_points(bool multi, bool skiplast) {
 	return(v);
 }
 
-
 SpatVector SpatVector::as_lines() {
 	SpatVector v;
 
-	if (geoms[0].gtype == lines) {
+	std::string gtype = type();
+	if ((gtype == "none") || (gtype == "lines")) {
 		return *this;
 	}
 
-	if (geoms[0].gtype == points) {
-		std::vector<double> x, y;
-		x.reserve(size());
-		y.reserve(size());
-		for (size_t i=0; i<size(); i++) {
-			x.push_back(geoms[i].parts[0].x[0]);
-			y.push_back(geoms[i].parts[0].y[0]);
+	if (gtype == "points") {
+		if (is_multipoint()) {
+			v = *this;
+			for (size_t i=0; i<size(); i++) {
+				v.geoms[i].gtype = lines;
+			}
+		} else {
+			std::vector<double> x, y;
+			x.reserve(size());
+			y.reserve(size());
+			for (size_t i=0; i<size(); i++) {
+				x.push_back(geoms[i].parts[0].x[0]);
+				y.push_back(geoms[i].parts[0].y[0]);
+			}
+			SpatPart p(x, y);
+			SpatGeom g(p, lines)	;
+			v.setGeom(g);
+			v.srs = srs;
 		}
-		SpatVector v;
-		SpatPart p(x, y);
-		SpatGeom g(p, lines)	;
-		v.setGeom(g);
-		v.srs = srs;
 		return v;
 	}
 /*
@@ -1173,7 +1188,7 @@ SpatVector SpatVector::as_lines() {
 		return v;
 	}
 */
-	// polygons, multipoints
+	// polygons
 	v = *this;
 	for (size_t i=0; i<size(); i++) {
 		for (size_t j=0; j < v.geoms[i].size(); j++) {
@@ -1188,7 +1203,7 @@ SpatVector SpatVector::as_lines() {
 				v.geoms[i].parts[j] = p;
 			}
 		}
-		v.geoms[i].gtype = lines;
+			v.geoms[i].gtype = lines;
 	}
 	v.df = df;
 	return(v);
@@ -1236,7 +1251,7 @@ void SpatGeom::remove_duplicate_nodes(int digits) {
 
 SpatVector SpatVector::remove_duplicate_nodes(int digits) {
 	SpatVector v = *this;
-	if (geoms[0].gtype == points) {
+	if (geoms.empty() || (geoms[0].gtype == points)) {
 		v.addWarning("returning a copy");
 		return v;
 	}
@@ -1285,7 +1300,7 @@ SpatVector SpatVectorCollection::append() {
 		if (v[i].df.nrow() == 0) {
 			out.df.add_rows(v[i].size());
 		} else {
-			std::vector<unsigned> r0;
+			std::vector<size_t> r0;
 			out.df = v[i].df.subset_rows(r0);
 			out.df.add_rows(out.size()-v[i].size());
 			out.df.rbind(v[i].df);
@@ -1353,12 +1368,14 @@ SpatVector SpatVector::rotate_longitude(double longitude, bool left) {
 		size_t np = out.geoms[i].size();
 		for (size_t j=0; j<np; j++) {
 			size_t nx = out.geoms[i].parts[j].x.size();
-			for (size_t k=0; k<nx; k++) {
-				if (left) {
+			if (left) {
+				for (size_t k=0; k<nx; k++) {
 					if (out.geoms[i].parts[j].x[k] > longitude) {
 						out.geoms[i].parts[j].x[k] = out.geoms[i].parts[j].x[k] - 360;
 					}
-				} else {
+				}
+			} else {
+				for (size_t k=0; k<nx; k++) {
 					if (out.geoms[i].parts[j].x[k] < longitude) {
 						out.geoms[i].parts[j].x[k] = out.geoms[i].parts[j].x[k] + 360;
 					}
@@ -1368,12 +1385,14 @@ SpatVector SpatVector::rotate_longitude(double longitude, bool left) {
 				size_t nh = out.geoms[i].parts[j].holes.size();
 				for (size_t k=0; k<nh; k++) {
 					size_t nx = out.geoms[i].parts[j].holes[k].x.size();
-					for (size_t h=0; h<nx; h++) {
-						if (left) {
+					if (left) {
+						for (size_t h=0; h<nx; h++) {
 							if (out.geoms[i].parts[j].holes[k].x[h] > longitude) {
 								out.geoms[i].parts[j].holes[k].x[h] = out.geoms[i].parts[j].holes[k].x[h] - 360;
 							} 
-						} else {
+						}
+					} else {
+						for (size_t h=0; h<nx; h++) {
 							if (out.geoms[i].parts[j].holes[k].x[h] < longitude) {
 								out.geoms[i].parts[j].holes[k].x[h] = out.geoms[i].parts[j].holes[k].x[h] + 360;
 							} 

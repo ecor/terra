@@ -3,12 +3,18 @@
 #include "string_utils.h"
 #include "math_utils.h"
 
+#include "sort.h"
+
 #include "gdal_priv.h"
 #include "gdalio.h"
 #include "ogr_spatialref.h"
 
 //#define GEOS_USE_ONLY_R_API
 #include <geos_c.h>
+
+#if defined(HAVE_TBB) && !defined(__APPLE__)
+#define USE_TBB
+#endif
 
 
 #if GDAL_VERSION_MAJOR >= 3
@@ -35,10 +41,20 @@
 #endif
 #endif
 
+
+
+// [[Rcpp::export(name = ".have_TBB")]]
+bool have_TBB() {
+	#ifdef HAVE_TBB
+		return true;
+	#else 
+		return false;
+	#endif 
+}
+
+
 //from sf
-
 #ifdef projh
-
 // [[Rcpp::export]]
 std::string proj_version() {
 	std::stringstream buffer;
@@ -58,6 +74,7 @@ std::string proj_version() {
 #endif
 
 
+
 // [[Rcpp::export]]
 std::vector<unsigned char> hex2rgb(std::string s) {
 	unsigned char r, g, b;
@@ -66,6 +83,20 @@ std::vector<unsigned char> hex2rgb(std::string s) {
 	std::vector<unsigned char> x = {r, g, b};
 	return x;
 }
+
+/*
+// [[Rcpp::export]]
+std::vector<size_t> terra_order(std::vector<double> v) {
+	return sort_order_a(v);
+}
+
+// [[Rcpp::export]]
+std::vector<double> terra_permute(std::vector<double> v, std::vector<size_t> p) {
+	permute(v, p);
+	return v;
+}
+*/
+
 
 // [[Rcpp::export]]
 std::string rgb2hex(std::vector<unsigned char> x) {
@@ -192,9 +223,14 @@ std::string gdal_getconfig(std::string option) {
 
 // [[Rcpp::export(name = ".gdalinfo")]]
 std::string ginfo(std::string filename, std::vector<std::string> options, std::vector<std::string> oo) {
-	std::string out = gdalinfo(filename, options, oo);
-	return out;
+	return gdalinfo(filename, options, oo);
 }
+
+// [[Rcpp::export(name = ".gdalmdinfo")]]
+std::string gmdinfo(std::string filename, std::vector<std::string> options) {
+	return gdalMDinfo(filename, options);
+}
+
 
 // [[Rcpp::export(name = ".sdinfo")]]
 std::vector<std::vector<std::string>> sd_info(std::string filename) {
@@ -252,7 +288,7 @@ std::vector<std::vector<std::string>> gdal_drivers() {
     GDALDriver *poDriver;
     char **papszMetadata;
 	for (size_t i=0; i<n; i++) {
-	    poDriver = GetGDALDriverManager()->GetDriver(i);
+	    poDriver = GetGDALDriverManager()->GetDriver((int)i);
 		const char* ss = poDriver->GetDescription();
 		if (ss != NULL ) s[0][i] = ss;
 		ss = poDriver->GetMetadataItem( GDAL_DMD_LONGNAME );
@@ -427,7 +463,7 @@ std::vector<double> percRank(std::vector<double> x, std::vector<double> y, doubl
 					break;
 				}
 			}
-			double z = (b + 0.5 * t) / nx;
+			double z = ((double)b + 0.5 * (double)t) / (double) nx;
 			if (tail == 1) { // both
 				if (z > 0.5) {
 					z = 2 * (1 - z);
@@ -454,15 +490,42 @@ std::vector<double> percRank(std::vector<double> x, std::vector<double> y, doubl
 }
 
 
+// [[Rcpp::export(name = ".clearVSIcache")]]
+void clearVSIcache(bool vsi) {
+	//if (vsi)
+	VSICurlClearCache();
+}
+
 // [[Rcpp::export(name = ".setGDALCacheSizeMB")]]
-void setGDALCacheSizeMB(double x) {
-  GDALSetCacheMax64(static_cast<int64_t>(x) * 1024 * 1024);
+void setGDALCacheSizeMB(double x, bool vsi) {
+	if (vsi) {
+		int64_t v = int64_t(x * 1024 * 1024);
+		CPLSetConfigOption("CPL_VSIL_CURL_CACHE_SIZE", std::to_string(v).c_str());
+	} else {
+		GDALSetCacheMax64(static_cast<int64_t>(x) * 1024 * 1024);
+	}
+
 }
 
 // [[Rcpp::export(name = ".getGDALCacheSizeMB")]]
-double getGDALCacheSizeMB() {
-  return static_cast<double>(GDALGetCacheMax64() / 1024 / 1024);
+double getGDALCacheSizeMB(bool vsi) {
+	if (vsi) {
+		std::string out = gdal_getconfig("CPLGetConfigOption");
+		Rcpp::Rcout << out << std::endl;
+		if (out == "") return NAN;
+		double v = -1; 
+		try {
+			v = stod(out) / (1024 * 1024);
+		} catch(...){
+			return(NAN);
+		}
+		return(v);
+		
+	} else {
+		return static_cast<double>(GDALGetCacheMax64() / 1024 / 1024);
+	}
 }
+
 
 // convert NULL-terminated array of strings to std::vector<std::string>
 std::vector<std::string> charpp2vect(char **cp) {
@@ -503,13 +566,14 @@ bool set_proj_search_paths(std::vector<std::string> paths) {
 	for (size_t i = 0; i < paths.size(); i++) {
 		cpaths[i] = (char *) (paths[i].c_str());
 	}
-	cpaths[cpaths.size()] = NULL;
+	cpaths[cpaths.size()-1] = NULL;
 	OSRSetPROJSearchPaths(cpaths.data());
 	return true;
 #else
 	return false;
 #endif
 }
+
 
 // [[Rcpp::export(name = ".PROJ_network")]]
 std::string PROJ_network(bool enable, std::string url) {
@@ -528,6 +592,25 @@ std::string PROJ_network(bool enable, std::string url) {
 	return s;
 }
 
+
+
+// [[Rcpp::export(name = ".removeDriver")]]
+void removeDriver(std::vector<std::string> d) {
+	if ((d.size() == 0) || ((d.size() == 1) && (d[0] == ""))) {
+		GDALAllRegister();	
+	} else {
+		for (size_t i=0; i<d.size(); i++) {
+			GDALDriverH hDrv = GDALGetDriverByName(d[i].c_str());
+			if (hDrv == NULL) {
+				Rcpp::warning(d[i] + " is not a known driver\n");
+			} else {
+				GDALDeregisterDriver(hDrv);
+			}
+		}
+	}
+}
+
+
 // [[Rcpp::export(name = ".pearson")]]
 double pearson_cor(std::vector<double> x, std::vector<double> y, bool narm) {
  
@@ -544,8 +627,8 @@ double pearson_cor(std::vector<double> x, std::vector<double> y, bool narm) {
 		}
 	}
 	size_t n = x.size();
-	double xbar = accumulate(x.begin(), x.end(), 0.0) / n;
-	double ybar = accumulate(y.begin(), y.end(), 0.0) / n;
+	double xbar = accumulate(x.begin(), x.end(), 0.0) / (double)n;
+	double ybar = accumulate(y.begin(), y.end(), 0.0) / (double)n;
 	double numer = 0;
 	for (size_t i=0; i<n; i++) {
 		numer += (x[i]-xbar) * (y[i]-ybar);
@@ -608,7 +691,7 @@ Rcpp::IntegerMatrix uniqueSymmetricRows(std::vector<size_t> x, std::vector<size_
 	size_t n = x.size();
 	for (size_t i=0; i<n; i++) {
 		if (x[i] > y[i]) {
-			double tmp = x[i];
+			size_t tmp = x[i];
 			x[i] = y[i];
 			y[i] = tmp;
 		}
@@ -656,4 +739,109 @@ double stattest2(std::vector<double> x, std::string fun, bool narm) {
 }
 
 */
+
+
+Rcpp::List get_output(std::vector<std::string> names, std::vector<long> sizes) {
+	Rcpp::List L = Rcpp::List::create(Rcpp::Named("name") = names, Rcpp::Named("size") = sizes);
+	return(L);
+}
+
+
+#if GDAL_VERSION_MAJOR >= 3 && GDAL_VERSION_MINOR >= 4
+
+// [[Rcpp::export(name = ".arnames")]]
+std::vector<std::string> arnames(std::string filename, bool filter) {
+// FROM GDAL 3.11 (while not widely available).
+// * Author:   Even Rouault <even.rouault at spatialys.com>
+// * Copyright (c) 2019, Even Rouault <even.rouault at spatialys.com>
+
+    std::vector<std::string> ret;
+    auto poDataset = std::unique_ptr<GDALDataset>(GDALDataset::Open(filename.c_str(), GDAL_OF_MULTIDIM_RASTER ));
+
+    if (!poDataset) {
+		ret.push_back("not a good dataset");
+        return ret;
+    }
+
+	std::shared_ptr<GDALGroup> poRootGroup = poDataset->GetRootGroup();
+    if (!poRootGroup) {
+		ret.push_back("no root group");
+        return ret;
+    }
+
+    std::list<std::shared_ptr<GDALGroup>> stackGroups;
+    stackGroups.push_back(nullptr);  // nullptr means this
+    while (!stackGroups.empty()) {
+        std::shared_ptr<GDALGroup> groupPtr = std::move(stackGroups.front());
+        stackGroups.erase(stackGroups.begin());
+        const GDALGroup *poCurGroup = groupPtr ? groupPtr.get() : poRootGroup.get();
+        for (const std::string &arrayName :  poCurGroup->GetMDArrayNames(nullptr)) {
+            std::string osFullName = poCurGroup->GetFullName();
+            if (!osFullName.empty() && osFullName.back() != '/') 
+                osFullName += '/';
+            osFullName += arrayName;
+            ret.push_back(std::move(osFullName));
+        }
+        auto insertionPoint = stackGroups.begin();
+        for (const auto &osSubGroup : poCurGroup->GetGroupNames(nullptr)) {
+            auto poSubGroup = poCurGroup->OpenGroup(osSubGroup);
+            if (poSubGroup)
+                stackGroups.insert(insertionPoint, std::move(poSubGroup));
+        }
+    }
+	if (filter) {
+		ret = ncdf_filternames(ret);
+	}
+    return ret;
+}
+
+
+// [[Rcpp::export(name = ".dimfo")]]
+Rcpp::List dimfo(std::string filename, std::string array_name) {
+
+	std::vector<std::string> names;
+	std::vector<long> sizes;
+
+    auto poDataset = std::unique_ptr<GDALDataset>(GDALDataset::Open(filename.c_str(), GDAL_OF_MULTIDIM_RASTER ));
+    if (!poDataset) {
+		names.push_back("cannot open as md: " + filename);
+		sizes.push_back(-99);
+		return get_output(names, sizes);
+    }
+
+	std::shared_ptr<GDALGroup> poRootGroup = poDataset->GetRootGroup();
+    if (!poRootGroup) {
+		names.push_back("no root group: " + filename);
+		sizes.push_back(-99);
+		return get_output(names, sizes);
+    }
+
+	auto poVar = poRootGroup->OpenMDArray(array_name.c_str());
+	if (!poVar)   {
+		names.push_back("cannot open: " + array_name);
+		sizes.push_back(-99);
+		return get_output(names, sizes);
+	}
+
+	if (names.size() == 0) {
+		for ( const auto &poDim: poVar->GetDimensions() ) {
+			names.push_back(static_cast<std::string>(poDim->GetName()));
+			sizes.push_back(static_cast<long>(poDim->GetSize()));
+		}
+	}
+	return get_output(names, sizes);
+}
+
+#else
+
+Rcpp::List dimfo(std::string filename, std::string array_name) {
+	return get_output({"not supported with GDAL < 3.4"}, {-99});
+}
+
+std::vector<std::string> arnames(std::string filename, bool filter) {
+	std::vector<std::string> out(1, "not supported with GDAL < 3.4");
+	return out;
+}
+
+#endif
 

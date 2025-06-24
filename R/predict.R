@@ -21,12 +21,12 @@ parfun <- function(cls, d, fun, model, ...) {
 	if (!is.data.frame(d)) {
 		d <- data.frame(d)
 	}
+	nrd <- nrow(d)
 	if (!is.null(const)) {
-		nms <- names(const)
-		for (i in 1:ncol(const)) {
-			# avoid rowname recycling warnings
-			d[[ nms[i] ]] <- const[[ nms[i] ]]
-		}
+		d <- lapply(1:nrow(const), function(i) {
+			cbind(d, const[rep(i, nrow(d)), , drop=FALSE])
+		})
+		d <- do.call(rbind, d)
 	}
 	if (na.rm) {
 		n <- nrow(d)
@@ -54,10 +54,10 @@ parfun <- function(cls, d, fun, model, ...) {
 			}
 		} else {
 			if (!is.null(index)) {
-				r <- matrix(NA, nrow=nl*n, ncol=length(index))
+				r <- matrix(NA, nrow=n, ncol=length(index))
 				index <- NULL
 			} else {
-				r <- matrix(NA, nrow=nl*n, ncol=1)
+				r <- matrix(NA, nrow=n, ncol=nl)
 			}
 		}
 	} else {
@@ -67,7 +67,8 @@ parfun <- function(cls, d, fun, model, ...) {
 			r <- fun(model, d, ...)
 		}
 		if (is.list(r)) {
-			r <- as.data.frame(lapply(r, as.numeric))
+			r <- as.data.frame(r)
+			r <- data.frame(lapply(r, as.numeric))
 		} else if (is.factor(r)) {
 			r <- as.integer(r)
 		} else if (is.data.frame(r)) {
@@ -87,19 +88,28 @@ parfun <- function(cls, d, fun, model, ...) {
 	if (!is.null(index)) {
 		r <- r[, index, drop=FALSE]
 	}
+	if (!is.null(const)) {
+		r <- do.call(cbind, split(r, rep(1:nrow(const), each=nrd)))
+	}
+
 	r
 }
+
+#r <- .runModel(model, fun, d, nl, const, na.rm, index, cores=NULL)
 
 
 .getFactors <- function(model, fun, d, nl, const, na.rm, index, ...) {
 	if (!is.data.frame(d)) {
 		d <- data.frame(d)
 	}
-	if (! is.null(const)) {
-		for (i in 1:ncol(const)) {
-			d <- cbind(d, const[,i,drop=FALSE])
-		}
+	nrd <- nrow(d)
+	if (!is.null(const)) {
+		d <- lapply(1:nrow(const), function(i) {
+			cbind(d, const[rep(i, nrow(d)), , drop=FALSE])
+		})
+		d <- do.call(rbind, d)
 	}
+	
 	if (na.rm) {
 		n <- nrow(d)
 		i <- rowSums(is.na(d)) == 0
@@ -124,7 +134,7 @@ parfun <- function(cls, d, fun, model, ...) {
 		data.frame(value=1:length(levs), class=levs)
 	} else if (is.list(r) || is.data.frame(r)) {
 		r <- as.data.frame(r)
-		out <- sapply(r, levels)
+		out <- lapply(r, levels)
 		for (i in 1:length(out)) {
 			if (!is.null(out[[i]])) {
 				out[[i]] <- data.frame(value=1:length(out[[i]]), label=out[[i]])
@@ -144,8 +154,13 @@ find_dims <- function(object, model, nc, fun, const, na.rm, index, ...) {
 	rnr <- 1
 	if (nc==1) rnr <- min(nr, 20) - testrow + 1
 	d <- readValues(object, testrow, rnr, 1, nc, TRUE, TRUE)
+	nrd <- nrow(d)
 	cn <- NULL
 	levs <- NULL
+
+	all_const <- const
+	const <- const[1,,drop=FALSE]
+
 	if (!is.null(index)) {
 		nl <- length(index)
 		r <- .runModel(model, fun, d, nl, const, na.rm, index, cores=NULL, ...)
@@ -205,15 +220,29 @@ find_dims <- function(object, model, nc, fun, const, na.rm, index, ...) {
 		}
 		levs <- .getFactors(model, fun, d, nl, const, na.rm, index, ...)
 	}
+
 	out <- rast(object, nlyrs=nl)
 	if (!all(sapply(levs, is.null))) levels(out) <- levs
 	if (length(cn) == nl) names(out) <- make.names(cn, TRUE)
+
+	if (NROW(all_const) > 1) {
+		oldnl <- nl
+		nl <- nl * nrow(all_const)
+		nms <- names(out)
+		newnms <- apply(all_const, 1, function(x) paste0(names(all_const), x, collapse="_"))
+		newnms <- apply(cbind(rep(nms, nrow(all_const)), newnms), 1, function(x) paste0(x, collapse="."))
+		nlyr(out) <- nl
+		names(out) <- newnms
+	}
 	out
 }
 
 
 setMethod("predict", signature(object="SpatRaster"),
 	function(object, model, fun=predict, ..., const=NULL, na.rm=FALSE, index=NULL, cores=1, cpkgs=NULL, filename="", overwrite=FALSE, wopt=list()) {
+
+		debugr <- isTRUE(wopt$debug)
+		wopt$debug <- NULL
 
 		nms <- names(object)
 		if (length(unique(nms)) != length(nms)) {
@@ -225,11 +254,7 @@ setMethod("predict", signature(object="SpatRaster"),
 		#tomat <- FALSE
 		readStart(object)
 		on.exit(readStop(object))
-		if (!is.null(const)) {
-			const <- data.frame(const)[1,,drop=FALSE]
-			rownames(const) <- NULL
-		}
-		out <- terra:::find_dims(object, model, nc, fun, const, na.rm, index, ...)
+		out <- find_dims(object, model, nc, fun, const, na.rm, index, ...)
 		nl <- nlyr(out)
 		
 		doclust <- FALSE
@@ -258,6 +283,13 @@ setMethod("predict", signature(object="SpatRaster"),
 			if (prod(NROW(r), NCOL(r)) != prod(b$nrows[i], nc, nl)) {
 				msg <- "the number of values returned by 'fun' (model predict function) does not match the input."
 				if (!na.rm) msg <- paste(msg, "Try na.rm=TRUE?")
+				if (debugr) {
+					str(b)
+					message(paste("step", i, "(Error, debug=TRUE)"))
+					message(msg)
+					message("returning input/output and blocks")
+					return(list(blocks=b, input=d, output=r))
+				}
 				error("predict", msg)
 			}
 			writeValues(out, r, b$row[i], b$nrows[i])

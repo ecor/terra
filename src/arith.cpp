@@ -22,6 +22,13 @@
 #include "vecmath.h"
 #include <cmath>
 
+#if defined(USE_TBB)
+#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#endif 
+
+
 //#include "modal.h"
 
 /*
@@ -51,6 +58,21 @@ void operator*(std::vector<double>& a, const std::vector<double>& b) {
 
 */
 
+
+
+inline double R_modulo(const double &x, const double &y) { 
+	double m = std::fmod(x, y);
+	if (y < 0) {
+		if (m > 0) {
+			m += y; 
+		}
+	} else if (m < 0) {
+        m += y; 
+    }
+	return m;
+}
+
+
 //template <typename T>
 void operator%(std::vector<double>& a, const std::vector<double>& b) {
 //    std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::modulus<T>());
@@ -58,7 +80,7 @@ void operator%(std::vector<double>& a, const std::vector<double>& b) {
 		if (std::isnan(a[i]) || std::isnan(b[i])) {
 			a[i] = NAN;
 		} else {
-			a[i] = std::abs(std::fmod(a[i], b[i]));
+			a[i] = R_modulo(a[i], b[i]);
 		}
 	}
 }
@@ -143,7 +165,7 @@ bool smooth_operator(std::string &oper, bool &logical, bool &reverse, bool &fals
 }
 
 
-
+//#include <execution>
 
 SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatOptions &opt) {
 
@@ -201,11 +223,14 @@ SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatO
 		return out;
 	}
 
+//	auto policy = std::execution::par;
+
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a, b;
 		readBlock(a, out.bs, i);
 		x.readBlock(b, out.bs, i);
 		recycle(a,b);
+		
 		if (oper == "+") {
 			std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::plus<double>());
 		} else if (oper == "-") {
@@ -268,7 +293,7 @@ SpatRaster SpatRaster::arith(SpatRaster x, std::string oper, bool falseNA, SpatO
 
 SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool falseNA, SpatOptions &opt) {
 
-	SpatRaster out = geometry(nlyr());
+	SpatRaster out = geometry();
 	if (!hasValues()) {
 		out.setError("raster has no values"); // or warn and treat as NA?
 		return out;
@@ -309,8 +334,10 @@ SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool fals
 		std::vector<double> a;
 		readBlock(a, out.bs, i);
 		if (std::isnan(x)) {
-			for(double& d : a)  d = NAN;
+			std::fill(a.begin(), a.end(), NAN);
+			//for (double& d : a)  d = NAN;
 		} else if (oper == "+") {
+//			std::for_each(std::execution::par, a.begin(), a.end(), [&](double& d) {	d += x;	});
 			for (double& d : a)  d += x;
 		} else if (oper == "-") {
 			if (reverse) {
@@ -336,11 +363,11 @@ SpatRaster SpatRaster::arith(double x, std::string oper, bool reverse, bool fals
 		} else if (oper == "%") {
 			if (reverse) {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::abs(std::fmod(x, a[i]));
+					a[i] = R_modulo(x, a[i]);
 				}
 			} else {
 				for (size_t i=0; i<a.size(); i++) {
-					a[i] = std::abs(std::fmod(a[i], x));
+					a[i] = R_modulo(a[i], x);
 				}
 			}
 		} else if (oper == "%/%") {
@@ -504,11 +531,11 @@ SpatRaster SpatRaster::arith(std::vector<double> x, std::string oper, bool rever
 			} else if (oper == "%") {
 				if (reverse) {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(x[j], v[s+k]);
+						v[s+k] = R_modulo(x[j], v[s+k]);
 					}
 				} else {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(v[s+k], x[j]);
+						v[s+k] = R_modulo(v[s+k], x[j]);
 					}
 				}
 			} else if (oper == "==") {
@@ -581,7 +608,7 @@ SpatRaster SpatRaster::arith_m(std::vector<double> x, std::string oper, std::vec
 	if (dim[0] < 2) {
 		return(arith(x, oper, reverse, false, opt));
 	}
-	if (dim[0] > ncell()) {
+	if ((double) dim[0] > ncell()) {
 		out.setError("incorrect matrix dimensions (nrow > ncell(x))"); 
 		return out;
 	}
@@ -692,11 +719,11 @@ SpatRaster SpatRaster::arith_m(std::vector<double> x, std::string oper, std::vec
 			} else if (oper == "%") {
 				if (reverse) {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(xj[k], v[s+k]);
+						v[s+k] = R_modulo(xj[k], v[s+k]);
 					}
 				} else {
 					for (size_t k=0; k<off; k++) {
-						v[s+k] = std::fmod(v[s+k], xj[k]);
+						v[s+k] = R_modulo(v[s+k], xj[k]);
 					}
 				}
 			} else if (oper == "==") {
@@ -744,6 +771,7 @@ template <typename T> int sign(T value) {
 double dabs(double x) {
 	return (x < 0 ? -1 * x : x);
 }
+
 
 SpatRaster SpatRaster::math(std::string fun, SpatOptions &opt) {
 
@@ -797,10 +825,25 @@ SpatRaster SpatRaster::math(std::string fun, SpatOptions &opt) {
 		readStop();
 		return out;
 	}
+
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a;
 		readBlock(a, out.bs, i);
-		for(double& d : a) if (!std::isnan(d)) d = mathFun(d);
+
+#if defined(USE_TBB)
+		if (opt.parallel) {
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
+				[&](const tbb::blocked_range<size_t>& range) {
+				for (size_t i = range.begin(); i != range.end(); i++) {
+					if (!std::isnan(a[i])) a[i] = mathFun(a[i]);
+				}
+			});
+		} else {
+			for (double& d : a) if (!std::isnan(d)) d = mathFun(d);
+		}
+#else
+		for (double& d : a) if (!std::isnan(d)) d = mathFun(d);	
+#endif
 		if (!out.writeBlock(a, i)) return out;
 	}
 	out.writeStop();
@@ -921,7 +964,23 @@ SpatRaster SpatRaster::trig(std::string fun, SpatOptions &opt) {
 	for (size_t i = 0; i < out.bs.n; i++) {
 		std::vector<double> a;
 		readValues(a, out.bs.row[i], out.bs.nrows[i], 0, ncol());
+#if defined(USE_TBB) 
+		if (opt.parallel) {
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, a.size()),
+				[&](const tbb::blocked_range<size_t>& range) {
+				for (size_t i = range.begin(); i != range.end(); i++) {
+					if (!std::isnan(a[i])) {
+						a[i] = trigFun(a[i]);
+					}
+				}
+			});
+		} else {
+			for (double& d : a) if (!std::isnan(d)) d = trigFun(d);
+		}
+#else 
 		for (double& d : a) if (!std::isnan(d)) d = trigFun(d);
+#endif	
+
 		if (!out.writeBlock(a, i)) return out;
 	}
 	out.writeStop();
@@ -1426,7 +1485,7 @@ SpatRaster SpatRaster::modal(std::vector<double> add, std::string ties, bool nar
 			for (size_t k=0; k<nl; k++) {
 				v[k] = a[j+k*nc];
 			}
-			b[j] = modal_value(v, ities, narm, rgen, dist);
+			b[j] = modal_value(v, (unsigned)ities, narm, rgen, dist);
 		}
 		if (!out.writeBlock(b, i)) return out;
 	}
@@ -1483,7 +1542,7 @@ SpatRaster SpatRaster::range(std::vector<double> add, bool narm, SpatOptions &op
 
 SpatRaster SpatRasterStack::summary_numb(std::string fun, std::vector<double> add, bool narm, SpatOptions &opt) {
 
-	std::vector<unsigned> vnl = nlyr();
+	std::vector<size_t> vnl = nlyr();
 	size_t nl = vmax(vnl, false);
 	SpatRaster out = ds[0].geometry(nl);
 	size_t ns = nsds();
@@ -1924,10 +1983,10 @@ std::vector<std::vector<double>> SpatRaster::where(std::string what, bool values
 						if (v[k] < val[j]) {
 							val[j] = v[k];
 							out[j].resize(0);
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						} else if (v[k] == val[j]) {
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						}
 					}
@@ -1938,10 +1997,10 @@ std::vector<std::vector<double>> SpatRaster::where(std::string what, bool values
 						if (v[k] > val[j]) {
 							val[j] = v[k];
 							out[j].resize(0);
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						} else if (v[k] == val[j]) {
-							double cell = k - off + boff;
+							double cell = (double) (k - off + boff);
 							out[j].push_back(cell);
 						}
 					}

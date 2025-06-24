@@ -147,6 +147,24 @@ double SpatSRS::to_meter() {
 	return out;
 }
 
+
+bool SpatSRS::m_dist(double &m, bool lonlat, std::string unit) {
+	m = 1;
+	if (!lonlat) {
+		m = to_meter();
+		m = std::isnan(m) ? 1 : m;
+	}
+	std::vector<std::string> ss {"m", "km"};
+	if (std::find(ss.begin(), ss.end(), unit) == ss.end()) {
+		return false;
+	}
+	if (unit == "km")	{
+		m /= 1000;
+	}
+	return true;
+}
+
+
 bool SpatSRS::is_same(SpatSRS other, bool ignoreempty) {
 	if (ignoreempty) {
 		if (is_empty() || other.is_empty()) {
@@ -198,6 +216,21 @@ bool SpatSRS::is_lonlat() {
 	}
 	return x.IsGeographic();
 }
+
+
+
+bool SpatSRS::is_not_lonlat() {
+	if (wkt.size() < 2) {
+		return false;
+	}
+	OGRSpatialReference x;
+	OGRErr erro = x.SetFromUserInput(wkt.c_str());
+	if (erro != OGRERR_NONE) {
+		return false;
+	}
+	return !x.IsGeographic();
+}
+
 
 
 bool SpatSRS::set(std::string txt, std::string &msg) {
@@ -388,7 +421,7 @@ SpatVector SpatVector::project(std::string crs, bool partial) {
 	
 	s.setSRS(crs);
 	s.df = df;
-	std::vector<unsigned> keeprows;
+	std::vector<size_t> keeprows;
 	
 	if (partial) {
 		#if GDAL_VERSION_MAJOR >= 2 && GDAL_VERSION_MINOR > 1

@@ -108,6 +108,7 @@ setMethod("ext", signature(x="SpatRasterDataset"),
 
 setMethod("ext<-", signature("SpatRaster", "SpatExtent"),
 	function(x, value) {
+		x@pntr <- x@pntr$deepcopy()
 		x@pntr$extent <- value@pntr
 		messages(x, "ext<-")
 	}
@@ -140,6 +141,14 @@ setMethod("ext", signature(x="SpatVector"),
 		e
 	}
 )
+
+setMethod("ext", signature(x="SpatVectorCollection"),
+	function(x) {
+		e <- sapply(x, function(e) as.vector(ext(e)))
+		ext(min(e[1,]), max(e[2,]), min(e[3,]), max(e[4,]))
+	}
+)
+
 
 setMethod("ext", signature(x="SpatVectorProxy"),
 	function(x) {

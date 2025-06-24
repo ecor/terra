@@ -16,12 +16,30 @@ setMethod ("area", "SpatVector",
 if (!isGeneric("gridDistance")) {setGeneric("gridDistance", function(x, ...) standardGeneric("gridDistance"))}
 setMethod("gridDistance", signature(x="SpatRaster"),
 	function(x, ...) {
-		error("gridDistance", "'gridDistance' was renamed to 'gridDist'")
-		#. 'gridDistance' will be removed in a future version")
-		#gridDist(x, target=target, scale=scale, maxiter=maxiter, filename=filename, ...) 
+		error("gridDistance", "'terra::gridDistance' was renamed to 'gridDist'")
 	}
 )
 
+
+setMethod("convHull", signature(x="SpatVector"),
+	function(x, by="") {
+#		warn("convHull", "method is deprecated, please use 'hull(type='convex')'")
+		hull(x, type="convex", by=by)
+	}
+)
+setMethod("minCircle", signature(x="SpatVector"),
+	function(x, by="") {
+#		warn("minCircle", "method is deprecated, please use 'hull(type='circle')'")
+		hull(x, "circle", by)
+	}
+)
+
+setMethod("minRect", signature(x="SpatVector"),
+	function(x, by="") {
+#		warn("minRect", "method is deprecated, please use 'hull(type='circle')'")
+		hull(x, "rectangle", by)
+	}
+)
 
 
 #if (!isGeneric("setCats")) { setGeneric("setCats", function(x, ...) standardGeneric("setCats")) }

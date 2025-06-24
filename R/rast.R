@@ -10,6 +10,7 @@ new_rast <- function(nrows=10, ncols=10, nlyrs=1, xmin=0, xmax=1, ymin=0, ymax=1
 	if (ncols < 1) error("rast", "ncols < 1")
 	nrows <- round(nrows)
 	if (nrows < 1) error("rast", "nrows < 1")
+	if (nlyrs < 1) error("rast", "nlyrs < 1")
 
 	if (missing(extent)) {
 		e <- c(xmin, xmax, ymin, ymax)
@@ -166,7 +167,16 @@ setMethod("rast", signature(x="SpatExtent"),
 
 
 setMethod("rast", signature(x="SpatVector"),
-	function(x, ...) {
+	function(x, type="", ...) {
+	
+		if (type == "xyz") {
+			if (geomtype(x) != "points") {
+				error("rast", "xyz can only be used with points")
+			}
+			x <- data.frame(crds(x), data.frame(x))
+			return(rast(x, type="xyz", ...))
+		}
+	
 		dots <- list(...)
 		e <- ext(x)
 		dots$xmin=e[1]
@@ -218,8 +228,59 @@ setMethod("rast", signature(x="SpatVector"),
 	return(x)
 }
 
+clean_domains <- function(domains) {
+	if (is.null(domains)) {
+		domains <- ""[0]
+	} else {
+		domains <- unique(domains)
+		domains <- as.character(domains[!is.na(domains)])
+	}
+	domains
+}
+
+
+multi <- function(x, subds=1, dims=NULL, drivers=NULL, opts=NULL, win=NULL, snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, guessCRS=TRUE, domains="") {
+
+	f <- .fullFilename(x, vsi=isTRUE(vsi))
+	if (length(f) == 0) {
+		error("multi", "filename is empty. Provide a valid filename")
+	}
+
+	if (is.null(opts)) opts <- ""[0]
+	if (isTRUE(raw)) opts <- c(opts, "so=false")
+	
+	if (is.null(drivers)) drivers <- ""[0]
+
+	domains <- clean_domains(domains)
+	if (is.null(dims)) dims <- 0
+		
+	r <- methods::new("SpatRaster")
+	if (is.character(subds)) {
+		r@pntr <- SpatRaster$new(f, -1, subds, TRUE, drivers, opts, dims-1, isTRUE(noflip), isTRUE(guessCRS), domains)
+	} else {
+		if (subds < 1) subds = 1
+		r@pntr <- SpatRaster$new(f, subds-1, ""[0], TRUE, drivers, opts, dims-1, isTRUE(noflip), isTRUE(guessCRS), domains)
+	}
+	messages(r, "rast (multi)")
+}
+
+
 setMethod("rast", signature(x="character"),
-	function(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, win=NULL, snap="near", vsi=FALSE, raw=FALSE) {
+	function(x, subds=0, lyrs=NULL, drivers=NULL, opts=NULL, win=NULL, snap="near", vsi=FALSE, raw=FALSE, noflip=FALSE, guessCRS=TRUE, domains="", md=FALSE, dims=NULL) {
+
+		if (isTRUE(md)) {
+			if (!is.null(win)) {
+				error("rast", "argument 'win' is ignored if 'multi=TRUE'")			
+			}
+			if (length(x) > 1) {
+				error("rast", "only a single filename can be used if 'multi=TRUE'")
+			}
+			r <- multi(x, subds, dims=dims, drivers=drivers, opts=opts, vsi=vsi, raw=raw, noflip=noflip, guessCRS=guessCRS, domains=domains)
+			if (!is.null(lyrs)) {
+				r <- r[[lyrs]]
+			}
+			return(r)
+		}
 
 		f <- .fullFilename(x, vsi=vsi)
 		if (length(f) == 0) {
@@ -233,18 +294,18 @@ setMethod("rast", signature(x="character"),
 			}
 			return(r)
 		}
-		
+
+		domains <- clean_domains(domains)
 		r <- methods::new("SpatRaster")
 		#subds <- subds[1]
 		if (is.null(opts)) opts <- ""[0]
 		if (raw) opts <- c(opts, "so=false")
 		if (is.null(drivers)) drivers <- ""[0]
-		if (length(subds) == 0) subds = 0
+		if (length(subds) == 0) subds <- 0
 		if (is.character(subds)) {
-			#r@pntr <- SpatRaster$new(f, -1, subds, FALSE, 0[])
-			r@pntr <- SpatRaster$new(f, -1, subds, FALSE, drivers, opts, 0[])
+			r@pntr <- SpatRaster$new(f, -1, subds, FALSE, drivers, opts, 0[], isTRUE(noflip), isTRUE(guessCRS), domains)
 		} else {
-			r@pntr <- SpatRaster$new(f, subds-1, "", FALSE, drivers, opts, 0[])
+			r@pntr <- SpatRaster$new(f, subds-1, "", FALSE, drivers, opts, 0[], isTRUE(noflip), isTRUE(guessCRS), domains)
 		}
 		r <- messages(r, "rast")
 		if (r@pntr$getMessage() == "ncdf extent") {
@@ -252,18 +313,25 @@ setMethod("rast", signature(x="character"),
 			test <- try(r <- .ncdf_extent(r, f), silent=TRUE)
 			if (inherits(test, "try-error")) {
 				warn("rast", "GDAL did not find an extent. Cells not equally spaced?")
-			}
-		}
-		r <- messages(r, "rast")
-		if (crs(r) == "") {
-			if (is.lonlat(r, perhaps=TRUE, warn=FALSE)) {
-				if (!isTRUE(all(as.vector(ext(r)) == c(0,ncol(r),0,nrow(r))))) {
-					crs(r) <- "OGC:CRS84"
+			} else if (isTRUE(guessCRS)) {
+				if (crs(r) == "") {
+					e <- ext(r)
+					if ((e$xmin >= -180) && (e$xmax <= 360) && (e$ymin >= -90) && (e$ymax <= 90)) {
+						crs(r) <- "OGC:CRS84"
+					}
 				}
 			}
 		}
+		r <- messages(r, "rast")
 
+		
 		if (!is.null(lyrs)) {
+			if (length(f) > 1) {
+				s <- sources(r, FALSE, TRUE)
+				if (max(lyrs) <= max(s$bands[s$sid == 1])) {
+					lyrs <- which(!is.na(match(s$bands, lyrs)))
+				}
+			}
 			r <- r[[lyrs]]
 		} 
 		if (!is.null(win)) {
@@ -274,42 +342,6 @@ setMethod("rast", signature(x="character"),
 		r
 	}
 )
-
-
-multi <- function(x, subds=0, xyz=3:1, drivers=NULL, opts=NULL) {
-
-	x <- trimws(x)
-	x <- x[x!=""]
-	if (length(x) == 0) {
-		error("rast,character", "provide a valid filename")
-	}
-	r <- methods::new("SpatRaster")
-	f <- .fullFilename(x)
-	if (is.null(opts)) opts <- ""[0]
-	if (is.null(drivers)) drivers <- ""[0]
-	if (length(subds) == 0) subds = 1
-	subds <- subds[1]
-
-	if (is.character(subds)) {
-		r@pntr <- SpatRaster$new(f, -1, subds, TRUE, drivers, opts, xyz-1)
-	} else {
-		r@pntr <- SpatRaster$new(f, subds-1, ""[0], TRUE, drivers, opts, xyz-1)
-	}
-	if (r@pntr$getMessage() == "ncdf extent") {
-		test <- try(r <- .ncdf_extent(r), silent=TRUE)
-		if (inherits(test, "try-error")) {
-			warn("rast", "GDAL did not find an extent. Cells not equally spaced?")
-		}
-	}
-	r <- messages(r, "rast")
-
-	if (crs(r) == "") {
-		if (is.lonlat(r, perhaps=TRUE, warn=FALSE)) {
-			crs(r) <- "OGC:CRS84"
-		}
-	}
-	r
-}
 
 
 setMethod("rast", signature(x="SpatRaster"),
@@ -409,7 +441,10 @@ setMethod("rast", signature(x="ANY"),
 		xyz <- as.matrix(xyz)
 		xyz <- matrix(as.numeric(xyz), ncol=ncol(xyz), nrow=nrow(xyz))
 	}
+	
 	x <- sort(unique(xyz[,1]))
+#	x <- sort(unique(round(xyz[,1], digits+2)))
+	
 	if (length(x) == 1) {
 		error("rast", "cannot create a raster geometry from a single x coordinate")
 	}
@@ -428,13 +463,11 @@ setMethod("rast", signature(x="ANY"),
 	}
 
 	y <- sort(unique(xyz[,2]))
+#	y <- sort(unique(round(xyz[,2], digits+2)))
 	if (length(y) == 1) {
 		error("rast", "cannot create a raster geometry from a single y coordinate")
 	}
 	dy <- y[-1] - y[-length(y)]
-	# probably a mistake to use the line below
-	# Gareth Davies suggested that it be removed
-	# dy <- round(dy, digits)
 
 	ry <- min(dy)
 	for (i in 1:5) {
@@ -454,7 +487,7 @@ setMethod("rast", signature(x="ANY"),
 	maxy <- max(y) + 0.5 * ry
 
 	d <- dim(xyz)
-	r <- rast(xmin=minx, xmax=maxx, ymin=miny, ymax=maxy, crs=crs, nlyrs=d[2]-2)
+	r <- rast(xmin=minx, xmax=maxx, ymin=miny, ymax=maxy, crs=crs, nlyrs=max(1, d[2]-2))
 	res(r) <- c(rx, ry)
 	ext(r) <- round(ext(r), digits+2)
 	cells <- cellFromXY(r, xyz[,1:2])

@@ -1,5 +1,10 @@
 
 
+unloadGDALdrivers <- function(x) {
+	.removeDriver(x)
+}
+
+
 fileBlocksize <- function(x) {
 	v <- x@pntr$getFileBlocksize()
 	m <- matrix(v, ncol=2)
@@ -8,15 +13,19 @@ fileBlocksize <- function(x) {
 }
 
 
+clearVSIcache <- function() {
+	.clearVSIcache(TRUE)
+}
+
 gdalCache <- function(size=NA) {
-	if (is.na(size)) {
-		.getGDALCacheSizeMB()
-	} else {
-		if (size > 0) {
-			.setGDALCacheSizeMB(size)
-		}
+	vsi <- FALSE # vsi not working
+	if (is.null(size) || is.na(size)) {
+		.getGDALCacheSizeMB(vsi)
+	} else if (size > 0) {
+		.setGDALCacheSizeMB(size, vsi)
 	}
 }
+
 
 getGDALconfig <- function(option) {
 	sapply(option, .gdal_getconfig)
@@ -35,12 +44,32 @@ setGDALconfig <- function(option, value="") {
 }
 
 
+libVersion <- function(lib="all", parse=FALSE) {
+	lib <- tolower(lib)
+	if (lib=="gdal") {
+		out <- .gdal_version()
+	} else if (lib=="proj") {
+		out <- proj_version()
+	} else if (lib=="geos") {
+		out <- .geos_version()
+	} else {
+		out <- c(gdal=.gdal_version(), proj=proj_version(), geos=.geos_version())
+	}
+	if (parse) {
+		nms <- names(out)
+		out <- data.frame(matrix(as.numeric(unlist(strsplit(out, "\\."))), ncol=3, byrow=TRUE), row.names=nms)
+		names(out) <- c("major", "minor", "sub")
+	}
+	out
+}
 
 
-gdal <- function(warn=NA, drivers=FALSE, lib="gdal") {
+
+
+gdal <- function(warn=NA, drivers=FALSE, ...) {
 	if (!is.na(warn)) {
 		warn <- as.integer(warn)
-		stopifnot(warn %in% c(1:4))
+		stopifnot(warn %in% (1:4))
 		.set_gdal_warnings(warn)
 	} else if (drivers) {
 		x <- .gdaldrivers()
@@ -55,15 +84,11 @@ gdal <- function(warn=NA, drivers=FALSE, lib="gdal") {
 		rownames(x) <- NULL
 		x
 	} else {
-		lib <- tolower(lib)
-		if (lib=="gdal") {
-			.gdal_version()
-		} else if (lib=="proj") {
-			proj_version()
-		} else if (lib=="geos") {
-			.geos_version()
+		dots <- list(...)
+		if (length(dots) > 0) {
+			libVersion(dots[1])
 		} else {
-			c(gdal=.gdal_version(), proj=proj_version(), geos=.geos_version())
+			libVersion("gdal")		
 		}
 	}
 }
@@ -107,6 +132,48 @@ gdal <- function(warn=NA, drivers=FALSE, lib="gdal") {
 	m
 }
 
+mdinfo_simplify <- function(p) {
+	p <- gsub('\"', "", strsplit(p, "\n")[[1]])
+	p <- p[-c(1, length(p))]
+	p <- gsub("^  ", "", p)
+	p <- gsub(",$", "", p)
+	  
+	s <- grep("\\[", p)[-1]
+	e <- grep("]", p)
+	i <- which(s > e[-length(e)])[1]
+	e <- e[-i]
+	if (max(e-s) < 8) {
+		for (i in 1:length(s)) {
+			p[s[i]] <- paste0(p[s[i]], paste(trimws(p[(s[i]+1):e[i]]), collapse=""))
+		}
+		s <- s + 1
+		r <- unlist(lapply(1:length(s), function(i) s[i]:e[i]))
+		p <- p[-r]
+	}
+	p
+}
+
+ar_info <- function(x, what="describe", simplify=TRUE, filter=TRUE, array="") {
+	what <- match.arg(tolower(what), c("describe", "arrays", "dimensions"))
+	if (what == "describe") {
+		p <- .gdalmdinfo(x, ""[0])
+		if (simplify) {
+			pp <- try(mdinfo_simplify(p), silent=TRUE)
+			if (!inherits(pp, "try-error")) {
+				p <- pp
+			}
+		}
+		return(p)
+	} else if (what == "arrays") {
+		.arnames(x, filter);
+	} else if (what == "dimensions") {
+		d <- .dimfo(x, array)
+		if (d$size[1] == -99) {
+			error("descar", d$name[1])
+		}
+		data.frame(d);
+	}
+}
 
 
 setMethod("describe", signature(x="character"),
@@ -149,3 +216,13 @@ setMethod("describe", signature(x="character"),
 	}
 )
 
+setMethod("describe", signature(x="SpatRaster"),
+	function(x, source=1, ...) {
+		if (!hasValues(x)) return(NULL)
+		source <- round(source)
+		if ((source < 1) || (source > nsrc(x))) {
+			error("describe", "source should be >= 1 and <= nsrc()")
+		}
+		describe(sources(x)[source])
+	}
+)

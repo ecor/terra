@@ -13,7 +13,8 @@ Show multiple maps that share a single legend.
 
 \usage{
 \S4method{panel}{SpatRaster}(x, main, loc.main="topleft", nc, nr, maxnl=16, 
-	maxcell=500000, box=FALSE, pax=list(), plg=list(), range=NULL, ...)
+	maxcell=500000, box=FALSE, pax=list(), plg=list(), range=NULL, halo=TRUE, 
+	type=NULL, ...)
 }
 
 \arguments{
@@ -28,6 +29,8 @@ Show multiple maps that share a single legend.
   \item{plg}{see \code{\link{plot}}}
   \item{pax}{see \code{\link{plot}}}
   \item{range}{numeric. minimum and maximum values to be used for the continuous legend }  
+  \item{halo}{logical. Use a halo around main (the title)?}
+  \item{type}{character. Type of map/legend. One of "continuous", "classes", or "interval". If not specified, the type is chosen based on the data}
   \item{...}{arguments passed to \code{plot("SpatRaster", "numeric")} and additional graphical arguments}  
 }
 
@@ -41,7 +44,7 @@ v <- vect(system.file("ex/lux.shp", package="terra"))
 x <- c(r, r/2, r*2, r)
 names(x) <- paste0("(", LETTERS[1:4], ")")
 panel(x)
-panel(x, fun=\()lines(v), loc.main="topright")
+panel(x, fun=function() lines(v), loc.main="topright")
 }
 
 

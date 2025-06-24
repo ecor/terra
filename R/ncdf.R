@@ -53,21 +53,67 @@
 }
 
 
+write_tags <- function(tags, nc, varid, prefix="TAG_") {
+	if (NROW(tags) > 0) {
+		nms <- paste0(prefix, tags[,2])
+		for(i in 1:nrow(tags)) {
+			try(ncdf4::ncatt_put(nc, varid, nms[i], tags[i,3], prec="text"), silent=TRUE)
+		}
+	}
+}
 
-.write_cdf <- function(x, filename, overwrite=FALSE, zname="time", atts="", gridmap="", prec="float", compression=NA, missval, force_v4=TRUE, verbose=FALSE, ...) {
+
+get_time_vars <- function(y) {
+	zv <- y@pntr$time
+	tstep <- y@pntr$timestep
+	cal <- "standard"
+	if (tstep == "seconds") {
+		zunit <- "seconds since 1970-1-1 00:00:00"
+	} else if (tstep == "days") {
+		zunit <- "days since 1970-1-1"
+		zv <- zv / (24 * 3600)
+	} else if (tstep == "months") {
+		zunit <- "months"
+		zv <- time(y)
+	} else if (tstep == "yearmonths") {
+		zunit <- "months since 1970"
+		tm <- time(y) - 1970
+		yr <- tm %/% 1
+		zv <- (yr*12) + round(12 * (tm %% 1))
+	} else if (tstep == "years") {
+		zunit <- "years since 1970"
+		zv <- time(y) - 1970
+	} else {
+		zunit <- "unknown"
+	}
+	list(zv=zv, zunit=zunit)
+}
+
+
+.write_cdf <- function(x, filename, overwrite=FALSE, timename="time", atts="", gridmap="", prec="float", compression=NA, missval, tags=FALSE, force_v4=TRUE, verbose=FALSE, ...) {
 
 	n <- length(x)
 	y <- x[1]
 	if (is.lonlat(y, perhaps=TRUE, warn=FALSE)) {
-		xname = "longitude"
-		yname = "latitude"
-		xunit = "degrees_east"
-		yunit = "degrees_north"
+		xname <- "longitude"
+		yname <- "latitude"
+		xunit <- "degrees_east"
+		yunit <- "degrees_north"
 	} else {
-		xname = "easting"
-		yname = "northing"
-		xunit = "meter" # probably
-		yunit = "meter" # probably
+		xname <- "easting"
+		yname <- "northing"
+		linunit <- linearUnits(x[1])
+		if (isTRUE(linunit == 1)) {
+			xunit <- yunit <- "meter"
+		} else if (isTRUE(linunit == 1000)) {
+			xunit <- yunit <- "km"
+		} else if (isTRUE(linunit == 0.3048)) {
+			xunit <- yunit <- "feet"
+		} else if (isTRUE(linunit == 1609.344)) {
+			xunit <- yunit <- "miles"
+		} else {
+			xunit <- yunit <- "unknown"		
+		}
 	}
 	xdim <- ncdf4::ncdim_def( xname, xunit, xFromCol(y, 1:ncol(y)) )
 	ydim <- ncdf4::ncdim_def( yname, yunit, yFromRow(y, 1:nrow(y)) )
@@ -77,7 +123,7 @@
 
 	lvar <- longnames(x)
 	units <- units(x)
-	zname <- rep_len(zname, n)
+	timename <- rep_len(timename, n)
 
 	valid_prec <- c("short", "integer", "float", "double", "byte")
 	if (!all(prec %in% valid_prec)) {
@@ -96,41 +142,90 @@
 	nl <- nlyr(x)
 	ncvars <- list()
 	cal <- NA
+
+#	depthtime <- rep(0, n)
+	nudv <- rep(0, n)
+	
 	for (i in 1:n) {
+
 		if ((nl[i] > 1) || (x[i]@pntr$hasTime)) {
 			y <- x[i]
-			if (y@pntr$hasTime) {
-				zv <- y@pntr$time
-				tstep <- y@pntr$timestep
-				cal <- "standard"
-				if (tstep == "seconds") {
-					zunit <- "seconds since 1970-1-1 00:00:00"
-				} else if (tstep == "days") {
-					zunit <- "days since 1970-1-1"
-					zv <- zv / (24 * 3600)
-				} else if (tstep == "months") {
-					zunit <- "months"
-					zv <- time(y)
-				} else if (tstep == "yearmonths") {
-					zunit <- "months since 1970"
-					tm <- time(y) - 1970
-					yr <- tm %/% 1
-					zv <- (yr*12) + round(12 * (tm %% 1))
-				} else if (tstep == "years") {
-					zunit <- "years since 1970"
-					zv <- time(y) - 1970
-				} else {
-					zunit <- "unknown"
+			if (y@pntr$hasTime && y@pntr$hasDepth) {
+				tm <- time(y)
+				dv <- depth(y)
+				utm <- unique(tm)
+				udv <- unique(dv)
+				dsrt <- isTRUE(all(sort(dv, decreasing=FALSE) == dv)) || isTRUE(all(sort(dv, decreasing=TRUE) == dv))
+				tsrt <- isTRUE(all(sort(tm, decreasing=FALSE) == tm)) || isTRUE(all(sort(tm, decreasing=TRUE) == tm))
+				if (!(dsrt || tsrt)) {
+					error("writeCDF", "neither time nor depth are sorted")						
 				}
-			} else {
-				zv <- 1:nlyr(y)
-				zunit <- "unknown"
-			}
-			zdim <- ncdf4::ncdim_def(zname[i], zunit, zv, unlim=FALSE, create_dimvar=TRUE, calendar=cal)
-			ncvars[[i]] <- ncdf4::ncvar_def(vars[i], units[i], list(xdim, ydim, zdim), missval[i], lvar[i], prec = prec[i], compression=compression,...)
-		} else {
+				if (dsrt) {
+					mz <- matrix(tm, ncol=length(udv))
+					nudv[i] <- length(udv)
+				} else {
+					mz <- matrix(dv, ncol=length(utm))				
+					nudv[i] <- length(utm)
+				}
+				a <- apply(mz, 1, function(i) length(unique(i)))
+				if (!isTRUE(all(a == 1))) {
+					if (dsrt) {
+						error("writeCDF", paste("time values not sorted within depth"))					
+					} else {
+						error("writeCDF", paste("depth values not sorted within time"))										
+					}
+				}
+				
+				tab <- unique(table(tm, dv))
+				if (length(tab) > 1) {
+					error("writeCDF", "unexpected time/depth values, combinations not balanced")
+				}
+				if ((length(utm) * length(udv)) != nlyr(y)) {
+					error("writeCDF", "unexpected time/depth values, unbalanced combinations")				
+				}
+				
+				zname <- depthName(y)
+				zunit <- depthUnit(y) 
+				if (zunit == "") zunit <- "unknown"
+				zdim <- ncdf4::ncdim_def(zname, zunit, udv, unlim=FALSE, create_dimvar=TRUE)
 
-			ncvars[[i]] <- ncdf4::ncvar_def(name=vars[i], units=units[i], dim=list(xdim, ydim), missval=missval[i], longname=lvar[i], prec = prec[i], compression=compression, ...)
+				tvrs <- get_time_vars(y)
+				timv <- unique(tvrs$zv)
+				timunit <- tvrs$zunit		
+				timdim <- ncdf4::ncdim_def(timename[i], timunit, timv, unlim=FALSE, create_dimvar=TRUE, calendar=cal)
+
+				if (dsrt) {
+					ncvars[[i]] <- ncdf4::ncvar_def(vars[i], units[i], list(xdim, ydim, timdim, zdim), 
+											missval[i], lvar[i], prec = prec[i], compression=compression)
+#					depthtime[i] <- 1
+				} else {
+					ncvars[[i]] <- ncdf4::ncvar_def(vars[i], units[i], list(xdim, ydim, zdim, timdim), 
+											missval[i], lvar[i], prec = prec[i], compression=compression)
+#					depthtime[i] <- 2
+				}
+				
+			} else {
+				if (y@pntr$hasTime) {
+					tv <- get_time_vars(y)
+					zv <- tv$zv
+					zunit <- tv$zunit
+					zname <- timename[i]
+				} else if (y@pntr$hasDepth) {
+					zv <- depth(y)
+					zname <- depthName(y)
+					if (zname == "") zname <- "depth"
+					zunit <- depthUnit(y) 
+					if (zunit == "") zunit <- "unknown"
+				} else {
+					zv <- 1:nlyr(y)
+					zunit <- "unknown"
+					zname <- paste0("Z", i)
+				}
+				zdim <- ncdf4::ncdim_def(zname, zunit, zv, unlim=FALSE, create_dimvar=TRUE, calendar=cal)
+				ncvars[[i]] <- ncdf4::ncvar_def(vars[i], units[i], list(xdim, ydim, zdim), missval[i], lvar[i], prec = prec[i], compression=compression)
+			}
+		} else {
+			ncvars[[i]] <- ncdf4::ncvar_def(name=vars[i], units=units[i], dim=list(xdim, ydim), missval=missval[i], longname=lvar[i], prec = prec[i], compression=compression)
 		}
 	}
 
@@ -139,32 +234,32 @@
 	ncobj <- ncdf4::nc_create(filename, ncvars, force_v4=force_v4, verbose=verbose)
 	on.exit(ncdf4::nc_close(ncobj))
 
-	haveprj <- FALSE
+#	haveprj <- FALSE
 	prj <- crs(x[1])
 	prj <- gsub("\n", "", prj)
-	if (prj != "") {
+#	if (prj != "") {
 		haveprj <- TRUE
 		ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "crs_wkt", prj, prec="text")
 		# need for older gdal?
 		ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "spatial_ref", prj, prec="text")
 		prj <- .proj4(x[1])
 		if (prj != "") {
-			ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "proj4", prj, prec='text')
+			ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "proj4", prj, prec="text")
 		}
-		prj <- crs(x[1], describe=TRUE)[1,3]
-		if (!is.na(prj)) {
-			ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "epsg_code", prj, prec='text')
+		prj <- crs(x[1], describe=TRUE)[1,2:3]
+		if (!any(is.na(prj))) {
+			prj <- paste0(prj, collapse=":")
+			ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "code", prj, prec="text")
 		}
-	}
+#	}
 	gridmap <- grep("=", gridmap, value=TRUE)
 	if (length(gridmap)>0) {
 		gridmap <- strsplit(gridmap, "=")
 		for (i in 1:length(gridmap)) {		
 			ncdf4::ncatt_put(ncobj, ncvars[[n+1]], gridmap[[i]][1], gridmap[[i]][2], prec="text")
 		}
-		haveprj <- TRUE
+#		haveprj <- TRUE
 	}
-
 
 	e <- ext(x)
 	rs <- res(x)
@@ -172,12 +267,33 @@
 	ncdf4::ncatt_put(ncobj, ncvars[[n+1]], "geotransform", gt, prec="text")
 
 	opt <- spatOptions()
+
+	bsteps <- blocks(rast(x[[1]], nlyr=sum(nlyr(x))), 4)
+	if (bsteps$n > opt$progress) {
+		progress <- TRUE
+		pb <- utils::txtProgressBar(0, bsteps$n) 
+		pcnt <- 0
+	} else {
+		progress <- FALSE
+	}
+	
 	for (i in 1:n) {
-		y = x[i]
+		y <- x[i]
+		b <- blocks(y, 8)
 		readStart(y)
-		b <- blocks(y, 4)
-		if (length(ncvars[[1]]$dim) == 3) {
+		if (length(ncvars[[i]]$dim) == 4) {
 			for (j in 1:b$n) {
+				if (progress) { utils::setTxtProgressBar(pb, pcnt); pcnt <- pcnt + 1 }
+				d <- readValues(y, b$row[j], b$nrows[j], 1, nc, FALSE, FALSE)
+				d[is.nan(d)] <- NA
+#				d <- array(d, c(nc, b$nrows[j], nudv[i], nl[i]/nudv[i]))
+#				ncdf4::ncvar_put(ncobj, ncvars[[i]], d, start=c(1, b$row[j], 1, 1), count=c(nc, b$nrows[j], nudv[i], nl[i]/nudv[i]))
+				d <- array(d, c(nc, b$nrows[j], nl[i]/nudv[i], nudv[i]))
+				ncdf4::ncvar_put(ncobj, ncvars[[i]], d, start=c(1, b$row[j], 1, 1), count=c(nc, b$nrows[j], nl[i]/nudv[i], nudv[i]))
+			}
+		} else if (length(ncvars[[i]]$dim) == 3) {
+			for (j in 1:b$n) {
+				if (progress) { utils::setTxtProgressBar(pb, pcnt); pcnt <- pcnt + 1 }
 				d <- readValues(y, b$row[j], b$nrows[j], 1, nc, FALSE, FALSE)
 				d[is.nan(d)] <- NA
 				d <- array(d, c(nc, b$nrows[j], nl[i]))
@@ -185,6 +301,7 @@
 			}
 		} else {
 			for (j in 1:b$n) {
+				if (progress) { utils::setTxtProgressBar(pb, pcnt); pcnt <- pcnt + 1 }
 				d <- readValues(y, b$row[j], b$nrows[j], 1, nc, FALSE, FALSE)
 				d[is.nan(d)] <- NA
 				d <- matrix(d, ncol=b$nrows[j])
@@ -195,13 +312,17 @@
 		if (haveprj) {
 			ncdf4::ncatt_put(ncobj, ncvars[[i]], "grid_mapping", "crs", prec="text")
 		}
+		if (tags) write_tags(metags(y), ncobj, ncvars[[i]], "")
 	}
-
+	if (progress) close(pb)
+	
 	ncdf4::ncatt_put(ncobj, 0, "Conventions", "CF-1.4", prec="text")
 	pkgversion <- drop(read.dcf(file=system.file("DESCRIPTION", package="terra"), fields=c("Version")))
 	ncdf4::ncatt_put(ncobj, 0, "created_by", paste("R packages ncdf4 and terra (version ", pkgversion, ")", sep=""), prec="text")
-	ncdf4::ncatt_put(ncobj, 0, "date", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), prec="text")
+	ncdf4::ncatt_put(ncobj, 0, "created_date", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), prec="text")
 
+	if (tags) write_tags(metags(x), ncobj, 0, "")
+	
 	atts <- grep("=", atts, value=TRUE)
 	if (length(atts) > 0) {
 		atts <- strsplit(atts, "=")
@@ -239,12 +360,22 @@ setMethod("writeCDF", signature(x="SpatRaster"),
 			}
 			invisible( writeCDF(y, filename=filename, ...) )
 		} else {
-			if (missing(varname)) {
-				varname <- tools::file_path_sans_ext(basename(filename))
+			if (!missing(varname)) {
+				varnames(x) <- varname
+				longnames(x) <- longname
+			} else { 
+				varname <- varnames(x)[1]
+				longname <- longnames(x)[1]
+				if (varname == "") {
+					varname <- tools::file_path_sans_ext(basename(filename))
+					longname <- ""
+				}
+				varnames(x) <- varname
+				longnames(x) <- longname
 			}
-			varnames(x) <- varname
-			longnames(x) <- longname
-			units(x) <- unit
+			if (!missing(unit)) {
+				units(x) <- unit
+			}
 			x <- sds(x)
 			invisible( writeCDF(x, filename=filename, ...) )
 		}
@@ -253,7 +384,7 @@ setMethod("writeCDF", signature(x="SpatRaster"),
 
 
 setMethod("writeCDF", signature(x="SpatRasterDataset"),
-	function(x, filename, overwrite=FALSE, zname="time", atts="", gridmap="", prec="float", compression=NA, missval, ...) {
+	function(x, filename, overwrite=FALSE, timename="time", atts="", gridmap="", prec="float", compression=NA, missval, tags=FALSE, ...) {
 		filename <- trimws(filename)
 		stopifnot(filename != "")
 		xt  <- tools::file_ext(filename)
@@ -263,7 +394,7 @@ setMethod("writeCDF", signature(x="SpatRasterDataset"),
 		if (file.exists(filename) & !overwrite) {
 			error("writeCDF", "file exists, use 'overwrite=TRUE' to overwrite it")
 		}
-		ok <- .write_cdf(x, filename, zname=zname, atts=atts, gridmap=gridmap, prec=prec, compression=compression, missval=missval, ...)
+		ok <- .write_cdf(x, filename, timename=timename, atts=atts, gridmap=gridmap, prec=prec, compression=compression, missval=missval, tags=tags,  ...)
 		if (ok) {
 			if (length(x) > 1) {
 				out <- sds(filename)

@@ -162,6 +162,10 @@ SpatVector SpatVector::aggregate(std::string field, bool dissolve) {
 SpatVector SpatVector::aggregate(bool dissolve) {
 	SpatVector out;
 	SpatGeom g;
+	if (geoms.empty()) {
+		out = *this;
+		return out;
+	}
 	g.gtype = geoms[0].gtype;
 	for (size_t i=0; i<size(); i++) {
 		g.unite( getGeom(i) );
@@ -245,7 +249,7 @@ SpatVector SpatVector::elongate(double length, bool flat) {
 	return out;
 }
 
-#include "Rcpp.h"
+//#include "Rcpp.h"
 
 SpatVectorCollection SpatVector::split(std::string field) {
 
@@ -261,7 +265,7 @@ SpatVectorCollection SpatVector::split(std::string field) {
 
 	for (size_t i=0; i<uv.nrow(); i++) {
 		SpatVector v;
-		std::vector<unsigned> r;
+		std::vector<size_t> r;
 		for (size_t j=0; j<idx.size(); j++) {
 			if (i == (size_t)idx[j]) {
 				v.addGeom( getGeom(j) );
@@ -314,7 +318,7 @@ SpatVector SpatVector::get_holes() {
 	if (geoms[0].gtype != polygons) {
 		return out;
 	}
-	std::vector<unsigned> atts;
+	std::vector<size_t> atts;
 
 	for (size_t i=0; i<n; i++) {
 		SpatGeom g;
@@ -735,6 +739,10 @@ SpatVector SpatVector::thin(double threshold) {
 		out.setError("threshold must be a positive number");
 		return out;
 	}
+	if (geoms.empty()) {
+		out = *this;
+		return out;
+	}
 	size_t mnode = 4;
 	if (geoms[0].gtype == lines) {
 		mnode = 3;
@@ -778,7 +786,8 @@ SpatVector SpatVector::thin(double threshold) {
 SpatVector SpatVector::removeSlivers(double dthres, double athres, size_t n) {
 
 	SpatVector out;
-	if (geoms[0].gtype != polygons) {
+	
+	if (geoms.empty() || geoms[0].gtype != polygons) {
 		out.setError("can only remove slivers from polygons");
 		return out;
 	}

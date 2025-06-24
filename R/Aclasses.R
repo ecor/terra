@@ -1,8 +1,7 @@
 # Author: Robert J. Hijmans, r.hijmans@gmail.com
 # Date : November 2017
-# Version 0
+# Version 1
 # License GPL v3
-
 
 setClass("SpatRaster",
 	representation (

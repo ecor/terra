@@ -18,6 +18,31 @@ setMethod("droplevels", signature(x="SpatRaster"),
 	}
 )
 
+setMethod("simplifyLevels", signature(x="SpatRaster"),
+	function(x, filename="", overwrite=FALSE, ...) {
+
+		f <- function(r) {
+			v <- levels(r)[[1]]
+			s <- split(v, v[,2])
+			i <- sapply(s, nrow) > 1
+			if (any(i)) {
+				s <- s[i]
+				s <- lapply(s, function(i) cbind(i[-1,1], i[1,1])) 
+				s <- do.call(rbind, s)
+			}	
+			y <- classify(x, s)
+			v <- v[-s[,1], ]
+			levels(y) <- v
+			y
+		}
+		out <- rast(lapply(x, f))
+		if (filename != "") {
+			out <- writeRaster(out, filename, overwrite=overwrite, ...)
+		}	
+		out
+	}
+)
+
 
 setMethod("is.factor", signature(x="SpatRaster"),
 	function(x) {
@@ -71,6 +96,33 @@ setMethod("levels<-", signature(x="SpatRaster"),
 	}
 )
 
+
+combineLevels <- function(x, assign=TRUE) {
+	if (nlyr(x) == 1) return(x)
+	nms <- names(x)
+    lv <- levels(x)
+	lv <- lv[sapply(lv, is.data.frame)]
+	un <- unique(sapply(lv, names))
+	if (length(un) > 2) {
+		lv <- lapply(lv, function(i) { colnames(i) <- colnames(lv[[1]]); i})
+	}
+	lv <- try(do.call(rbind, lv), silent=TRUE)
+	if (inherits(lv, "try-error")) { # should not happen anymore
+		error("panel", "cannot use combine categories")
+	}
+	lv <- unique(lv)
+	if (length(unique(lv[,1])) < nrow(lv)) {
+		error("panel", "cannot combine conflicting categories")			
+	}
+	lv <- lv[order(lv[,1]), ]
+	if (assign) {
+		x <- categories(x, 0, lv)
+		names(x) <- nms 
+		x
+	} else {
+		lv
+	}
+}
 
 
 setMethod ("set.cats" , "SpatRaster",

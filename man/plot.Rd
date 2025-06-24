@@ -13,8 +13,7 @@
 \alias{plot,SpatVector,character-method}
 \alias{plot,SpatVectorProxy,missing-method}
 \alias{plot,SpatVectorCollection,missing-method}
-
-
+\alias{plot,SpatVectorCollection,numeric-method}
 
 \title{Make a map}
 
@@ -28,18 +27,19 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 
 \usage{
 \S4method{plot}{SpatRaster,numeric}(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
-    maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, 
-	levels=NULL, all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, 
-	colNA=NULL, alpha=NULL, sort=FALSE,  decreasing=FALSE, grid=FALSE, ext=NULL, 
-	reset=FALSE, add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, ...)
+    maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, 
+	all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, 
+	alpha=NULL, sort=FALSE,  reverse=FALSE, grid=FALSE, ext=NULL, reset=FALSE, 
+	add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL, ...)
 
-\S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, ...)
+\S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, 
+	plg=list(), pax=list(), ...)
 
 \S4method{plot}{SpatRaster,character}(x, y, ...)
 
-\S4method{plot}{SpatVector,character}(x, y, col=NULL, type=NULL, mar=NULL, add=FALSE, legend=TRUE, axes=!add, 
-    main="", buffer=TRUE, background=NULL, grid=FALSE, ext=NULL, sort=TRUE, 
-	decreasing=FALSE, plg=list(), pax=list(), nr, nc, colNA=NA, alpha=NULL, 
+\S4method{plot}{SpatVector,character}(x, y, col=NULL, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
+    main="", grid=FALSE, ext=NULL, sort=TRUE, reverse=FALSE, fun=NULL,
+	colNA=NA, alpha=NULL, nr, nc, add=FALSE, buffer=TRUE, background=NULL, 
 	box=axes, clip=TRUE, ...)
 
 \S4method{plot}{SpatVector,numeric}(x, y, ...)
@@ -47,6 +47,8 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 \S4method{plot}{SpatVector,missing}(x, y, values=NULL, ...)
 
 \S4method{plot}{SpatVectorCollection,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, ...)
+
+\S4method{plot}{SpatVectorCollection,numeric}(x, y, main, mar=NULL, ext=NULL, ...)
 }
 
 \arguments{
@@ -61,20 +63,37 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{background}{background color. Default is no color (white)}
   \item{box}{logical. Should a box be drawn around the map?}
   \item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
-  \item{plg}{list with parameters for drawing the legend. For the classes and interval type legend see the arguments for \code{\link[graphics]{legend}}. For example \code{x} and \code{y} can be used to place the legend. You can also use keywords such as "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. 
-  
-  Some of these do not apply to a continuous legend, or they behave a little differently. For example, only the placement keywords "left", "right", "top", and "bottom" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. Additional parameters for continuous legends include: 
-  
+  \item{overview}{logical. Should "overviews" be used for fast rendering? This can result in much faster plotting of raster files that have overviews (e.g. "COG" format) and are accessed over a http connection. However, these overviews generally show aggregate values, thus reducing the range of the actual values. If \code{NULL}, the argument is set to \code{TRUE} for rasters that are accessed over http and \code{FALSE} in other cases}
+ 
+ \item{plg}{list with parameters for drawing the legend. See the arguments for \code{\link[graphics]{legend}}. 
+ 
+  A legend can be placed with placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can have be a keyword such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. For a continuous legend, only the placement keywords "left", "right", "top", "bottom", "topright", "bottomright" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that move the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax). When supplying coordinates, use \code{horiz=TRUE} to get a horizontal legend.
+    
+  Additional parameters for continuous legends include: 
+
   \itemize{
-    \item \code{digits} to set the number of digits to print after the decimal point. \code{size} to change the height and/or width; the defaults are \code{c(1,1)}, negative values for size flip the order of the legend. 
-	\item \code{at} to set the location of the tic-marks
-	\item \code{tic} One of these partially matched values: "through", "in", "out", or "none", to choose a tic-mark placement/length that is different from the default "through and out". 
-	}
-  }
-  \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Arguments \code{side}, \code{tick} and \code{lab} can be used to indicate for which of the four axes to draw a line (side), tick-mark, and/or the tick-mark labels. The default is \code{c(1:4)} for side and \code{1:2} for the other two. If \code{side} is changed the other two default to that value. Logical argument \code{retro} can be used to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation}  
+	\item \code{digits} integer. The number of digits to print after the decimal point
+    \item \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
+	\item \code{at} to set the location of the tickmarks
+	\item \code{tick} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout". 
+	\item \code{tick.col}, \code{tick.box.col} and \code{tick.lwd} to change the appearance of the tickmarks
+	\item \code{title.srt} to rotate the legend title
+	\item \code{title.x} and \code{title.y} to place the legend title at specific coordinates  
+  }}
+  
+  \item{pax}{list with parameters for drawing axes. See the arguments for \code{\link{axis}}. Additional parameters include: 
+  \itemize{
+    \item \code{side} numeric to indicate for which of the axes to draw a line. Default is \code{1:4} (only noticble when \code{box=FALSE}. 
+    \item \code{tick} numeric to indicate for which of the axes to draw tickmarks. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
+    \item \code{lab} numeric to indicate for which of the axes to draw labels. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
+    \item \code{xat}/\code{yat} numeric with the values at which tickmarks are to be drawn on the horizontal/vertical axis.
+    \item \code{xlab}/\code{ylab} this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis. 
+    \item \code{retro} a logical value that can be set to \code{TRUE} to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation. For longitude/latitude data only. See \code{\link{graticule}} for projected data.
+  }}
+  
   \item{maxcell}{positive integer. Maximum number of cells to use for the plot}
   \item{smooth}{logical. If \code{TRUE} the cell values are smoothed (only if a continuous legend is used)}
-  \item{range}{numeric. minimum and maximum values to be used for the continuous legend }
+  \item{range}{numeric. minimum and maximum values to be used for the continuous legend. You can use \code{NA} for one of these to only set the minimum or maximum value}
   \item{fill_range}{logical. If \code{TRUE}, values outside of \code{range} get the colors of the extreme values; otherwise they get colored as \code{NA}}
   \item{levels}{character. labels for the legend when \code{type="classes"} }
   \item{all_levels}{logical. If \code{TRUE}, the legend shows all levels of a categorical raster, even if they are not present in the data}
@@ -84,15 +103,15 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{colNA}{character. color for the NA values}
   \item{alpha}{Either a single numeric between 0 and 1 to set the transparency for all colors (0 is transparent, 1 is opaque) or a SpatRaster with values between 0 and 1 to set the transparency by cell. To set the transparency for a given color, set it to the colors directly}
   \item{sort}{logical. If \code{TRUE} legends with categorical values are sorted. If \code{x} is a \code{SpatVector} you can also supply a vector of the unique values, in the order in which you want them to appear in the legend}
-  \item{decreasing}{logical. If \code{TRUE}, legends are sorted in decreasing order}
+  \item{reverse}{logical. If \code{TRUE}, the legend order is reversed}
   \item{grid}{logical. If \code{TRUE} grid lines are drawn. Their properties such as type and color can be set with the \code{pax} argument}
   \item{nc}{positive integer. Optional. The number of columns to divide the plotting device in (when plotting multiple layers)}
   \item{nr}{positive integer. Optional. The number of rows to divide the plotting device in (when plotting multiple layers)}
-  \item{main}{character. Main plot titles (one for each layer to be plotted). You can use arguments \code{cex.main}, \code{font.main}, \code{col.main} to change the appearance; and \code{loc.main} to change the location of the main title (either two coordinates, or a character value such as "topleft")}
-  \item{maxnl}{positive integer. Maximum number of layers to plot (for a multi-layer object)}
+  \item{main}{character. Main plot titles (one for each layer to be plotted). You can use arguments \code{cex.main}, \code{font.main}, \code{col.main} to change the appearance; and \code{loc.main} to change the location of the main title (either two coordinates, or a character value such as "topleft"). You can also use \code{sub=""} for a subtitle. See \code{\link{title}}}
+  \item{maxnl}{positive integer. Maximum number of layers to plot (for a multi-layer object).}
   \item{add}{logical. If \code{TRUE} add the object to the current plot}
   \item{ext}{SpatExtent. Can be use instead of xlim and ylim to set the extent of the plot}
-  \item{reset}{logical. If \code{TRUE} add the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link{lines}})}
+  \item{reset}{logical. If \code{TRUE} the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link{lines}})}
   \item{values}{Either a vector with values to be used for plotting or a two-column data.frame, where the first column matches a variable in \code{x} and the second column has the values to be plotted}
   \item{...}{arguments passed to \code{plot("SpatRaster", "numeric")} and additional graphical arguments}  
 }
@@ -117,13 +136,12 @@ plot(r)
 
 plot(r, type="interval")
 
-e <- c(6.37, 6.41, 49.9, 50.1)
-plot(r, plg=list(ext=e, title="Legend\nTitle", title.cex=0.9), 
+plot(r, plg=list(x=6.35, y = c(49.9, 50.1), title="Legend\nTitle", title.cex=0.9), 
 		pax=list(side=1:4, retro=FALSE))
 north(cbind(5.8, 50.1))	
 
 d <- classify(r, c(100,200,300,400,500,600))
-plot(d, type="classes")
+plot(d)
 
 plot(d, type="interval", breaks=1:5) 
 plot(d, type="interval", breaks=c(1,4,5), plg=list(legend=c("1-4", "4-5"))) 
@@ -143,7 +161,7 @@ par(mfrow=c(1,2))
 plot(r, range=c(50,600), mar=c(1,1,1,4))
 plot(r/2, range=c(50,600), mar=c(1,1,1,4))
 
-# as we only need one legend:	
+# as we only need one legend (also see the "panel" method):	
 par(mfrow=c(1,2))
 plot(r, range=c(50,600), mar=c(2, 2, 2, 2), plg=list(size=0.9, cex=.8), 
 	pax=list(side=1:2, cex.axis=.6), box=FALSE)

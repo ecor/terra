@@ -1,6 +1,8 @@
 #if (!isGeneric("#")) { setGeneric("#", function(x, ...) standardGeneric("#")) }
 #if (!isGeneric("prcomp")) {setGeneric("prcomp", function(x, ...) standardGeneric("princomp"))}
 
+
+
 ## ADDED BY ecor
 if (!isGeneric("watershed")) {setGeneric("watershed", function(x, ...) standardGeneric("watershed"))}
 if (!isGeneric("pitfinder")) {setGeneric("pitfinder", function(x, ...) standardGeneric("pitfinder"))}
@@ -12,6 +14,9 @@ if (!isGeneric("pitfiller")) {setGeneric("pitfiller", function(x,pit, ...) stand
 
 
 
+
+if (!isGeneric("thresh")) {setGeneric("thresh", function(x, ...) standardGeneric("thresh"))}
+if (!isGeneric("divide")) {setGeneric("divide", function(x, ...) standardGeneric("divide"))}
 
 if (!isGeneric("bestMatch")) {setGeneric("bestMatch", function(x, y, ...) standardGeneric("bestMatch"))}
 if (!isGeneric("k_means")) {setGeneric("k_means", function(x, ...) standardGeneric("k_means"))}
@@ -64,6 +69,7 @@ if (!isGeneric("scoff<-")) {setGeneric("scoff<-", function(x, ..., value) standa
 
 if (!isGeneric("blocks")) {setGeneric("blocks", function(x, ...) standardGeneric("blocks"))}
 if (!isGeneric("droplevels")) {setGeneric("droplevels", function(x, ...) standardGeneric("droplevels"))}
+if (!isGeneric("simplifyLevels")) {setGeneric("simplifyLevels", function(x, ...) standardGeneric("simplifyLevels"))}
 
 if (!isGeneric("str")) { setGeneric("str", function(object, ...) standardGeneric("str"))}
 
@@ -88,6 +94,7 @@ if (!isGeneric("set.ext")) {setGeneric("set.ext", function(x, ...) standardGener
 if (!isGeneric("set.names")) {setGeneric("set.names", function(x, ...) standardGeneric("set.names"))}
 if (!isGeneric("set.crs")) {setGeneric("set.crs", function(x, ...) standardGeneric("set.crs"))}
 if (!isGeneric("set.RGB")) {setGeneric("set.RGB", function(x, ...) standardGeneric("set.RGB"))}
+if (!isGeneric("set.window")) {setGeneric("set.window", function(x, ...) standardGeneric("set.window"))}
 
 
 if (!isGeneric("math")) { setGeneric("math", function(x, ...) standardGeneric("math")) }
@@ -138,6 +145,8 @@ if (!isGeneric("RGB<-")) {setGeneric("RGB<-", function(x, ..., value) standardGe
 if (!isGeneric("autocor")) {setGeneric("autocor", function(x, ...) standardGeneric("autocor"))}
 if (!isGeneric("delaunay")) {setGeneric("delaunay", function(x, ...) standardGeneric("delaunay"))}
 if (!isGeneric("voronoi")) {setGeneric("voronoi", function(x, ...) standardGeneric("voronoi"))}
+if (!isGeneric("hull")) {setGeneric("hull", function(x, ...) standardGeneric("hull"))}
+
 if (!isGeneric("convHull")) {setGeneric("convHull", function(x, ...) standardGeneric("convHull"))}
 if (!isGeneric("minRect")) {setGeneric("minRect", function(x, ...) standardGeneric("minRect"))}
 if (!isGeneric("minCircle")) {setGeneric("minCircle", function(x, ...) standardGeneric("minCircle"))}
@@ -152,7 +161,9 @@ if (!isGeneric("not.na")) {setGeneric("not.na", function(x, ...) standardGeneric
 if (!isGeneric("erase")) {setGeneric("erase", function(x, y, ...) standardGeneric("erase"))}
 if (!isGeneric("gaps")) {setGeneric("gaps", function(x, ...) standardGeneric("gaps"))}
 if (!isGeneric("is.rotated")) {setGeneric("is.rotated", function(x, ...) standardGeneric("is.rotated"))}
+if (!isGeneric("is.flipped")) {setGeneric("is.flipped", function(x, ...) standardGeneric("is.flipped"))}
 
+if (!isGeneric("is.num")) {setGeneric("is.num", function(x) standardGeneric("is.num"))}
 if (!isGeneric("is.int")) {setGeneric("is.int", function(x) standardGeneric("is.int"))}
 if (!isGeneric("as.int")) {setGeneric("as.int", function(x, ...) standardGeneric("as.int"))}
 if (!isGeneric("is.bool")) {setGeneric("is.bool", function(x) standardGeneric("is.bool"))}
@@ -194,6 +205,10 @@ if (!isGeneric("crosstab")) { setGeneric("crosstab", function(x, y, ...) standar
 if (!isGeneric("describe")) { setGeneric("describe", function(x, ...) standardGeneric("describe"))}
 if (!isGeneric("depth")) {setGeneric("depth", function(x,...) standardGeneric("depth"))}
 if (!isGeneric("depth<-")) {setGeneric("depth<-", function(x, value) standardGeneric("depth<-"))}
+if (!isGeneric("depthName")) {setGeneric("depthName", function(x,...) standardGeneric("depthName"))}
+if (!isGeneric("depthName<-")) {setGeneric("depthName<-", function(x, value) standardGeneric("depthName<-"))}
+if (!isGeneric("depthUnit")) {setGeneric("depthUnit", function(x,...) standardGeneric("depthUnit"))}
+if (!isGeneric("depthUnit<-")) {setGeneric("depthUnit<-", function(x, value) standardGeneric("depthUnit<-"))}
 if (!isGeneric("draw")) {setGeneric("draw", function(x,...) standardGeneric("draw"))}
 if (!isGeneric("ext")) { setGeneric("ext", function(x, ...)	standardGeneric("ext"))}
 if (!isGeneric("ext<-")) { setGeneric("ext<-", function(x, value) standardGeneric("ext<-")) }
@@ -220,7 +235,7 @@ if (!isGeneric("hasMinMax")) {setGeneric("hasMinMax", function(x) standardGeneri
 if (!isGeneric("minmax")) {setGeneric("minmax", function(x, ...) standardGeneric("minmax"))}
 if (!isGeneric("nsrc")) { setGeneric("nsrc", function(x) standardGeneric("nsrc")) }
 if (!isGeneric("perim")) {setGeneric("perim", function(x, ...) standardGeneric("perim"))}
-if (!isGeneric("edges")) {setGeneric("edges", function(x, ...) standardGeneric("edges"))}
+if (!isGeneric("nseg")) {setGeneric("nseg", function(x, ...) standardGeneric("nseg"))}
 if (!isGeneric("project")) {setGeneric("project", function(x,...) standardGeneric("project"))}
 if (!isGeneric("wrapCache")) {setGeneric("wrapCache", function(x, ...) standardGeneric("wrapCache"))}
 if (!isGeneric("wrap")) {setGeneric("wrap", function(x, ...) standardGeneric("wrap"))}

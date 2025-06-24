@@ -13,15 +13,18 @@ Merge SpatRasters, or merge a SpatVector with a data.frame
 }
 
 \description{
-Merge multiple SpatRasters to create a new SpatRaster with a larger spatial extent. The SpatRasters must have the same origin and spatial resolution. In areas where the SpatRasters overlap, the values of the SpatRaster that is first in the sequence of arguments (or in the SpatRasterCollection) will be retained (unless \code{first=FALSE}). Cells that are \code{NA} are ignored unless \code{na.rm=FALSE}
+Merge multiple SpatRasters to create a new SpatRaster with a larger spatial extent. The SpatRasters should all have the same coordinate reference system. They should normally also have the same spatial origin and resolution, but automatic resampling can be done depending on the algorithm used (see argument \code{algo}). In areas where the SpatRasters overlap, the values of the SpatRaster that is first in the sequence of arguments (or in the SpatRasterCollection) will be retained (unless \code{first=FALSE}). 
 
 There is also a method for merging SpatVector with a data.frame; that is, to join the data.frame to the attribute table of the SpatVector.
+
+See \code{\link{classify}} to merge a SpatRaster with a \code{data.frame}.
 }
 
 \usage{
-\S4method{merge}{SpatRaster,SpatRaster}(x, y, ..., first=TRUE, na.rm=TRUE, filename="", overwrite=FALSE, wopt=list())
+\S4method{merge}{SpatRaster,SpatRaster}(x, y, ..., first=TRUE, na.rm=TRUE, algo=1, method=NULL, 
+			filename="", overwrite=FALSE, wopt=list())
 
-\S4method{merge}{SpatRasterCollection,missing}(x, first=TRUE, na.rm=TRUE, filename="", ...)
+\S4method{merge}{SpatRasterCollection,missing}(x, first=TRUE, na.rm=TRUE, algo=1, method=NULL, filename="", ...)
 
 \S4method{merge}{SpatVector,data.frame}(x, y, ...)
 }
@@ -31,7 +34,9 @@ There is also a method for merging SpatVector with a data.frame; that is, to joi
   \item{y}{missing if \code{x} is a SpatRasterCollection. SpatRaster if \code{x} is a SpatRaster. data.frame if \code{x} is a SpatVector}
   \item{...}{if \code{x} is a SpatRaster: additional objects of the same class as \code{x}. If \code{x} is a SpatRasterCollection: options for writing files as in \code{\link{writeRaster}}. If \code{x} is a SpatVector, the same arguments as in \code{\link[base]{merge}}}
   \item{first}{logical. If \code{TRUE}, in areas where rasters overlap, the first value is used. Otherwise the last value is used}
-  \item{na.rm}{logical. If \code{TRUE} values that are \code{NA} are ignored}
+  \item{na.rm}{logical. If \code{TRUE} missing values are are ignored. This is only used for algo 1; the other two always ignore missing values}
+  \item{algo}{integer. You can use 1, 2 or 3 to pick a merge algorithm. algo 1 is generally faster than algo 2, but it may have poorer file compression. Algo 1 will resample input rasters (and that may slow it down), but algo 2 does not do that. You can increase the tolerance option to effectively get nearest neighbor resampling with, for example, \code{wopt=list(tolerance=.2)} allows misalignment of .2 times the resolution of the first input raster and effectively use nearest neighbor resampling. Algo 3 creates a virtual raster (see \code{\link{vrt}}). This is very quick and can be a good approach if the merge raster is used as input to a next step in the analysis. It allows any amount of misalignment (and does not respond to the tolerance option). Otherwise its speed is similar to that of algo 2}
+  \item{method}{character. The interpolation method to be used if resampling is necessary (see argument \code{algo}). One of "nearest", "bilinear", "cubic", "cubicspline", "lanczos", "average", "mode" as in \code{\link{resample}}. If \code{NULL}, "nearest" is used for categorical rasters and "bilinear" for other rasters} 
   \item{filename}{character. Output filename}
   \item{overwrite}{logical. If \code{TRUE}, \code{filename} is overwritten}
   \item{wopt}{list with named options for writing files as in \code{\link{writeRaster}}}
@@ -57,14 +62,16 @@ z <- rast(xmin=-60, xmax=-30, ymax=50, ymin=20, res=1, vals=3)
 m1 <- merge(x, y, z)
 m2 <- merge(z, y, x)
 m3 <- merge(y, x, z)
+# panel(c(m1, m2, m3))
 
 # if you have many SpatRasters, it may be convenient
 # to make a SpatRasterCollection
-rlist <- list(x, y, z)
-rsrc <- sprc(rlist)
+# s <- sprc(list(x, y, z))
+s <- sprc(x, y, z)
 
-m <- merge(rsrc)
-
+sm1 <- merge(s, algo=1, first=FALSE)
+sm2 <- merge(s, algo=2, first=FALSE)
+#sm3 <- merge(s, algo=3, first=FALSE)
 
 ## SpatVector with data.frame
 f <- system.file("ex/lux.shp", package="terra")

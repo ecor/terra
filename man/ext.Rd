@@ -7,6 +7,7 @@
 \alias{ext,SpatExtent-method}
 \alias{ext,SpatRaster-method}
 \alias{ext,SpatVector-method}
+\alias{ext,SpatVectorCollection-method}
 \alias{ext,SpatVectorProxy-method}
 \alias{ext,SpatRasterDataset-method}
 \alias{ext,SpatRasterCollection-method}
@@ -20,11 +21,12 @@
 \alias{ext,Extent-method}
 \alias{ext,sf-method}
 \alias{ext,bbox-method}
+\alias{ext,PackedSpatExtent-method}
 
 \title{Create, get or set a SpatExtent}
 
 \description{
-Get a SpatExtent of a SpatRaster, SpatVector, or other spatial objects. Or create a SpatExtent from a vector (length=4; order=xmin, xmax, ymin, ymax)
+Get a SpatExtent of a SpatRaster, SpatVector, or other spatial objects. Or create a SpatExtent from four numbers (xmin, xmax, ymin, ymax).
 
 You can set the extent of a SpatRaster, but you cannot set the extent of a SpatVector (see \code{\link{rescale}} for that). See \code{\link{set.ext}} to set the extent in place.
 }
@@ -42,7 +44,7 @@ You can set the extent of a SpatRaster, but you cannot set the extent of a SpatV
 }
 
 \arguments{
-  \item{x}{SpatRaster}
+  \item{x}{SpatRaster, SpatVector, a numeric vector of length four (xmin, xmax, ymin, ymax), a single numeric (xmin; see additional arguments under\code{...}), or missing (in which case the output is the global extent in lon-lat coordinates)}
   \item{cells}{positive integer (cell) numbers to subset the extent to area covered by these cells}
   \item{value}{SpatExtent, or numeric vector of length four (xmin, xmax, ymin, ymax)}  
   \item{...}{if \code{x} is a single numeric value, additional numeric values for xmax, ymin, and ymax}  
@@ -53,7 +55,13 @@ You can set the extent of a SpatRaster, but you cannot set the extent of a SpatV
 A \code{\link{SpatExtent}} object. 
 }
 
+\seealso{
+\code{\link{xmin}}, \code{\link{xmax}}, \code{\link{ymin}}, \code{\link{ymax}}
+}
+
 \examples{
+ext()
+
 r <- rast()
 e <- ext(r)
 as.vector(e)

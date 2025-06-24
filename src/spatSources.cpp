@@ -79,6 +79,7 @@ SpatRaster SpatRaster::combineSources(SpatRaster &x, bool warn) {
 		return(out);
 	}
 	out.checkTime(x);
+	out.checkDepth(x);
 	out.source.insert(out.source.end(), x.source.begin(), x.source.end());
     // to make names unique (not great if called several times
 	//out.setNames(out.getNames());
@@ -99,6 +100,7 @@ void SpatRaster::combine(SpatRaster &x) {
 	}
 
 	checkTime(x);
+	checkDepth(x);
 	source.insert(source.end(), x.source.begin(), x.source.end());
 	//setNames(getNames());
 	return;
@@ -107,12 +109,12 @@ void SpatRaster::combine(SpatRaster &x) {
 
 void SpatRaster::checkTime(SpatRaster &x) {
 	if (!hasTime()) {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		x.setTime(time, "remove", "");
 		return;
 	}
 	if (!x.hasTime()) {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		setTime(time, "remove", "");
 		return;
 	}
@@ -126,11 +128,57 @@ void SpatRaster::checkTime(SpatRaster &x) {
 			source[i].timestep = "days";
 		}
 	} else {
-		std::vector<int_64> time;
+		std::vector<int64_t> time;
 		setTime(time, "remove", "");
 		x.setTime(time, "remove", "");
 	}
 }
+
+void SpatRaster::checkDepth(SpatRaster &x) {
+	std::vector<double> dpth;
+	if (!hasDepth()) {
+		x.setDepth(dpth);
+		return;
+	}
+	if (!x.hasDepth()) {
+		setDepth(dpth);
+		return;
+	}
+	std::string uname, dname;
+	std::string un = source[0].depthunit;
+	std::string xun = x.source[0].depthunit;
+	if (un != xun) {
+		if ((un == "") && (xun != "")) {
+			uname = xun;
+		} else if ((un != "") && (xun == "")) {
+			uname = un;
+		} else if ((un != "") && (xun != "")) {
+			uname = "";
+		}
+	} else {
+		uname = un;
+	}
+	setDepthName(uname);
+	x.setDepthName(uname);
+		
+	std::string nm = source[0].depthname;
+	std::string xnm = x.source[0].depthname;
+	if (nm != xnm) {
+		if ((nm == "") && (xnm != "")) {
+			dname = xnm;
+		} else if ((nm != "") && (xnm == "")) {
+			dname = nm;
+		} else if ((nm != "") && (xnm != "")) {
+			dname = "";
+		}
+	} else {
+		dname = nm;
+	}
+	
+	setDepthName(dname);
+	x.setDepthName(dname);
+}
+
 
 void SpatRaster::addSource(SpatRaster &x, bool warn, SpatOptions &opt) {
 
@@ -158,6 +206,7 @@ void SpatRaster::addSource(SpatRaster &x, bool warn, SpatOptions &opt) {
 			x = x.init({NAN}, opt);
 		}
 		checkTime(x);
+		checkDepth(x);
         source.insert(source.end(), x.source.begin(), x.source.end());
 	}
 }
@@ -277,10 +326,12 @@ void SpatRasterSource::appendValues(std::vector<double> &v, size_t lyr) {
 }
 
 
-bool SpatRasterSource::in_order() {
+bool SpatRasterSource::in_order(bool all) {
 	if (memory) return true;
-	if (nlyr != nlyrfile) return false;
-	for (size_t i=0; i<layers.size(); i++) {
+	if (nlyr != nlyrfile) {
+		if (all) return false;
+	}
+	for (size_t i=layers[0]; i<layers.size(); i++) {
 		if (layers[i] != i) {
 			return false;
 		}

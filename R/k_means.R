@@ -42,3 +42,22 @@ setMethod("k_means", signature(x="SpatRaster"),
 	}
 )
 
+
+
+h_clust <- function(x, ngroups, dist_metric="euclidean", clust_method="complete", agfun=mean, matchfun="squared", ..., maxcell=10000, filename="", overwrite=FALSE, wopt=list()) {
+	stopifnot(maxcell > 0)
+	stopifnot(ngroups > 0)
+	stopifnot(ngroups < maxcell)
+	d <- na.omit(spatSample(x, maxcell, "regular"))
+	dd <- stats::dist(d, dist_metric)
+	hc <- stats::hclust(dd, clust_method)
+	th <- sort(hc$height, TRUE)[ngroups]
+	cls <- stats::cutree(hc, h = th)
+	hc <- cut(stats::as.dendrogram(hc), h=th)$upper
+	d <- aggregate(d, list(cls=cls), agfun)
+	cls <- d$cls 
+	d$cls <- NULL
+	b <- bestMatch(x, d, fun=matchfun, ..., filename=filename, overwrite=overwrite, wopt=wopt)	
+	return(list(clusters=b, dendrogram=hc))
+}
+

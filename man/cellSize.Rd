@@ -11,9 +11,7 @@ Compute the area covered by individual raster cells.
 
 Computing the surface area of raster cells is especially relevant for longitude/latitude rasters. 
 
-But note that for both angular (longitude/latitude) and for planar (projected) coordinate reference systems raster cells sizes are generally not constant, unless you are using an equal-area coordinate reference system. 
-
-For planar CRSs, the area is therefore not computed based on the linear units of the coordinate reference system, but on the *actual* area by transforming cells to longitude/latitude. If you do not want that correction, you can use \code{transform=FALSE} or \code{init(x, prod(res(x)))}
+But note that for both angular (longitude/latitude) and for planar (projected) coordinate reference systems raster cells sizes are generally not constant, unless you are using an equal-area coordinate reference system. For planar CRSs, the area is therefore not computed based on the linear units of the coordinate reference system, but rather by transforming cells to longitude/latitude. If you do not want that correction, you can use \code{transform=FALSE} or \code{init(x, prod(res(x)))}
 }
 
 \usage{
@@ -36,7 +34,7 @@ For planar CRSs, the area is therefore not computed based on the linear units of
 SpatRaster
 }
 
-\seealso{\code{\link{expanse}}}
+\seealso{\code{\link{expanse}}, \code{\link{surfArea}}}
 
 \examples{
 
@@ -53,7 +51,7 @@ a <- cellSize(r)
 r <- rast(ncols=90, nrows=45, ymin=-80, ymax=80)
 m <- project(r, "+proj=merc")
 
-bad <- init(m, prod(res(m)) / 1000000, names="naive")
+bad <- init(m, prod(res(m)) / 1000000, wopt=list(names="naive"))
 good <- cellSize(m, unit="km", names="corrected")
 plot(c(good, bad), nc=1, mar=c(2,2,1,6))
 }

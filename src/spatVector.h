@@ -59,9 +59,9 @@ class SpatPart {
 		//holes, polygons only
 		bool addHole(std::vector<double> X, std::vector<double> Y);
 		bool addHole(SpatHole h);
-		SpatHole getHole(unsigned i) { return( holes[i] ) ; }
+		SpatHole getHole(size_t i) { return( holes[i] ) ; }
 		bool hasHoles() { return !holes.empty();}
-		unsigned nHoles() { return holes.size();}
+		size_t nHoles() { return holes.size();}
 		size_t ncoords();
 		bool is_CCW();
 };
@@ -83,14 +83,14 @@ class SpatGeom {
 		bool unite(SpatGeom g);
 		bool addPart(SpatPart p);
 		bool addHole(SpatHole h);
-		bool setPart(SpatPart p, unsigned i);
+		bool setPart(SpatPart p, size_t i);
 		bool reSetPart(SpatPart p);
-		SpatPart getPart(unsigned i);
+		SpatPart getPart(size_t i);
 		//double area_plane();
 		//double area_lonlat(double a, double f);
 		//double length_plane();
 		//double length_lonlat(double a, double f);
-		unsigned size() { return parts.size(); };
+		size_t size() { return parts.size(); };
 		bool empty() { return parts.empty(); };
 		void remove_duplicate_nodes(int digits);
 		size_t ncoords();
@@ -131,9 +131,9 @@ class SpatVector {
 
 		std::vector<std::string> get_names();
 		void set_names(std::vector<std::string> s);
-		unsigned nrow();
-		unsigned ncol();
-		unsigned nxy();
+		size_t nrow();
+		size_t ncol();
+		size_t nxy();
 
 		SpatVector deepCopy() {return *this;}
 
@@ -143,6 +143,7 @@ class SpatVector {
 		bool could_be_lonlat();
 		std::string type();
 		SpatGeomType getGType(std::string &type);
+		bool is_multipoint();
 
 		//std::vector<std::string> getCRS();
 		//void setCRS(std::vector<std::string> _crs);
@@ -161,10 +162,10 @@ class SpatVector {
 			return srs.get(x);
 		}
 
-		SpatGeom getGeom(unsigned i);
+		SpatGeom getGeom(size_t i);
 		bool addGeom(SpatGeom p);
 		bool setGeom(SpatGeom p);
-		bool replaceGeom(SpatGeom p, unsigned i);
+		bool replaceGeom(SpatGeom p, size_t i);
 		std::vector<std::vector<double>> getGeometry();
 		SpatDataFrame getGeometryDF();
 		std::vector<std::string> getGeometryWKT();
@@ -178,33 +179,35 @@ class SpatVector {
 		SpatVector project(std::string crs, bool partial);
 		std::vector<double> project_xy(std::vector<double> x, std::vector<double> y, std::string fromCRS, std::string toCRS);
 
-		SpatVector subset_cols(int i);
-		SpatVector subset_cols(std::vector<int> range);
-		SpatVector subset_rows(int i);
-		SpatVector subset_rows(std::vector<int> range);
-		SpatVector subset_rows(std::vector<unsigned> range);
-		SpatVector remove_rows(std::vector<unsigned> range);
+		SpatVector subset_cols(long i);
+		SpatVector subset_cols(std::vector<long> range);
+		SpatVector subset_rows(long i);
+		SpatVector subset_rows(std::vector<long> range);
+		SpatVector subset_rows(std::vector<size_t> range);
+		SpatVector remove_rows(std::vector<size_t> range);
 
-		void setGeometry(std::string type, std::vector<unsigned> gid, std::vector<unsigned> part, std::vector<double> x, std::vector<double> y, std::vector<unsigned> hole);
+		void setGeometry(std::string type, std::vector<size_t> gid, std::vector<size_t> part, std::vector<double> x, std::vector<double> y, std::vector<size_t> hole);
 		void setPointsGeometry(std::vector<double> &x, std::vector<double> &y);
-		void setPointsDF(SpatDataFrame &x, std::vector<unsigned> geo, std::string crs, bool keepgeom);
+		void setPointsDF(SpatDataFrame &x, std::vector<size_t> geo, std::string crs, bool keepgeom);
 		void setLinesStartEnd(std::vector<double> &x, std::string crs);
 
 		std::vector<double> area(std::string unit, bool transform, std::vector<double> mask);
 
 		void reserve(size_t n);
 		std::vector<double> length();
-		std::vector<double> edges();
+		std::vector<size_t> nseg();
 
-		std::vector<double> distance(bool sequential, std::string unit, const std::string method);
-		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method);
+		std::vector<double> distance(bool sequential, std::string unit, const std::string method, bool by_node, SpatOptions &opt);
+		std::vector<double> distance(SpatVector x, bool pairwise, std::string unit, const std::string method, bool by_node, SpatOptions &opt);
 		std::vector<double> pointdistance(const std::vector<double>& px, const std::vector<double>& py, const std::vector<double>& sx, const std::vector<double>& sy, bool pairwise, double m, bool lonlat, std::string method);
 
 //		std::vector<double> pointdistance_seq(const std::vector<double>& px, const std::vector<double>& py, double m, bool lonlat);
 
+//		std::vector<std::vector<double>> get_index(SpatVector &p);
 
-		std::vector<double> linedistLonLat(SpatVector x);
-
+		std::vector<double> distLonLat(SpatVector p, std::string unit, std::string method, bool transp);
+//		std::vector<double> distLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method, bool transp);
+		//std::vector<double> nearestDistLonLat(std::vector<double> x, std::vector<double> y, std::string unit, std::string method);
 		std::vector<std::vector<size_t>> knearest(size_t k);
 
 		size_t size();
@@ -216,7 +219,7 @@ class SpatVector {
 		SpatVector set_holes(SpatVector x, size_t i);
 		SpatVector remove_duplicate_nodes(int digits);
 		
-		bool read(std::string fname, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::vector<std::string> options);
+		bool read(std::string fname, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::string dialect, std::vector<std::string> options);
 		
 		bool write(std::string filename, std::string lyrname, std::string driver, bool append, bool overwrite, std::vector<std::string>);
 
@@ -225,7 +228,7 @@ class SpatVector {
 #ifdef useGDAL
 		GDALDataset* write_ogr(std::string filename, std::string lyrname, std::string driver, bool append, bool overwrite, std::vector<std::string> options);
 		GDALDataset* GDAL_ds();
-		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what);
+		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::string dialect);
 		SpatVector fromDS(GDALDataset *poDS);
 		bool ogr_geoms(std::vector<OGRGeometryH> &ogrgeoms, std::string &message);		
 		bool delete_layers(std::string filename, std::vector<std::string> layers, bool return_error);		
@@ -233,11 +236,11 @@ class SpatVector {
 #endif
 
 // attributes
-		std::vector<double> getDv(unsigned i);
-		std::vector<long> getIv(unsigned i);
-		std::vector<std::string> getSv(unsigned i);
-		std::vector<unsigned> getItype();
-		std::vector<unsigned> getIplace();
+		std::vector<double> getDv(size_t i);
+		std::vector<long> getIv(size_t i);
+		std::vector<std::string> getSv(size_t i);
+		std::vector<size_t> getItype();
+		std::vector<size_t> getIplace();
 
 		void add_column(unsigned dtype, std::string name) {
 			df.add_column(dtype, name);
@@ -329,7 +332,7 @@ class SpatVector {
 		SpatVector snap(double tolerance);
 		SpatVector snapto(SpatVector y, double tolerance);
 		SpatVector thin(double threshold);
-
+		SpatVector split_lines(SpatVector v);
 		SpatVector allerretour();
 		SpatVectorCollection bienvenue();
 		SpatVector aggregate(bool dissolve);
@@ -348,12 +351,16 @@ class SpatVector {
 
 		SpatVector centroid(bool check_lonlat);
 		SpatVector point_on_surface(bool check_lonlat);
+		std::vector<int> pointInPolygon(std::vector<double> &x, std::vector<double> &y);
 
 		SpatVector crop(SpatExtent e, bool wrap);
 		SpatVector crop(SpatVector e);
 		SpatVector voronoi(SpatVector bnd, double tolerance, int onlyEdges);		
-		SpatVector delaunay(double tolerance, int onlyEdges);		
-		SpatVector hull(std::string htype, std::string by="");
+		SpatVector voronoi_sphere(SpatVector bnd, double tolerance, int onlyEdges);
+
+		SpatVector delaunay(double tolerance, int onlyEdges, bool constrained=false);		
+		SpatVector hull(std::string htype, std::string by="", double param=1, bool allowHoles=true, bool tight=true);
+
 		SpatVector intersect(SpatVector v, bool values);
 		SpatVector unite(SpatVector v);
 		SpatVector unite();
@@ -367,8 +374,8 @@ class SpatVector {
 		SpatVectorCollection split(std::string field);
 		SpatVector symdif(SpatVector v);
 		SpatVector set_precision(double gridSize);
-		std::vector<std::vector<unsigned>> index_2d(SpatVector v);
-		std::vector<std::vector<unsigned>> index_sparse(SpatVector v);
+		std::vector<std::vector<size_t>> index_2d(SpatVector v);
+		std::vector<std::vector<size_t>> index_sparse(SpatVector v);
 
 		std::vector<std::vector<double>> which_relate(SpatVector v, std::string relation, bool narm);
 		std::vector<std::vector<double>> which_relate(std::string relation, bool narm);
@@ -377,18 +384,18 @@ class SpatVector {
 		std::vector<int> relate(SpatVector v, std::string relation, bool prepared, bool index);
 		std::vector<int> relate(std::string relation, bool symmetrical);
 		std::vector<int> relateFirst(SpatVector v, std::string relation);
-		std::vector<unsigned> equals_exact(SpatVector v, double tol);
-		std::vector<unsigned> equals_exact(bool symmetrical, double tol);
+		std::vector<size_t> equals_exact(SpatVector v, double tol);
+		std::vector<size_t> equals_exact(bool symmetrical, double tol);
 
-		std::vector<double> geos_distance(SpatVector v, bool parallel, std::string fun);
-		std::vector<double> geos_distance(bool sequential, std::string fun);
+		std::vector<double> geos_distance(SpatVector v, bool parallel, std::string fun, double m);
+		std::vector<double> geos_distance(bool sequential, std::string fun, double m);
 
 		SpatVector nearest_point(SpatVector v, bool parallel, const std::string method);
 		SpatVector nearest_point(const std::string method);
 		std::vector<int> nearest_geometry(SpatVector v);
 		
-		SpatVector sample(unsigned n, std::string method, unsigned seed);
-		SpatVector sample_geom(std::vector<unsigned> n, std::string method, unsigned seed);
+		SpatVector sample(size_t n, std::string method, unsigned seed);
+		SpatVector sample_geom(std::vector<size_t> n, std::string method, unsigned seed);
 
 		SpatVector clearance();
 		SpatVector width();
@@ -400,7 +407,7 @@ class SpatVector {
 		SpatVector cross_dateline(bool &fixed);
 		SpatVector densify(double interval, bool adjust, bool ignorelonlat);
 		SpatVector round(int digits);
-		std::vector<unsigned> nullGeoms();
+		std::vector<size_t> nullGeoms();
 		std::vector<bool> naGeoms();
 				
 };
@@ -413,13 +420,13 @@ class SpatVectorCollection {
 	public:
 		virtual ~SpatVectorCollection(){}
 		SpatVectorCollection();
-		SpatVectorCollection(std::string filename, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		SpatVectorCollection(std::string filename, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 		
 		
 		SpatVectorCollection deepCopy() { return *this; }
-		bool read(std::string fname, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		bool read(std::string fname, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 		
-		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> extent, SpatVector filter);
+		bool read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::string dialect, std::vector<double> extent, SpatVector filter);
 
 //		SpatVectorCollection create(std::string filename);
 

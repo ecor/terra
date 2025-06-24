@@ -365,7 +365,7 @@ SpatRaster SpatRaster::rasterizeGeom(SpatVector x, std::string unit, std::string
 
 
 SpatRaster SpatRaster::hardCopy(SpatOptions &opt) {
-	SpatRaster out = geometry(-1, true, true);
+	SpatRaster out = geometry(nlyr(), true, true);
 	if (!hasValues()) {
 		out.addWarning("raster has no values");
 		return out;
@@ -513,6 +513,13 @@ SpatRaster SpatRaster::rasterizeLyr(SpatVector x, double value, double backgroun
 	GDALDatasetH rstDS;
 	double naval;
 	
+	if (!opt.datatype_set) {
+		if ((value < -16777216) || (value > 16777216)) {
+			opt.datatype = "FLT8S";
+		}
+	}
+
+	
 	if (!getDSh(rstDS, out, filename, driver, naval, update, background, opt)) {
 		return out;
 	}
@@ -559,12 +566,12 @@ SpatRaster SpatRaster::rasterizeLyr(SpatVector x, double value, double backgroun
 
 	GDALClose(rstDS);
 	if (driver != "MEM") {
-		out = SpatRaster(filename, {-1}, {""}, {}, {});
+		out = SpatRaster(filename, {-1}, {""}, {}, {}, false, false, {});
 	}
 	return out;
 }
 
-
+#include "vecmath.h"
 SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<double> values,
 	double background, bool touches, std::string fun, bool weights, bool update, bool minmax, SpatOptions &opt) {
 	
@@ -656,12 +663,22 @@ SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<do
 				add = false;
 				addWarning("cannot add factors");
 			}
+			out.setValueType(1);
 		}
 	}
 
 	if (values.size() != nGeoms) {
 		recycle(values, nGeoms);
 	}
+
+	if (!opt.datatype_set) {
+		double vmn = vmin(values, true);
+		double vmx = vmax(values, true);
+		if ((vmn < -16777216) || (vmx > 16777216)) {
+			opt.set_datatype("FLT8S");
+		}
+	}
+
 
 	GDALDataset *vecDS = x.write_ogr("", "lyr", "Memory", false, true, std::vector<std::string>());
 	if (x.hasError()) {
@@ -706,10 +723,11 @@ SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<do
 	char** papszOptions = NULL;
 
 	for (size_t i = 0; i < out.bs.n; i++) {
+
 		if (out.bs.n > 1) {
-			double halfres = tmp.yres() / 2;
-			e.ymax = tmp.yFromRow(out.bs.row[i]) + halfres;
-			e.ymin = tmp.yFromRow(out.bs.row[i] + out.bs.nrows[i] - 1) - halfres;
+			double halfres = temp.yres() / 2;
+			e.ymax = temp.yFromRow(out.bs.row[i]) + halfres;
+			e.ymin = temp.yFromRow(out.bs.row[i] + out.bs.nrows[i] - 1) - halfres;
 			if (update) {
 				tmp = crop(e, "near", false, topt);	
 			} else {

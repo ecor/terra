@@ -18,43 +18,16 @@
 #include "spatRaster.h"
 #include <limits>
 #include <set>
-#include <cmath>
-#include <algorithm>
-#include <map>
+//#include <cmath>
+//#include <algorithm>
+//#include <map>
 
 #include "vecmath.h"
 #include "vecmathse.h"
 
 #include "math_utils.h"
 #include "string_utils.h"
-
-std::map<double, unsigned long long> table(std::vector<double> &v) {
-	std::map<double, unsigned long long> count;
-	for_each( v.begin(), v.end(), [&count]( double val ){
-			if(!std::isnan(val)) count[val]++;
-		}
-	);
-	return count;
-}
-
-
-std::map<double, unsigned long long int> ctable(std::map<double, unsigned long long int> &x, std::map<double, unsigned long long int> &y) {
-	for(auto p : y) {
-		x[p.first] += p.second;
-	}
-	return(x);
-}
-
-
-std::vector<double> vtable(std::map<double, unsigned long long int> &x) {
-	std::vector<std::vector<double>> out(2);
-	for( auto p : x ) {
-		out[0].push_back(p.first);
-		out[1].push_back(p.second);
-	}
-	out[0].insert(out[0].end(), out[1].begin(), out[1].end());
-	return out[0];
-}
+#include "table_utils.h"
 
 
 
@@ -70,7 +43,7 @@ std::vector<std::vector<double>> SpatRaster::freq(bool bylayer, bool round, int 
 
 	if (bylayer) {
 		out.resize(nl);
-		std::vector<std::map<double, unsigned long long int>> tabs(nl);
+		std::vector<std::map<double, size_t>> tabs(nl);
 		for (size_t i = 0; i < bs.n; i++) {
 			unsigned nrc = bs.nrows[i] * nc;
 			std::vector<double> v;
@@ -81,26 +54,26 @@ std::vector<std::vector<double>> SpatRaster::freq(bool bylayer, bool round, int 
 			for (size_t lyr=0; lyr<nl; lyr++) {
 				unsigned off = lyr*nrc;
 				std::vector<double> vv(v.begin()+off, v.begin() + off + nrc);
-				std::map<double, unsigned long long int> tab = table(vv);
-				tabs[lyr] = ctable(tabs[lyr], tab);
+				std::map<double, size_t> tab = table(vv);
+				tabs[lyr] = combine_tables(tabs[lyr], tab);
 			}
 		}
 		for (size_t lyr=0; lyr<nl; lyr++) {
-			out[lyr] = vtable(tabs[lyr]);
+			out[lyr] = table2vector(tabs[lyr]);
 		}
 	} else {
 		out.resize(1);
-		std::map<double, long long unsigned> tabs;
+		std::map<double, size_t> tabs;
 		for (size_t i = 0; i < bs.n; i++) {
 			std::vector<double> v;
 			readValues(v, bs.row[i], bs.nrows[i], 0, nc);
 			if (round) {
 				for (double& d : v) d = roundn(d, digits);
 			}
-			std::map<double, long long unsigned> tab = table(v);
-			tabs = ctable(tabs, tab);
+			std::map<double, size_t> tab = table(v);
+			tabs = combine_tables(tabs, tab);
 		}
-		out[0] = vtable(tabs);
+		out[0] = table2vector(tabs);
 	}
 	readStop();
 	return(out);
@@ -1333,7 +1306,7 @@ SpatDataFrame SpatRaster::zonal_poly(SpatVector x, std::string fun, bool weights
 			cell = rasterizeCells(p, touches, small, opt);
         }
 		
-		std::vector<std::vector<double>> e = extractCell(cell);
+		std::vector<std::vector<double>> e = extractCell(cell, opt);
  		if ((weights || exact) && fun == "mean") {
 			if (narm) {
 				for (size_t j=0; j<nl; j++) {
@@ -1375,8 +1348,8 @@ SpatDataFrame SpatRaster::zonal_poly(SpatVector x, std::string fun, bool weights
 
 std::vector<double> tabfun(std::vector<double> x, std::vector<double> w) {
 //	if (w.size() == 0) {
-		std::map<double, long long unsigned> tab = table(x);
-		return vtable(tab);
+		std::map<double, size_t> tab = table(x);
+		return table2vector(tab);
 //	} else {
 		
 //	}
@@ -1422,7 +1395,7 @@ std::vector<std::vector<double>> SpatRaster::zonal_poly_table(SpatVector x, bool
 		} else {
 			cell = rasterizeCells(p, touches, small, opt);
         }	
-		std::vector<std::vector<double>> e = extractCell(cell);
+		std::vector<std::vector<double>> e = extractCell(cell, opt);
 		out[i] = tabfun(e[0], wgt);
 	}
 
@@ -1471,8 +1444,8 @@ SpatDataFrame SpatRaster::zonal_poly_weighted(SpatVector x, SpatRaster w, bool w
 			cell = rasterizeCells(p, touches, small, opt);
         }
 		
-		std::vector<std::vector<double>> e = extractCell(cell);
-		std::vector<std::vector<double>> we = w.extractCell(cell);
+		std::vector<std::vector<double>> e = extractCell(cell, opt);
+		std::vector<std::vector<double>> we = w.extractCell(cell, opt);
 		
  		if (weights || exact) {
 			if (narm) {

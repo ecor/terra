@@ -1,4 +1,39 @@
 
+retro_labels <- function(x, lat=TRUE) {
+	if ((is.null(x)) || (!is.numeric(x))) {
+		return(x)
+	}
+	if ((length(x) > 1) && (min(diff(x)) <= 1/120)) {
+		d <- floor(x)
+		m <- floor(60*(x - d))
+		s <- round(3600*(x - d - m/60))
+	} else {
+		d <- floor(x)
+		m <- round(60*(x - d))
+		s <- 0
+	}
+
+	if (lat) {
+		h <- c("S", "", "N")[sign(d)+2]
+		d <- abs(d)
+	} else {
+		d <- (d + 180) %% 360 - 180
+		h <- c("W", "", "E")[sign(d)+2]
+		d <- abs(d)
+		h[d == 180] <- ""
+	} 
+	i <- (s == 0) & (m == 0)
+	j <- (s == 0) & (m != 0)
+
+	m <- formatC(m, width=2, flag="0")
+	s <- formatC(s, width=2, flag="0")
+	r <- paste0(d, "\u00B0" , m, "'", s, '"', h)
+	r[i] <- paste0(d[i], "\u00B0" , h[i])
+	r[j] <- paste0(d[j], "\u00B0" , m[j], "'", h[j])	
+	r
+}
+
+
 .plot.axes <- function(x) {
 
 	if (is.null(x$axs$cex.axis)) {
@@ -32,15 +67,16 @@
 	}
 	
 	xat <- yat <- NULL
+	# na.omit(x$axs$at) breaks eva3dm
 	if (!is.null(x$axs$at)) {
-		xat <- yat <- x$axs$at
+		xat <- yat <- (x$axs$at)
 	}
 	if (!is.null(x$axs$xat)) {
-		xat <- x$axs$xat
+		xat <- (x$axs$xat)
 		x$axs$xat <- NULL
 	}
 	if (!is.null(x$axs$yat)) {
-		yat <- x$axs$yat
+		yat <- (x$axs$yat)
 		x$axs$yat <- NULL
 	}
 

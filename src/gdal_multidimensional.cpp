@@ -1,95 +1,289 @@
-
 #include "spatRaster.h"
-
-/*
-#if GDAL_VERSION_MAJOR >= 3 && GDAL_VERSION_MINOR >= 1
-
 #include "proj.h"
-
 #include "ogr_spatialref.h"
-
 #include "gdal_priv.h"
 #include "gdal.h"
+#include "gdalio.h"
 #include "crs.h"
 #include "string_utils.h"
+#include "file_utils.h"
+#include "vecmath.h"
+#include <stddef.h>
+
+//#include <cstdint>
+//#if INTPTR_MAX != INT32_MAX
+//    #define IS_64_BIT
+//#endif
 
 
-bool SpatRaster::constructFromFileMulti(std::string fname, std::vector<int> sub, std::vector<std::string> subname, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<size_t> xyz) {
+bool parse_ncdf_time(SpatRasterSource &s, const std::string unit, const std::string calendar, std::vector<double> raw, std::string &msg) {
 
-Rcpp::Rcout << "in" << std::endl;
-
-	if (xyz.size() != 3) {
-		setError("you must supply three dimension indices");
-        return false;
+	std::vector<int64_t> out;
+	std::string origin = unit;
+	bool years = false;
+	bool yearsbp = false;
+	bool yearmonths = false;
+	bool months = false;
+	bool days = false;
+	bool hours = false;
+	bool minutes = false;
+	bool seconds = false;
+	bool foundorigin = false;
+	std::string step;
+	
+	lowercase(origin);
+	if ((origin.find("seconds")) != std::string::npos) {
+		seconds = true;
+	} else if ((origin.find("minutes")) != std::string::npos) {
+		minutes = true;
+	} else if ((origin.find("hours")) != std::string::npos) {
+		hours = true;
+	} else if ((origin.find("days")) != std::string::npos) {
+		days = true;
+	} else if ((origin.find("months since")) != std::string::npos) {
+		yearmonths = true;
+		foundorigin = true;
+	} else if ((origin.find("months")) != std::string::npos) {
+		months = true;
+		foundorigin = true;
+	} else if ((origin.find("years before present")) != std::string::npos) {
+		yearsbp = true;
+		foundorigin = true;
+	} else if ((origin.find("years")) != std::string::npos) {
+		years = true;
 	}
 
-
-    auto poDataset = std::unique_ptr<GDALDataset>(
-        GDALDataset::Open(fname.c_str(), GDAL_OF_MULTIDIM_RASTER ));
-    if( !poDataset ) {
-		setError("not a good dataset");
-        return false;
-    }
-
-	auto poRootGroup = poDataset->GetRootGroup();
-    if( !poRootGroup ) {
-		setError("no roots");
-		return false;
-    }
-
-
-	std::vector<std::string> gnames;
-	std::string subdsname = "";
-	char** papszOptions = NULL;
-	gnames = poRootGroup->GetMDArrayNames(papszOptions);
-	CSLDestroy(papszOptions);
-
-	if (gnames.size() == 0) {
-		setError("no subdatsets detected");
-		return false;
-	}
-	Rcpp::Rcout << "available: ";
-	for (size_t i=0; i<gnames.size(); i++) {
-		Rcpp::Rcout << gnames[i] << " ";
-	}
-	Rcpp::Rcout << std::endl;
-
-
-	if (subname.size() > 0) {
-		subdsname = subname[0];
-		if (std::find(gnames.begin(), gnames.end(), subdsname) == gnames.end()) {
-			setError("subdatset name not found");
-			return false;
+	if (!foundorigin) {
+		size_t pos;		
+		if ((pos = origin.find("from")) != std::string::npos) {
+			origin.erase(0, pos + 5);
+			foundorigin = true;
+		} else if ((pos = origin.find("since")) != std::string::npos) {
+			origin.erase(0, pos + 6);
+			foundorigin = true;
 		}
-	} else if (sub[0] >= 0) {
-		if (sub[0] >= (int)gnames.size()) {
-			setError("subdatset is out or range");
+	}
+
+	SpatTime_t offset = 0;
+	if (foundorigin) {
+		step = "seconds";
+		out.reserve(raw.size());
+		std::string cal = "366";
+		if (calendar == "360_day" || calendar == "360 day") {
+			cal = "360";
+		} else if (calendar == "noleap" || calendar == "365_day" || calendar == "365 day") {
+			cal = "365";		
+		} else if (calendar =="gregorian" || calendar =="proleptic_gregorian" || calendar=="standard" || calendar == "julian") {
+			cal = "366";
+		} else if (!(months || years || yearmonths || yearsbp)) {
+			//cal = "366";
+			msg = "unknown calendar (assuming standard): " + calendar;			
+		}
+
+		// this shortcut means that 360/noleap calendars loose only have dates, no time
+		// to be refined
+		if ((hours || minutes || seconds) && (cal == "360")) {
+			int div = 24;
+			double add = 0;
+			std::vector<int> ymd = getymd(origin);
+			if (hours) {
+				hours = false;
+				add = ymd[3] + ymd[4] / 60 + ymd[5] / 3600; 
+			} else if (minutes) {
+				div = 1440; // 24 * 60
+				add = ymd[3] * 60 + ymd[4] + ymd[5] / 60; 
+				minutes = false;
+			} else if (seconds) {
+				div = 86400; // 24 * 3600
+				add = ymd[3] * 3600 + ymd[4] * 60 + ymd[5]; 
+				seconds = false;
+			}
+			for (size_t i=0; i<raw.size(); i++) {
+				raw[i] = (raw[i]+add) / div; 
+			}
+			days = true;
+		} 
+	
+		if (days) {
+			step = "days";
+			std::vector<int> ymd = getymd(origin);
+			if (cal == "365") {
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+					get_time_noleap(ymd[0], ymd[1], ymd[2], 0, 0, 0, raw[i], "days"));
+			} else if (cal == "360") {
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+					time_from_day_360(ymd[0], ymd[1], ymd[2], raw[i]));
+			} else {
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+					time_from_day(ymd[0], ymd[1], ymd[2], raw[i]));
+			}
+		} else if (hours) {
+			if (cal == "365") {
+				std::vector<int> ymd = getymd(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+						get_time_noleap(ymd[0], ymd[1], ymd[2], ymd[3], 0, 0, raw[i], "hours")
+					);
+			} else {
+				offset = get_time_string(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(raw[i]*3600+offset);
+			}
+		} else if (minutes) {
+			if (cal == "365") {
+				std::vector<int> ymd = getymd(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+						get_time_noleap(ymd[0], ymd[1], ymd[2], ymd[3], ymd[4], 0, raw[i], "minutes")
+					);
+			} else {
+				offset = get_time_string(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(60*raw[i]+offset);
+			}
+		} else if (seconds) {
+			if (cal == "365") {
+				std::vector<int> ymd = getymd(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(
+						get_time_noleap(ymd[0], ymd[1], ymd[2], ymd[3], ymd[4], 0, raw[i], "minutes")
+					);
+			} else {
+				offset = get_time_string(origin);
+				for (size_t i=0; i<raw.size(); i++) out.push_back(raw[i]+offset);
+			}
+		} else if (years) {
+			step = "years";
+			int syear = getyear(origin);
+			for (size_t i=0; i<raw.size(); i++) out.push_back(get_time(syear+raw[i], 6, 30, 0, 0, 0));
+		} else if (yearsbp) {
+			step = "years";
+			int syear = 1950;
+			for (size_t i=0; i<raw.size(); i++) out.push_back(get_time(syear+raw[i], 6, 30, 0, 0, 0));
+		} else if (yearmonths) {
+			step = "yearmonths";
+			int syear = getyear(origin);
+			for (size_t i=0; i<raw.size(); i++) {
+				long year = std::floor(raw[i] / 12.0);
+				int month = raw[i] - (12 * year) + 1;
+				out.push_back(get_time(syear+year, month, 15, 0, 0, 0));
+			}
+		} else if (months) {
+			step = "months";
+			// check for 0..11 range
+			int zero = vmin(raw, true) == 0.0;
+			for (size_t i=0; i<raw.size(); i++) {
+				unsigned m = std::ceil(raw[i] + zero);
+				out.push_back(get_time(1970, m, 15, 0, 0, 0));
+			}
+		} else {
+			step = "raw";
+			for (size_t i=0; i<raw.size(); i++) out.push_back(raw[i]);
+		}
+	}
+
+	s.time = out;
+	s.timestep = step;
+	s.hasTime = true;
+	return true;
+}
+
+
+
+
+#if GDAL_VERSION_MAJOR >= 3 && GDAL_VERSION_MINOR >= 4 // && defined(IS_64_BIT)
+
+
+std::vector<std::string> GetArrayNames(std::shared_ptr<GDALGroup> x, bool filter) {
+// FROM GDAL 3.11 (while not widely available).
+// * Author:   Even Rouault <even.rouault at spatialys.com>
+// * Copyright (c) 2019, Even Rouault <even.rouault at spatialys.com>
+    std::vector<std::string> ret;
+    std::list<std::shared_ptr<GDALGroup>> stackGroups;
+    stackGroups.push_back(nullptr);  // nullptr means this
+    while (!stackGroups.empty()) {
+        std::shared_ptr<GDALGroup> groupPtr = std::move(stackGroups.front());
+        stackGroups.erase(stackGroups.begin());
+        const GDALGroup *poCurGroup = groupPtr ? groupPtr.get() : x.get();
+        for (const std::string &arrayName :  poCurGroup->GetMDArrayNames(nullptr)) {
+            std::string osFullName = poCurGroup->GetFullName();
+            if (!osFullName.empty() && osFullName.back() != '/') 
+                osFullName += '/';
+            osFullName += arrayName;
+            ret.push_back(std::move(osFullName));
+        }
+        auto insertionPoint = stackGroups.begin();
+        for (const auto &osSubGroup : poCurGroup->GetGroupNames(nullptr)) {
+            auto poSubGroup = poCurGroup->OpenGroup(osSubGroup);
+            if (poSubGroup)
+                stackGroups.insert(insertionPoint, std::move(poSubGroup));
+        }
+    }
+	if (filter) {
+		return ncdf_filternames(ret);
+	}
+    return ret;
+}
+
+
+bool SpatRaster::constructFromFileMulti(std::string fname, std::vector<int> subds, std::vector<std::string> subname, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<int> dims, bool noflip, bool guessCRS, std::vector<std::string> domains) {
+
+	SpatRasterSource s;
+
+	bool verbose = false;
+
+	char ** drvs = NULL;
+	for (size_t i=0; i<drivers.size(); i++) {
+		drvs = CSLAddString(drvs, drivers[i].c_str());
+	}
+	s.open_drivers = drivers;
+
+    auto poDataset = std::unique_ptr<GDALDataset>(GDALDataset::Open(fname.c_str(), GDAL_OF_MULTIDIM_RASTER, drvs));
+    if( !poDataset ) {
+		if (!file_exists(fname)) {
+			setError("file does not exist: " + fname);
+		} else if (drivers.size() > 0) {
+			setError("cannot read multidim from this file or with this driver");			
+		} else {
+			setError("cannot read multidim from this file");			
+        }
+		return false;
+    }
+
+	std::shared_ptr<GDALGroup> poRootGroup = poDataset->GetRootGroup();
+    if( !poRootGroup ) {
+		setError("dataset has no root group");
+		return false;
+    }
+
+	s.m_arrayname = "";
+
+	if ((subname.size() > 0) && (!subname[0].empty())) {
+		s.m_arrayname = subname[0];
+	} else if (subds.size() > 0) {
+		std::vector<std::string> anms = GetArrayNames(poRootGroup, true);
+		if ((subds[0] < 0) || (subds[0] >= (int)anms.size())) {
+			setError("array number is out or range");
 			return false;
 		} else {
-			subdsname = gnames[sub[0]];
+			s.m_arrayname = anms[anms.size()-1-subds[0]];
 		}
 	} else {
-		subdsname = gnames[0];
-		if (gnames.size() > 1)  {
-			std::string gn = "";
-			for (size_t i=1; i<gnames.size(); i++) {
-				gn += gnames[i] + ", ";
-			}
-			addWarning("using: " + subdsname + ". Other groups are: \n" + gn);
+		std::vector<std::string> anms = GetArrayNames(poRootGroup, true);
+		s.m_arrayname = anms[anms.size()-1];
+		if (anms.size() > 1)  {
+			anms = {anms.begin(), anms.end() - 1}; 
+			addWarning("using: " + s.m_arrayname + ". Other arrays are: \n" + concatenate(anms, "\n"));
 		}
 	}
 
-	Rcpp::Rcout << "subdsname: " << subdsname << std::endl;
-
-    auto poVar = poRootGroup->OpenMDArray(subdsname.c_str());
+	std::string startgroup="";
+	auto poVar = poRootGroup->ResolveMDArray(s.m_arrayname.c_str(), startgroup, nullptr);
+//    auto poVar = poRootGroup->OpenMDArray(s.m_arrayname.c_str());
     if( !poVar )   {
-		setError("cannot find: " + subdsname);
+		setError("cannot find: " + s.m_arrayname);
 		return false;
     }
-
+	s.m_arrayname = poVar->GetFullName();
 
 	std::string wkt = "";
-	std::shared_ptr<OGRSpatialReference> srs = poVar->GetSpatialRef();
+	auto srs = poVar->GetSpatialRef();
+
 	if (srs != NULL) {
 		char *cp;
 		const char *options[3] = { "MULTILINE=YES", "FORMAT=WKT2", NULL };
@@ -98,244 +292,683 @@ Rcpp::Rcout << "in" << std::endl;
 			wkt = std::string(cp);
 		}
 		CPLFree(cp);
+	} 
+	if (guessCRS && wkt.empty()) {
+		if (s.extent.xmin >= -181 && s.extent.xmax <= 361 && s.extent.ymin >= -91 && s.extent.ymax <= 91) {
+			wkt = "OGC:CRS84";
+			s.parameters_changed = true;
+		}
 	}
-
-	SpatRasterSource s;
-
-	std::string msg;
+	std::string msg = "";
 	if (!s.srs.set({wkt}, msg)) {
 		addWarning(msg);
 	}
 
+// dimensions 
 	std::vector<size_t> dimcount;
-	std::vector<std::string> dimnames;
-	std::vector<double> dim_start, dim_end;
+	std::vector<std::string> dimnames, dimunits;
+	std::vector<std::vector<double>> dimvals;
+	dimvals.reserve(4);
 
-	GDALExtendedDataTypeH hDT = GDALExtendedDataTypeCreate(GDT_Float64);
-    for ( const auto &poDim: poVar->GetDimensions() ) {
-        dimcount.push_back(static_cast<size_t>(poDim->GetSize()));
-        dimnames.push_back(static_cast<std::string>(poDim->GetName()));
+	std::string calendar = "";	
+	std::vector<std::shared_ptr<GDALDimension>> dimData = poVar->GetDimensions();
+	size_t ndim = dimData.size();
+    for (size_t i=0; i<ndim; i++) {
+		size_t n = dimData[i]->GetSize();
+        dimcount.push_back(n);
+        std::string name = static_cast<std::string>(dimData[i]->GetName());
+		dimnames.push_back(name);
+		std::vector<GUInt64> start(1, 0);
+		std::vector<size_t> count = {n};
+		dimvals.push_back(std::vector<double>(n));
 
-		std::vector<size_t> count = {dimcount[dimcount.size()-1]};
-		std::vector<double> vals(count[0]);
+		if (verbose) Rcpp::Rcout << name << std::endl;
 
-		const auto indvar = poDim->GetIndexingVariable();
-		indvar->Read(
-			std::vector<GUInt64>{0}.data(),
-            count.data(), nullptr, nullptr,
-            GDALExtendedDataType::Create(GDT_Float64),
-            &vals[0]);
-
-		// to do: check for equal spacing if x or y dim
-		dim_start.push_back(vals[0]);
-        dim_end.push_back(vals[vals.size()-1]);
-		Rcpp::Rcout << vals[0] << " - " << vals[vals.size()-1] << std::endl;
-
+		const auto indvar = dimData[i]->GetIndexingVariable();
+        dimunits.push_back(static_cast<std::string>(indvar->GetUnit()));
+		auto pcal = indvar->GetAttribute("calendar");
+		if (pcal) calendar = pcal->ReadAsString();
+		
+	
+		indvar->Read(start.data(), count.data(), nullptr, nullptr, GDALExtendedDataType::Create(GDT_Float64), &dimvals[i][0]);
+		if ((i >= (ndim-2)) && (dimvals[i].size() > 2)) {
+			double res = dimvals[i][1] - dimvals[i][0];
+			if (!indvar->IsRegularlySpaced(dimvals[i][0], res)) {
+				setError(name + " is not regularly spaced");
+				return false;
+			}
+		}
     }
-    GDALExtendedDataTypeRelease(hDT);
 
 	s.m_ndims = dimcount.size();
-	s.source_name = subdsname;
-	s.source_name_long = poVar->GetAttribute("long_name")->ReadAsString();
-
-	s.m_hasNA = false;
-	double NAval = poVar->GetNoDataValueAsDouble(&s.m_hasNA);
-	if (s.m_hasNA) {
-		s.m_missing_value = NAval;
+	if (s.m_ndims < 2) {
+		setError("insufficient dimensions");
+		return false;
 	}
 
+	s.source_name = s.m_arrayname;
+	auto lname = poVar->GetAttribute("long_name");
+	if (lname) s.source_name_long = lname->ReadAsString();
+
+	auto mval = poVar->GetAttribute("missing_value");
+	if (mval) {
+		s.m_missing_value = mval->ReadAsDouble();
+		s.m_hasNA = true;
+	} else {
+		s.m_missing_value = poVar->GetNoDataValueAsDouble(&s.m_hasNA);
+	}
+
+	if (dims.size() < 2) {
+		dims = {2,1,0};
+	}
+
+	int ix = ndim - 1;
+	int iy = ix - 1;
+	int it = 0;
+	int iz = -1;
+	if (ix == 3) {
+		iz = 1;
+		dims = {ix, iy, iz, it};
+	} else if (ndim == 2) {
+		dims = {ix, iy};
+	}
+
+	//Rcpp::Rcout << ix << ", " << iy << ", " << iz << ", " << it << std::endl;
+	
 	SpatExtent e;
-	if (xyz[0] < s.m_ndims) {
-		s.nrow = dimcount[xyz[0]];
-		s.m_dimnames.push_back(dimnames[xyz[0]]);
-		double res = (dim_start[xyz[0]] - dim_end[xyz[0]]) / (s.nrow-1);
-		e.ymax = dim_start[xyz[0]] + 0.5 * res;
-		e.ymin = dim_end[xyz[0]] - 0.5 * res;
-	} else {
-		setError("the second dimension is not valid");
-		return false;
+ 	s.ncol = dimcount[ix];
+	s.nrow = dimcount[iy];
+	s.nlyr = 1;
+
+	// to do: check for equal spacing if x or y dim
+
+	double start = dimvals[ix][0];
+	double end = dimvals[ix][dimvals[ix].size()-1];
+	double res = (end - start) / (s.ncol-1);
+	e.xmin = start - 0.5 * res;
+	e.xmax = end + 0.5 * res;
+
+	start = dimvals[iy][0];
+	end = dimvals[iy][dimvals[iy].size()-1];
+	res = (end - start) / (s.nrow-1);
+	e.ymax = end + 0.5 * res;
+	e.ymin = start - 0.5 * res;
+	
+	s.flipped = false;
+	if ((!noflip) && (e.ymin > e.ymax)) {
+		std::swap(e.ymin, e.ymax);
+		s.flipped = true;
 	}
-	if (xyz[1] < s.m_ndims) {
-		s.ncol = dimcount[xyz[1]];
-		s.m_dimnames.push_back(dimnames[xyz[1]]);
-		double res = (dim_end[xyz[1]] - dim_start[xyz[1]]) / (s.ncol-1);
-		e.xmin = dim_start[xyz[1]] - 0.5 * res;
-		e.xmax = dim_end[xyz[1]] + 0.5 * res;
-	} else {
-		setError("the first dimension is not valid");
-		return false;
-	}
+//	s.m_names.push_back(dimnames[ix]);
+//	s.m_names.push_back(dimnames[iy]);
+
+
 	if (s.m_ndims > 2) {
-		if (xyz[2] < s.m_ndims) {
-			s.nlyr = dimcount[xyz[2]];
-			s.m_dimnames.push_back(dimnames[xyz[2]]);
-		} else {
-			setError("the third dimension is not valid");
-			return false;
-		}
-	}
-	s.m_dims = xyz;
-	s.extent = e;
-	if (s.m_ndims > 3) {
-		for (size_t i=0; i<s.m_ndims; i++) {
-			bool found = false;
-			for (size_t j=0; j<3; j++) {
-				if (i == xyz[j]) found = true;
-			}
-			if (!found) {
-				s.m_dims.push_back(i);
-				s.m_dimnames.push_back(dimnames[i]);
-			}
-		}
+		s.nlyr = dimcount[it];
+//		s.m_names.push_back(dimnames[it]);
+		std::string msg;
+		parse_ncdf_time(s, dimunits[it], "standard", dimvals[it], msg);
 	}
 
+	if (iz >= 0) {
+//		s.m_names.push_back(dimnames[iz]);
+		s.depthname = dimnames[iz];
+		s.depth = dimvals[iz];
+		s.hasDepth = true;
+		s.nlyr *= dimcount[iz];
+	}
 	s.nlyrfile = s.nlyr;
 	s.resize(s.nlyr);
 	s.layers.resize(s.nlyr);
     std::iota(s.layers.begin(), s.layers.end(), 0);
-	s.flipped = false;
+	
+	for (size_t i=0; i<dims.size(); i++) {
+		s.m_dims.push_back(dims[i]);
+	}
+	s.extent = e;
+
+	bool app_so = true;
+	size_t opsz = options.size();
+	if (opsz > 0) {
+		if (options[opsz-1] == "so=false") {
+			app_so = false;
+			options.resize(opsz-1); 
+		}
+	}
+
+	if (app_so) {
+		bool hasScale=false;
+		double scale = poVar->GetScale(&hasScale, nullptr);
+		if (scale == 1) hasScale = false;
+		bool hasOffset=false;
+		double offset = poVar->GetOffset(&hasOffset, nullptr);
+		if (offset == 0) hasOffset = false;
+		if (hasScale || hasOffset) {
+			s.has_scale_offset = std::vector<bool>(s.nlyr, true);
+			s.offset = std::vector<double>(nlyr(), offset);
+			s.scale = std::vector<double>(nlyr(), scale);
+		}
+	}
+	
 	s.rotated = false;
 	s.memory = false;
 	s.filename = fname;
 	s.hasValues = true;
 	s.unit = std::vector<std::string>(s.nlyr, poVar->GetUnit());
-	s.multidim = true;
+	s.is_multidim = true;
 
 // layer names
-	//std::vector<std::string> nms(s.nlyr, "");
-	//s.names = nms;
+	std::vector<std::string> nms;
+	std::vector<std::string> arn = strsplit_last(s.m_arrayname, "/");
+	std::string arname = arn[arn.size()-1];
+	if (iz >= 0) {
+		size_t niz = dimcount[iz];
+		size_t ntm = dimcount[it];	
+		nms.resize(ntm * niz, arname + "-");
+		size_t k = 0;
+		for (size_t i=0; i<niz; i++) {
+			std::string sz = double_to_string(dimvals[iz][i]);
+			for (size_t j=0; j<ntm; j++) {
+				nms[k] += std::to_string(j + 1) + "_" + s.depthname + "=" + sz;
+				k++;
+			}
+		}
+	} else {
+		nms.resize(s.nlyr, arname + "-");
+		for (size_t i=0; i<nms.size(); i++) {
+			nms[i] += std::to_string(i + 1);
+		}	
+	}
+	s.names = nms;
+
 // time
-// extent
-	s.m_counts = dimcount;
+	s.m_size = dimcount;
+	s.m_names = dimnames;
+	
 	setSource(s);
-	for (size_t i=0; i<s.m_ndims; i++){
-		Rcpp::Rcout << s.m_dims[i] << " " << s.m_dimnames[i] << " " << s.m_counts[s.m_dims[i]] << std::endl;
+	if (verbose) {
+		for (size_t i=0; i<s.m_dims.size(); i++){
+			Rcpp::Rcout << s.m_dims[i] << " " << dimnames[i] << " " << s.m_size[i] << std::endl;
+		}
 	}
 	return true;
 }
 
 
 
-bool SpatRaster::readStartMulti(unsigned src) {
+bool SpatRaster::readStartMulti(size_t src) {
 
-    GDALDatasetH hDS = GDALOpenEx( source[src].filename.c_str(), GDAL_OF_MULTIDIM_RASTER, NULL, NULL, NULL);
-    if (!hDS) {
+	char ** drvs = NULL;
+	for (size_t i=0; i<source[src].open_drivers.size(); i++) {
+		drvs = CSLAddString(drvs, source[src].open_drivers[i].c_str());
+	}
+
+    auto poDataset = std::unique_ptr<GDALDataset>(GDALDataset::Open(source[src].filename.c_str(), GDAL_OF_MULTIDIM_RASTER, drvs));
+    if( !poDataset ) {
 		setError("not a good dataset");
         return false;
     }
-    GDALGroupH hGroup = GDALDatasetGetRootGroup(hDS);
-    GDALReleaseDataset(hDS);
-    if (!hGroup) {
-		setError("not a good root group");
+
+
+	std::shared_ptr<GDALGroup> poRootGroup = poDataset->GetRootGroup();
+    if( !poRootGroup ) {
+		setError("no roots");
 		return false;
     }
 
-	GDALMDArrayH hVar = GDALGroupOpenMDArray(hGroup, source[src].source_name.c_str(), NULL);
-    GDALGroupRelease(hGroup);
-    if (!hVar) {
-		setError("not a good array");
+	std::string startgroup="";
+	auto poVar = poRootGroup->ResolveMDArray(source[src].m_arrayname.c_str(), startgroup, nullptr);
+
+//    auto poVar = poRootGroup->OpenMDArray(source[src].m_arrayname.c_str());
+    if( !poVar )   {
+		setError("cannot find: " + source[src].m_arrayname);
 		return false;
     }
 
-	source[src].gdalmdarray = hVar;
+
+	if (source[src].has_scale_offset[0]) {
+		source[src].m_array = poVar->GetUnscaled();
+	} else {
+		source[src].m_array = poVar;
+	}
+	source[src].open_read = true;
 	return true;
 }
 
 
-bool SpatRaster::readStopMulti(unsigned src) {
-	GDALMDArrayRelease(source[src].gdalmdarray);
+bool SpatRaster::readStopMulti(size_t src) {
+//	Rcpp::Rcout << "readStopMulti\n";
 	source[src].open_read = false;
+	source[0].m_array.reset();
 	return true;
 }
 
 
-bool SpatRaster::readValuesMulti(std::vector<double> &out, size_t src, size_t row, size_t nrows, size_t col, size_t ncols) {
 
-	Rcpp::Rcout << "reading" << std::endl;
+bool SpatRaster::readChunkMulti(std::vector<double> &data, size_t src, size_t row, size_t nrows, size_t col, size_t ncols) {
 
+//	Rcpp::Rcout << "readChunkMulti\n";
 	std::vector<GUInt64> offset(source[src].m_ndims, 0);
+
+/*	
 	std::vector<size_t> dims = source[src].m_dims;
+	Rcpp::Rcout << "dims: ";
+	for (size_t i=0; i<dims.size(); i++) {Rcpp::Rcout << dims[i] << " ";}
+	Rcpp::Rcout << "\n";
+*/
 
 	offset[source[src].m_dims[0]] = col;
 	offset[source[src].m_dims[1]] = row;
-	offset[source[src].m_dims[2]] = 0;
-
-//	std::vector<size_t> count = source[src].m_counts;
+	size_t ndim = source[src].m_dims.size();
 	std::vector<size_t> count(source[src].m_ndims, 1);
 	count[source[src].m_dims[0]] = ncols;
 	count[source[src].m_dims[1]] = nrows;
-	count[source[src].m_dims[2]] = nlyr();
 
-	size_t n=1;
-	for (size_t i=0; i<count.size(); i++) {
-		n *= count[i];
+//	std::vector<GPtrDiff_t> stride;
+	std::vector<long long int> stride;
+	if (!source[src].flipped) { 
+		stride.resize(ndim, 1);
+		stride[ndim-2] = -1;
+		offset[ndim-2] = nrow() - row - 1;
 	}
 
-	//count = {3600, 1, 1, 7200, 1};
+	size_t insize = data.size();
 
-	GDALExtendedDataTypeH hDT = GDALExtendedDataTypeCreate(GDT_Float64);
+	auto dt = GDALExtendedDataType::Create(GDT_Float64);
 
-	std::vector<double> temp;
-	temp.resize(n);
-	GDALMDArrayRead(source[src].gdalmdarray,
-						&offset[0],
-						&count[0],
-						NULL, // step: defaults to 1,1,1
-						NULL, // stride: default to row-major convention
-						hDT,
-						&temp[0],
-						NULL, // array start. Omitted
-						0 // array size in bytes. Omitted
-						);
-    GDALExtendedDataTypeRelease(hDT);
+	if (source[src].in_order(false)) {
+		if (ndim == 3) {
+			offset[source[src].m_dims[2]] = source[src].layers[0];
+			count[source[src].m_dims[2]] = source[src].layers.size();
+		} else if (ndim == 4) {
+			count[source[src].m_dims[2]] = source[src].depth.size();
+			count[source[src].m_dims[3]] = source[src].time.size();		
+		}
+		size_t n=vprod(count, false);
+		data.resize(insize + n);
+		source[src].m_array->Read(&offset[0], &count[0], &stride[0], NULL, dt, &data[insize], NULL, 0);
+    } else {
+		count[source[src].m_dims[2]] = 1;
 
+		data.resize(insize + ncols*nrows*source[src].layers.size());
+//		size_t n=vprod(count, false);
+		for (size_t i=0; i<source[src].layers.size(); i++) {
+			if (ndim == 3) {
+				offset[source[src].m_dims[2]] = source[src].layers[i];
+			} else if (ndim == 4) {
+				setError("not handled yet");
+				return false;
+				count[source[src].m_dims[3]] = 1;		
+			}
+			source[src].m_array->Read(&offset[0], &count[0], NULL, NULL, dt, &data[insize+i], NULL, 0);
+		}
+	}
 
-//tbd: row order should be reversed
-
-//	size_t nc = nrows * ncols;
-//	size_t nl = nlyr();
-//	out.resize(0);
-//	out.reserve(n);
-//	for (size_t i=0; i<nl; i++) {
-//		for (size_t j=0; j<nc; j++) {
-//			out.push_back( temp[nl*j + i] );
-//		}
-//	}
-
-
-    out = std::move(temp);
 	if (source[src].m_hasNA) {
-		std::replace (out.begin(), out.end(), source[src].m_missing_value, (double)NAN);
+//		Rcpp::Rcout << source[src].m_missing_value << std::endl;
+		std::replace (data.begin()+insize, data.end(), source[src].m_missing_value, (double)NAN);
 	}
 
+//	data.insert(data.end(), out.begin(), out.end());
+	return true;
+}
+
+bool SpatRaster::readRowColMulti(size_t src, std::vector<std::vector<double>> &out, size_t outstart, std::vector<int64_t> &rows, const std::vector<int64_t> &cols) {
+	
+//	Rcpp::Rcout << "readRowColMulti " << src << "\n";
+	if (!readStartMulti(src)) {
+		return false;
+	}
+	size_t n = rows.size();
+	size_t nl = source[src].layers.size();
+
+	out.resize(n);
+	size_t outend = outstart + nl;
+	for (size_t i=outstart; i<outend; i++) {
+		out[i].reserve(n);
+	}
+
+	std::vector<GUInt64> offset(source[src].m_ndims, 0);
+
+	size_t ndim = source[src].m_dims.size();
+	std::vector<size_t> count(source[src].m_ndims, 1);
+
+//	std::vector<GPtrDiff_t> stride;
+	std::vector<long long> stride;
+	if (!source[src].flipped) { 
+		stride.resize(ndim, 1);
+		stride[ndim-2] = -1;
+		int64_t nr = nrow();
+		for (int64_t &r : rows) r = nr - r - 1;  
+	}
+	if (source[src].in_order(false)) {
+		if (ndim == 3) {
+			offset[source[src].m_dims[2]] = source[src].layers[0];
+			count[source[src].m_dims[2]] = source[src].layers.size();
+		} else if (ndim == 4) {
+			count[source[src].m_dims[2]] = source[src].depth.size();
+			count[source[src].m_dims[3]] = source[src].time.size();		
+		}
+	} else {
+		if (ndim == 4) {
+			setError("not handled yet");
+			return false;
+		}
+		count[source[src].m_dims[3]] = 1;			
+	}
+
+	auto dt = GDALExtendedDataType::Create(GDT_Float64);
+
+	std::vector<double> v(n, NAN);
+	for (size_t i=0; i<n; i++) {
+	
+		if (std::isnan(cols[i]) || std::isnan(rows[i])) {
+			for (size_t i=0; i<n; i++) {
+				out[outstart+i].push_back(NAN);
+			}			
+			continue;
+		}
+		offset[source[src].m_dims[0]] = cols[i];
+		offset[source[src].m_dims[1]] = rows[i];
+
+		if (source[src].in_order(false)) {
+			source[src].m_array->Read(&offset[0], &count[0], &stride[0], NULL, dt, &v[0], NULL, 0);
+		} else {
+			for (size_t j=0; j<source[src].layers.size(); j++) {
+				offset[source[src].m_dims[2]] = source[src].layers[j];
+				source[src].m_array->Read(&offset[0], &count[0], NULL, NULL, dt, &v[j], NULL, 0);
+			}
+		}
+		if (source[src].m_hasNA) {
+			std::replace(v.begin(), v.end(), source[src].m_missing_value, (double)NAN);
+		}
+		for (size_t i=0; i<nl; i++) {
+			out[outstart+i].push_back(v[i]);
+		}
+	}
+
+	readStopMulti(src);	
 	return true;
 }
 
 
+
+
+bool SpatRaster::writeStartMulti(SpatOptions &opt, const std::vector<std::string> &srcnames) {
+
+	if (!hasValues()) {
+		setError("there are no cell values");
+		return false;
+	}
+
+	std::string filename = opt.get_filename();	
+	if (filename.empty()) {
+		setError("empty filename");
+		return(false);
+	} 
+	// assure filename won't be used again
+	opt.set_filenames({""});
+	std::string driver = "netCDF";
+/*
+	std::string driver = opt.get_filetype();
+	getGDALdriver(filename, driver);
+	if (driver.empty()) {
+		setError("cannot guess file type from filename");
+		return(false);
+	}
+	if (driver != "netCDF") {
+		if (driver.empty()) {
+			setError("multi-dim only implemented for netCDF");
+			return(false);
+		}
+	}
+*/
+	
+    GDALDriver *poDriver;
+    poDriver = GetGDALDriverManager()->GetDriverByName(driver.c_str());
+
+	GDALDataset *poDS;
+    poDS = poDriver->CreateMultiDimensional(filename.c_str(), NULL, NULL);
+	if (poDS == NULL) {
+		setError("failed writing "+ driver + " file");
+		GDALClose( (GDALDatasetH) poDS );
+		return false;
+	}
+
+    auto rg = poDS->GetRootGroup();
+	
+	std::vector<std::shared_ptr<GDALDimension>> dim_ptrs;
+	auto dt = GDALExtendedDataType::Create(GDT_Float64);
+
+
+	size_t nz = nlyr();
+	size_t ny = nrow();
+	size_t nx = ncol();
+	dim_ptrs.push_back(rg->CreateDimension("Z", "", "", nz));
+	dim_ptrs.push_back(rg->CreateDimension("Y", "", "", ny));
+	dim_ptrs.push_back(rg->CreateDimension("X", "", "", nx));
+
+
+    auto var = rg->CreateMDArray("Z", {dim_ptrs[0]}, dt);
+    var = rg->OpenMDArray("Z");
+
+	std::vector<double> dvals(nz);
+	std::iota(dvals.begin(), dvals.end(), 0);
+
+	std::vector<size_t> count = {nz};
+	std::vector<GUInt64> start = {0};
+
+	var->Write(start.data(), count.data(), nullptr, nullptr, dt, &dvals[0]); 
+
+    var = rg->CreateMDArray("Y", {dim_ptrs[1]}, dt);
+	yFromRow(dvals);
+	count = {ny};
+	var->Write(start.data(), count.data(), nullptr, nullptr, dt, &dvals[0]); 
+
+    var = rg->CreateMDArray("X", {dim_ptrs[2]}, dt);
+	xFromCol(dvals);
+	count = {nx};
+	var->Write(start.data(), count.data(), nullptr, nullptr, dt, &dvals[0]); 
+	
+	std::string vname = source[0].source_name.empty() ? "array" : source[0].source_name;
+	
+    var = rg->CreateMDArray(vname, dim_ptrs, GDALExtendedDataType::Create(GDT_Float64));
+	
+
+	std::string wkt = source[0].srs.wkt;
+	if (!wkt.empty()) {
+		OGRSpatialReference *srs = NULL;
+		srs = new OGRSpatialReference;
+		const char *cp = wkt.c_str();
+		srs->importFromWkt(cp);
+		if (srs != NULL) {
+			if (!var->SetSpatialRef(srs)) {
+				addWarning("failed to assign CRS to array");
+			}
+			CPLFree(srs);
+		}
+	}
+
+	source[0].m_array = var;
+	source[0].gdalconnection = poDS;
+
+	return true;
+}
+
+bool SpatRaster::writeValuesMulti(std::vector<double> &vals, size_t startrow, size_t nrows, size_t startcol, size_t ncols){
+	SpatOptions opt;
+	std::vector<GUInt64> start = {0, 0, 0};
+	std::vector<size_t> count = {nlyr(), nrow(), ncol()};
+	source[0].m_array->Write(start.data(), count.data(), nullptr, nullptr, GDALExtendedDataType::Create(GDT_Float64), &vals[0]); 
+	return true;
+}
+
+bool SpatRaster::writeStopMulti() {
+	//GDALMDArrayRelease(
+	source[0].m_array.reset();
+	GDALClose( source[0].gdalconnection );
+	return true;
+}
+
 #else
 
-*/
 
-bool SpatRaster::constructFromFileMulti(std::string fname, std::vector<int> sub, std::vector<std::string> subname, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<size_t> xyz) {
-	setError("multidim is not supported by GDAL < 3.1");
+
+bool SpatRaster::constructFromFileMulti(std::string fname, std::vector<int> subds, std::vector<std::string> subname, std::vector<std::string> drivers, std::vector<std::string> options, std::vector<int> dims, bool noflip, bool guessCRS, std::vector<std::string> domains) {
+	setError("multidim is not supported with GDAL < 3.4 or on 32-bit systems");
 	return false;
 }
 
 bool SpatRaster::readStartMulti(size_t src) {
-	setError("multidim is not supported by GDAL < 3.1");
 	return false;
 }
+
 bool SpatRaster::readStopMulti(size_t src) {
-	setError("multidim is not supported by GDAL < 3.1");
 	return false;
 }
 
-
-bool SpatRaster::readValuesMulti(std::vector<double> &out, size_t src, size_t row, size_t nrows, size_t col, size_t ncols) {
-	setError("multidim is not supported by GDAL < 3.1");
+bool SpatRaster::readChunkMulti(std::vector<double> &data, size_t src, size_t row, size_t nrows, size_t col, size_t ncols) {
 	return false;
 }
 
+bool SpatRaster::readRowColMulti(size_t src, std::vector<std::vector<double>> &out, size_t outstart, std::vector<int64_t> &rows, const std::vector<int64_t> &cols) {
+	return false;
+}
 
-//#endif
+bool SpatRaster::writeStartMulti(SpatOptions &opt, const std::vector<std::string> &srcnames) {
+	return false;
+}
+
+bool SpatRaster::writeValuesMulti(std::vector<double> &vals, size_t startrow, size_t nrows, size_t startcol, size_t ncols){
+	return false;
+}
+
+bool SpatRaster::writeStopMulti() {
+	return false;
+}
+
+#endif
+
+
+std::vector<double> SpatRaster::readValuesMulti(size_t src, size_t row, size_t nrows, size_t col, size_t ncols, int lyr) {
+
+	Rcpp::Rcout << "readValuesMulti\n";
+	std::vector<double> out;
+	if (lyr < 0) {
+		if (!readStartMulti(src)) {
+			return out;
+		}
+		readChunkMulti(out, src, row, nrows, col, ncols);
+		readStopMulti(src);
+		return out;
+	} else {
+		Rcpp::Rcout << "empty\n";
+		return out;
+	}
+}
+
+
+
+void getSampleRowCol2(std::vector<int64_t> &oldrow, std::vector<int64_t> &oldcol, size_t nrows, size_t ncols, size_t snrow, size_t sncol) {
+
+	double rf = nrows / (double)(snrow);
+	double cf = ncols / (double)(sncol);
+	//double rstart = std::floor(0.5 * rf);
+	//double cstart = std::floor(0.5 * cf);
+	double rstart = 0.5 * rf;
+	double cstart = 0.5 * cf;
+	
+	std::vector<int64_t> xcol, xrow;
+	xcol.reserve(sncol);
+	for (size_t i =0; i<sncol; i++) {
+        xcol.push_back(i * cf + cstart);
+	}
+	xrow.reserve(snrow);
+	for (size_t i =0; i<snrow; i++) {
+        xrow.push_back(i * rf + rstart);
+	}
+	oldrow.reserve(sncol * snrow);
+	oldcol.reserve(sncol * snrow);
+	for (size_t i =0; i<snrow; i++) {
+		for (size_t j=0; j<sncol; j++) {
+			oldrow.push_back(xrow[i]);
+			oldcol.push_back(xcol[j]);
+		}
+	}
+}
+
+
+std::vector<double> SpatRaster::readSampleMulti(size_t src, size_t srows, size_t scols, bool overview) {
+//	Rcpp::Rcout << "readSampleMulti\n";
+	std::vector<int64_t> colnr, rownr;
+	getSampleRowCol2(rownr, colnr, nrow(), ncol(), srows, scols);
+	std::vector<std::vector<double>> out(source[src].layers.size());
+	readRowColMulti(src, out, 0, rownr, colnr);
+    return out[0];
+}
+
+
+SpatRaster SpatRaster::writeRasterM(SpatOptions &opt) {
+	SpatRaster out;
+	
+	std::vector<std::string> fnames = opt.get_filenames();
+
+	if (!writeStartMulti(opt, {""})) {
+		out.setError(getError());
+		return out;
+	}
+	std::vector<double> vals = getValues(-1, opt);
+	if (!writeValuesMulti(vals, 0, nrow(), 0, ncol())) {
+		out.setError(getError());
+		return out;		
+	}
+	writeStopMulti();
+
+	std::vector<std::string> empty;
+	std::vector<int> dims = {-1};
+	
+	out.constructFromFileMulti(fnames[0], {0}, empty, empty, empty, dims, false, false, {""});
+	return out;
+}
+
+
+std::vector<bool> SpatRaster::is_multidim() {
+	std::vector<bool> out;
+	out.reserve(source.size());
+	for (size_t i=0; i<source.size(); i++) {
+		out.push_back(source[i].is_multidim);
+	}
+	return(out);
+}
+
+std::vector<std::vector<std::string>> SpatRaster::dim_names() {
+	std::vector<std::vector<std::string>> out(source.size());
+	for (size_t i=0; i<source.size(); i++) {
+		if (source[i].is_multidim) {
+			out[i] = source[i].m_names;
+		}
+	}
+	return(out);
+	
+}
+
+std::vector<std::vector<size_t>> SpatRaster::dim_order() {
+	std::vector<std::vector<size_t>> out(source.size());
+	for (size_t i=0; i<source.size(); i++) {
+		if (source[i].is_multidim) {
+			out[i] = source[i].m_order;
+		}
+	}
+	return out;
+}
+
+std::vector<std::vector<size_t>> SpatRaster::dim_size() {
+	std::vector<std::vector<size_t>> out(source.size());
+	for (size_t i=0; i<source.size(); i++) {
+		if (source[i].is_multidim) {
+			out[i] = source[i].m_size;
+		}
+	}
+	return out;
+}
 

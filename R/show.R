@@ -3,7 +3,6 @@
 # Version 1.0
 # License GPL v3
 
-
 win_basename <- function(x) {
 	if (isTRUE(grepl("Windows", utils::osVersion))) {
 		large <- nchar(x) > 256
@@ -200,8 +199,15 @@ setMethod ("show" , "SpatRaster",
 		cat("class       :" , class(object), "\n")
 
 		d <- dim(object)
-		cat("dimensions  : ", d[1], ", ", d[2], ", ", d[3], "  (nrow, ncol, nlyr)\n", sep="" )
+		cat("size        : ", d[1], ", ", d[2], ", ", d[3], "  (nrow, ncol, nlyr)\n", sep="" )
 		#cat ("ncell       :" , ncell(object), "\n")
+
+		nsr <- nsrc(object)
+		if ((nsr == 1) && (object@pntr$is_multidim)) {
+			dnms <- paste(rev(object@pntr$dim_names()[[1]]), collapse=", ")
+			dsz <- paste(rev(object@pntr$dim_size()[[1]]), collapse=", ")
+			cat("dimensions  : ", dnms, " (", dsz, "}\n", sep="" )
+		}
 
 		xyres <- res(object)
 		cat("resolution  : " , xyres[1], ", ", xyres[2], "  (x, y)\n", sep="")
@@ -241,7 +247,6 @@ setMethod ("show" , "SpatRaster",
 				ln[b] <- paste(substr(ln[b], 1, mid), "~", substr(ln[b], nchar(ln[b])-mid+1, nchar(ln[b])), sep="")
 			}
 
-			nsr <- nsrc(object)
 			m <- inMemory(object)
 
 			f <- sources(object)
@@ -325,9 +330,19 @@ setMethod ("show" , "SpatRaster",
 				}
 			}
 			uts <- units(object)
-			hasunits <- !all(uts == "")
-			if (nl > mnr) {
-				uts <- c(uts[1:mnr], "...")
+			utsu <- unique(uts)
+			if (all(utsu == "")) {
+				uts <- utsu			
+				hasunits <- FALSE
+			} else {
+				hasunits <- TRUE
+				if (length(utsu) > 1) {
+					if (nl > mnr) {
+						uts <- c(uts[1:mnr], "...")
+					} 
+				} else {
+					uts <- utsu
+				}
 			}
 
 			hMM <- hasMinMax(object)
@@ -371,9 +386,16 @@ setMethod ("show" , "SpatRaster",
 				}
 				u8 <- Encoding(ln) == "UTF-8"
 				wln <- nchar(ln)
+
+				if (isTRUE((length(uts) == 1) && (nl > 1))) {
+					nu <- 1
+				} else {
+					nu <- nchar(uts)
+				}
+
 				if (any(u8)) {
 					# for Chinese: wln <- wln + u8 * wln
-					w <- pmax(wln, nchar(minv), nchar(maxv), nchar(uts), na.rm = TRUE)
+					w <- pmax(wln, nchar(minv), nchar(maxv), nu, na.rm = TRUE)
 					m <- rbind(paste0(rep(" ", max(wln)), collapse=""), minv, maxv)
 					if (hasunits) m <- rbind(m, uts)
 					# a loop because "width" is not recycled by format
@@ -383,7 +405,7 @@ setMethod ("show" , "SpatRaster",
 						m[1,i] <- paste0(paste0(rep(" ", addsp), collapse=""), ln[i])
 					}
 				} else {
-					w <- pmax(wln, nchar(minv), nchar(maxv), nchar(uts), na.rm = TRUE)
+					w <- pmax(wln, nchar(minv), nchar(maxv), nu, na.rm = TRUE)
 					m <- rbind(ln, minv, maxv)
 					if (hasunits) m <- rbind(m, uts)
 					# a loop because "width" is not recycled by format
@@ -406,10 +428,20 @@ setMethod ("show" , "SpatRaster",
 					cat("min values  :", paste(m[2,], collapse=", "), "\n")
 					cat("max values  :", paste(m[3,], collapse=", "), "\n")
 				}
-				if (hasunits) cat("unit        :", paste(m[4,], collapse=", "), "\n")
-
+				if (hasunits) {
+					if ((length(uts) == 1) && (ncol(m) > 1)) {
+						cat("unit        :", uts, "\n")					
+					} else {
+						cat("unit        :", paste(m[4,], collapse=", "), "\n")
+					}
+				}
 			} else {
-				w <- pmax(nchar(ln), nchar(uts))
+				if (isTRUE((length(uts) == 1) && (nl > 1))) {
+					nu <- 1
+				} else {
+					nu <- nchar(uts)
+				}
+				w <- pmax(nchar(ln), nu)
 				m <- rbind(ln, uts)
 				for (i in 1:ncol(m)) {
 					m[,i]   <- format(m[,i], width=w[i], justify="right")
@@ -419,14 +451,48 @@ setMethod ("show" , "SpatRaster",
 				} else {
 					cat("names       :", paste(m[1,], collapse=", "), "\n")
 				}
-				if (hasunits) cat("unit        :", paste(m[2,], collapse=", "), "\n")
+				if (hasunits) {
+					if ((length(uts) == 1) && (ncol(m) > 1)) {
+						cat("unit        :", uts, "\n")					
+					} else {
+						cat("unit        :", paste(m[2,], collapse=", "), "\n")
+					}
+				}
 			}
 
+		}
+		if (object@pntr$hasDepth) {
+			dname <- depthName(object)
+			dunit <- depthUnit(object)
+			if (dname == "depth") {
+				if (dunit == "") {
+					dname <- ""
+				} else {
+					dname <- paste0("[", dunit, "]: ") 
+				}
+			} else {
+				if ((dunit == "") || (dunit == "unknown")) {
+					dname <- paste0(dname, ": ")
+				} else {
+					dname <- paste0(dname, " [", dunit, "]: ")
+				}
+			}
+			
+			label <- "depth       : "
+			dpth <- unique(depth(object))
+			if (length(dpth) > 1) {
+				rd <- range(dpth)
+				dpth <- paste0(label, paste(rd, collapse=" to "), " (", dname, length(dpth), " steps)")
+			} else {
+				dpth <- paste0(label, dpth)			
+			}
+			cat(dpth, "\n")		
 		}
 
 		if (object@pntr$hasTime) {
 			label <- "time        "
-			rtim <- range(time(object))
+			tms <- time(object)
+			rtim <- range(tms)
 			tims <- object@pntr$timestep
 			if (tims == "yearmonths") {
 				rtim <- format_ym(rtim)
@@ -442,14 +508,19 @@ setMethod ("show" , "SpatRaster",
 				label <- "time (raw)  "
 			}
 			utim <- unique(rtim)
+			add_steps <- FALSE
 			if (length(utim) > 1) {
 				ptim <- paste0(label, ": ", paste(rtim, collapse=" to "))
+				add_steps <- TRUE
 			} else {
 				ptim <- paste0(label, ": ", as.character(utim))
 			}
 			if (tims == "seconds") {
 				tz <- format(utim[1], format="%Z")
 				ptim <- paste(ptim, tz)
+			}
+			if (add_steps) {
+				ptim <- paste0(ptim, " (", length(unique(tms)), " steps)")
 			}
 			cat(ptim, "\n")
 		}

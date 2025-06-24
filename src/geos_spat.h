@@ -22,25 +22,37 @@
 # if GEOS_VERSION_MINOR >= 5
 #  define GEOS350
 # endif
-# if GEOS_VERSION_MINOR == 6
-#  if GEOS_VERSION_PATCH >= 1
-#   define GEOS361
-#  endif
+# if GEOS_VERSION_MINOR >= 6
+// for #1744
+//#  if GEOS_VERSION_PATCH >= 1
+#   define GEOS360
+//#  endif
 # endif
 # if GEOS_VERSION_MINOR >= 7
 #  define GEOS361
 #  define GEOS370
 # endif
 # if GEOS_VERSION_MINOR >= 8
-#  define GEOS361
-#  define GEOS370
 #  define GEOS380
+# endif
+# if GEOS_VERSION_MINOR >= 10
+#  define GEOS3100
+# endif
+# if GEOS_VERSION_MINOR >= 11
+#  define GEOS3110
+# endif
+# if GEOS_VERSION_MINOR >= 12
+#  define GEOS3120
 # endif
 #else
 # if GEOS_VERSION_MAJOR > 3
 #  define GEOS350
-#  define GEOS370
 #  define GEOS361
+#  define GEOS370
+#  define GEOS380
+#  define GEOS310
+#  define GEOS3110
+#  define GEOS3120
 # endif
 #endif
 
@@ -361,7 +373,7 @@ inline SpatVector vect_from_geos(std::vector<GeomPtr> &geoms , GEOSContextHandle
 	SpatVector v;
 
 	size_t ng = geoms.size();
-	std::vector<unsigned> gid, gp, hole;
+	std::vector<size_t> gid, gp, hole;
 	std::vector<double> x, y;
 	bool xok, yok;
 
@@ -470,8 +482,8 @@ inline SpatVector vect_from_geos(std::vector<GeomPtr> &geoms , GEOSContextHandle
 
 
 inline bool pointsFromGeom(GEOSContextHandle_t hGEOSCtxt, const GEOSGeometry* part, 
-const unsigned i, const unsigned j, std::vector<double> &x, std::vector<double> &y, 
-std::vector<unsigned> &gid, std::vector<unsigned> &gp, std::vector<unsigned> &hole, std::string &msg) {
+const size_t i, const size_t j, std::vector<double> &x, std::vector<double> &y, 
+std::vector<size_t> &gid, std::vector<size_t> &gp, std::vector<size_t> &hole, std::string &msg) {
 
 	const GEOSCoordSequence* crds = GEOSGeom_getCoordSeq_r(hGEOSCtxt, part); 		
 	int npts = -1;
@@ -508,8 +520,8 @@ std::vector<unsigned> &gid, std::vector<unsigned> &gp, std::vector<unsigned> &ho
 
 
 inline bool polysFromGeom(GEOSContextHandle_t hGEOSCtxt, const GEOSGeometry* part, 
-const unsigned i, const unsigned j, std::vector<double> &x, std::vector<double> &y, 
-std::vector<unsigned> &gid, std::vector<unsigned> &gp, std::vector<unsigned> &hole, std::string &msg) {
+const size_t i, const size_t j, std::vector<double> &x, std::vector<double> &y, 
+std::vector<size_t> &gid, std::vector<size_t> &gp, std::vector<size_t> &hole, std::string &msg) {
 	const GEOSGeometry* ring = GEOSGetExteriorRing_r(hGEOSCtxt, part);
 	const GEOSCoordSequence* crds = GEOSGeom_getCoordSeq_r(hGEOSCtxt, ring); 		
 	int npts = -1;
@@ -569,8 +581,8 @@ std::vector<unsigned> &gid, std::vector<unsigned> &gp, std::vector<unsigned> &ho
 }
 
 
-inline void emptyGeom(const unsigned i, std::vector<double> &x, std::vector<double> &y, 
-std::vector<unsigned> &gid, std::vector<unsigned> &gp, std::vector<unsigned> &hole) {
+inline void emptyGeom(const size_t i, std::vector<double> &x, std::vector<double> &y, 
+std::vector<size_t> &gid, std::vector<size_t> &gp, std::vector<size_t> &hole) {
 	x.push_back(NAN);
 	y.push_back(NAN);
 	gid.push_back(i);			
@@ -583,9 +595,9 @@ inline SpatVectorCollection coll_from_geos(std::vector<GeomPtr> &geoms, GEOSCont
 
 	SpatVectorCollection out;
 
-	std::vector<unsigned> pt_gid, pt_gp, pt_hole;
-	std::vector<unsigned> ln_gid, ln_gp, ln_hole;
-	std::vector<unsigned> pl_gid, pl_gp, pl_hole;
+	std::vector<size_t> pt_gid, pt_gp, pt_hole;
+	std::vector<size_t> ln_gid, ln_gp, ln_hole;
+	std::vector<size_t> pl_gid, pl_gp, pl_hole;
 	std::vector<double> pt_x, pt_y, ln_x, ln_y, pl_x, pl_y;
 	std::vector<long> pts_ids, lin_ids, pol_ids;
 	
@@ -646,7 +658,7 @@ inline SpatVectorCollection coll_from_geos(std::vector<GeomPtr> &geoms, GEOSCont
 
 		} else if (gt == "GeometryCollection") {
 
-			bool first=true;
+			bool firstlin=true, firstpol=true, firstpnt=true;
 			size_t kk = 0; // introduced for intersect
 			for(size_t j = 0; j<np; j++) {
 
@@ -682,18 +694,18 @@ inline SpatVectorCollection coll_from_geos(std::vector<GeomPtr> &geoms, GEOSCont
 							out.setError(msg);
 							return out;
 						}
-						if (track_ids && first) {
+						if (track_ids && firstpol) {
 							pol_ids.push_back(ids[i]);
-							first=false;
+							firstpol=false;
 						}
 					} else if (ggt == "Point" || ggt == "MultiPoint") {
 						if (!pointsFromGeom(hGEOSCtxt, part, f, k, pt_x, pt_y, pt_gid, pt_gp, pt_hole, msg)) {
 							out.setError(msg);
 							return out;
 						}
-						if (track_ids && first) {
+						if (track_ids && firstpnt) {
 							pts_ids.push_back(ids[i]);
-							first=false;
+							firstpnt=false;
 						}
 
 					} else if (ggt == "LineString" || ggt == "MultiLineString") {
@@ -701,9 +713,9 @@ inline SpatVectorCollection coll_from_geos(std::vector<GeomPtr> &geoms, GEOSCont
 							out.setError(msg);
 							return out;
 						}
-						if (track_ids && first) {
+						if (track_ids && firstlin) {
 							lin_ids.push_back(ids[i]);
-							first=false;
+							firstlin=false;
 						}
 
 					} else {

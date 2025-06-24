@@ -39,10 +39,10 @@ class SpatRasterStack {
 		std::vector<std::string> long_names;
 		std::vector<std::string> units;
 		SpatRasterStack() {};
-		SpatRasterStack(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options);
+		SpatRasterStack(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options, bool noflip, bool guessCRS, std::vector<std::string> domains);
 		SpatRasterStack(SpatRaster r, std::string name, std::string longname, std::string unit, bool warn=false);
-		std::vector<std::vector<std::vector<double>>> extractXY(std::vector<double> &x, std::vector<double> &y, std::string method);
-		std::vector<std::vector<std::vector<double>>> extractCell(std::vector<double> &cell);
+		std::vector<std::vector<std::vector<double>>> extractXY(std::vector<double> &x, std::vector<double> &y, std::string method, SpatOptions &opt);
+		std::vector<std::vector<std::vector<double>>> extractCell(std::vector<double> &cell, SpatOptions &opt);
 		std::vector<std::vector<std::vector<std::vector<double>>>> extractVector(SpatVector v, bool touches, bool small, std::string method, SpatOptions &opt);
 
 		std::vector<double> resolution();
@@ -62,10 +62,10 @@ class SpatRasterStack {
 		bool readStart();
 		bool readStop();
 		bool readAll();
-		unsigned nsds();
-		unsigned nrow();
-		unsigned ncol();
-		std::vector<unsigned> nlyr();
+		size_t nsds();
+		size_t nrow();
+		size_t ncol();
+		std::vector<size_t> nlyr();
 
 		std::string getSRS(std::string s);
 		bool push_back(SpatRaster r, std::string name, std::string longname, std::string unit, bool warn); 
@@ -76,20 +76,21 @@ class SpatRasterStack {
 
 
 		SpatRaster getsds(size_t i);
-		SpatRasterStack subset(std::vector<unsigned> x);
+		SpatRasterStack subset(std::vector<size_t> x);
 
 		SpatRasterStack crop(SpatExtent e, std::string snap, bool expand, SpatOptions &opt);
-		void replace(unsigned i, SpatRaster x, bool setname);
+		void replace(size_t i, SpatRaster x, bool setname);
 		SpatRaster collapse();
 		SpatRaster summary_numb(std::string fun, std::vector<double> add, bool narm, SpatOptions &opt);
 		SpatRaster summary(std::string fun, bool narm, SpatOptions &opt);
 		
 		
-		std::map<std::string, std::string> tags;
-		bool addTag(std::string name, std::string value);
-		bool removeTag(std::string name);
-		std::string getTag(std::string name);
-		std::vector<std::string> getTags();
+		//std::map<std::string, std::string> tags;
+		std::vector<std::vector<std::string>> tags;
+		bool addTag(std::string name, std::string value, std::string domain);
+		bool removeTag(std::string name, std::string domain);
+		std::string getTag(std::string name, std::string domain);
+		std::vector<std::vector<std::string>> getTags();
 		
 };
 
@@ -115,7 +116,7 @@ class SpatRasterCollection {
 //		SpatExtent extent;
 		std::vector<std::string> names;
 		SpatRasterCollection() {};
-		SpatRasterCollection(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options);
+		SpatRasterCollection(std::string fname, std::vector<int> ids, bool useids, std::vector<std::string> options, bool noflip, bool guessCRS, std::vector<std::string> domains);
 //		void setExtent();
 		SpatExtent getExtent();
 		
@@ -125,21 +126,30 @@ class SpatRasterCollection {
 		void resize(size_t n);
 		void push_back(SpatRaster r, std::string name);
 		void erase(size_t i); 
-		SpatRasterCollection crop(SpatExtent e, std::string snap, bool expand, std::vector<unsigned> use, SpatOptions &opt);
-		SpatRasterCollection cropmask(SpatVector v, std::string snap, bool touches, bool expand, std::vector<unsigned> use, SpatOptions &opt);
+		
+		void readBlock(SpatRaster &r, std::vector<std::vector<double>> &v, BlockSize bs, size_t i, std::vector<size_t> use, SpatOptions opt);
+		std::string make_vrt(std::vector<std::string> options, bool reverse, SpatOptions &opt);
+		
+		SpatRasterCollection crop(SpatExtent e, std::string snap, bool expand, std::vector<size_t> use, SpatOptions &opt);
+		SpatRasterCollection cropmask(SpatVector v, std::string snap, bool touches, bool expand, std::vector<size_t> use, SpatOptions &opt);
 		std::vector<int> getValueType(bool unique);
 
-		SpatRaster merge(bool first, bool narm, SpatOptions &opt);
+		SpatRaster merge(bool first, bool narm, int algo, std::string method, SpatOptions &opt);
 		SpatRaster morph(SpatRaster &x, SpatOptions &opt);
 		SpatRaster mosaic(std::string fun, SpatOptions &opt);
 		SpatRaster summary(std::string fun, SpatOptions &opt);
-		std::vector<unsigned> dims();
+		std::vector<size_t> dims();
 		std::vector<std::string> get_names();
 		void set_names(std::vector<std::string> nms);
 		std::vector<std::string> filenames();
 		
-
 		SpatRasterStack read_into(SpatRaster &tmp, size_t row, size_t nrows);
+
+		std::vector<std::vector<std::string>> tags;
+		bool addTag(std::string name, std::string value, std::string domain);
+		bool removeTag(std::string name, std::string domain);
+		std::string getTag(std::string name, std::string domain);
+		std::vector<std::vector<std::string>> getTags();
 
 };
 

@@ -67,6 +67,43 @@ time_as_seconds <- function(x) {
 }
 
 
+#setMethod("time", signature(x="SpatVector"),
+#	function(x, format="") {
+#		cls <- sapply(values(x[1,]), function(i) { a = class(i); a[length(a)] })
+#		i <- which(cls %in% c("Date", "POSIXt"))[1]
+#		if (is.na(i)) {
+#			return(rep(NA, nrow(x)))
+#		} else {
+#			d <- x[,i,drop=TRUE][,,drop=TRUE]
+#			if (format != "") {
+#				steps <- c("seconds", "days", "months", "years", "yearmonths")
+#				format <- match.arg(tolower(format), steps)
+#				if (!(format %in% steps)) {
+#					error("time", "not a valid time format")
+#				}
+#				tstep <- ifelse(cls[i]=="Date", "days", "seconds")
+#				if (format == "seconds") {
+#					if (tstep != "seconds") {
+#						error("time", "cannot extract seconds from Dates")
+#					}
+#					d
+#				} else if (format == "days") {
+#					as.Date(d)
+#				} else if (format == "yearmonths") {
+#					y <- as.integer(format(d, "%Y"))
+#					y + (as.integer(format(d, "%m"))-1)/12
+#				} else if (format == "months") {
+#					as.integer(format(d, "%m"))
+#				} else if (format == "years") {
+#					as.integer(format(d, "%Y"))
+#				}
+#			} else {
+#				d
+#			}
+#		}
+#	}
+#)
+
 setMethod("time", signature(x="SpatRaster"),
 	function(x, format="") {
 		if (!x@pntr$hasTime) {
@@ -74,7 +111,10 @@ setMethod("time", signature(x="SpatRaster"),
 		}
 		d <- x@pntr$time
 		tstep <- x@pntr$timestep
+		
 		if (format != "") {
+			steps <- c("seconds", "days", "months", "years", "yearmonths")
+			format <- match.arg(tolower(format), steps)
 			if ((format == "months") && (tstep == "years")) {
 				error("time", "cannot extract months from years-time")
 			} else if ((format == "years") && (tstep %in% c("months"))) {
@@ -87,28 +127,30 @@ setMethod("time", signature(x="SpatRaster"),
 				error("time", "cannot extract days from this type of time data")
 			}
 			tstep <- format
-		} 
+		} else if (tstep == "raw") {
+			return(d)
+		}
+		
+		
+		d <- strptime("1970-01-01", "%Y-%m-%d", tz="UTC") + d
 		if (tstep == "seconds") {
-			d <- strptime("1970-01-01", "%Y-%m-%d", tz="UTC") + d
 			tz <- x@pntr$timezone
 			if (!(tz %in% c("", "UTC"))) {
 				attr(d, "tzone") = tz
 			}
 			d
 		} else if (tstep == "days") {
-			d <- strptime("1970-01-01", "%Y-%m-%d", tz = "UTC") + d
 			as.Date(d)
 		} else if (tstep == "yearmonths") {
-			d <- strptime("1970-01-01", "%Y-%m-%d", tz = "UTC") + d
 			y <- as.integer(format(d, "%Y"))
 			y + (as.integer(format(d, "%m"))-1)/12
 		} else if (tstep == "months") {
-			d <- strptime("1970-01-01", "%Y-%m-%d", tz = "UTC") + d
 			as.integer(format(d, "%m"))
 		} else if (tstep == "years") {
-			d <- strptime("1970-01-01", "%Y-%m-%d", tz = "UTC") + d
 			as.integer(format(d, "%Y"))
-		} else { # raw
+#		} else if (tstep == "yearweeks") {
+#			yearweek(as.Date(d))
+		} else { # ???
 			d
 		}
 	}
@@ -144,6 +186,7 @@ setMethod("time<-", signature(x="SpatRaster"),
 			value <- tstep
 			tstep <- ""
 		}
+		x@pntr <- x@pntr$deepcopy()
 		if (is.null(value)) {
 			x@pntr$setTime(0[0], "remove", "")
 			return(x)
@@ -167,8 +210,8 @@ setMethod("time<-", signature(x="SpatRaster"),
 			if (tstep == "") stept <- "days"
 		} else if (inherits(value, "POSIXt")) {
 			if (tstep == "") stept <- "seconds"
-			tzone <- attr(value, "tzone")
-			if (is.null(tzone)) tzone = ""
+			tzone <- attr(value, "tzone")[1]
+			if (is.null(tzone)) tzone = "UTC"
 		} else if (inherits(value, "yearmon")) {
 			value <- as.numeric(value)
 			year <- floor(value)
@@ -216,6 +259,14 @@ setMethod("time<-", signature(x="SpatRaster"),
 				stept <- "raw"
 			}
 		}
+		if (any(is.na(value))) {
+			if (!all(is.na(value))) {
+				error("time<-", "NAs are not allowed in time values (unless they are all NA)")
+			}
+			value <- value[0]
+			stept <- "remove"
+		}
+		
 		if (!x@pntr$setTime(as.numeric(value), stept, tzone)) {
 			error("time<-", "cannot set these values")
 		}
@@ -231,6 +282,7 @@ setMethod("time<-", signature(x="SpatRasterDataset"),
 			value <- tstep
 			tstep <- ""
 		}
+
 		tstep <- rep_len(tstep, length(x))
 
 		if (is.list(value)) {
@@ -260,6 +312,34 @@ setMethod("depth", signature(x="SpatRaster"),
 	}
 )
 
+setMethod("depthName", signature(x="SpatRaster"),
+	function(x) {
+		x@pntr$get_depth_name()
+	}
+)
+
+setMethod("depthName<-", signature(x="SpatRaster"),
+	function(x, value) {
+		x <- deepcopy(x)
+		x@pntr$set_depth_name(value)
+		x
+	}
+)
+
+
+setMethod("depthUnit", signature(x="SpatRaster"),
+	function(x) {
+		x@pntr$get_depth_unit()
+	}
+)
+
+setMethod("depthUnit<-", signature(x="SpatRaster"),
+	function(x, value) {
+		x <- deepcopy(x)
+		x@pntr$set_depth_unit(value)
+		x
+	}
+)
 
 setMethod("depth<-", signature(x="SpatRaster"),
 	function(x, value)  {
@@ -268,6 +348,9 @@ setMethod("depth<-", signature(x="SpatRaster"),
 			return(x)
 		}
 		value <- as.numeric(value)
+		if (any(is.na(value))) {
+			error("depth<-", "NAs are not allowed")
+		}
 		if (! x@pntr$setDepth(value)) {
 			error("depth<-", "cannot set these  values")
 		}

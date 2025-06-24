@@ -144,18 +144,15 @@ setMethod("dots", signature(x="SpatVector"),
 
 	if (out$leg$geomtype == "points") {
 		points(x, col=out$main_cols, cex=out$cex, pch=pch, ...)
-		#if (!out$add) {
-		#	e <- out$lim
-		#}
-		out$leg$pch = pch
-		out$leg$pt.cex = out$cex
+		if (is.null(out$leg$pch)) out$leg$pch <- pch
+		if (is.null(out$leg$pt.cex)) out$leg$pt.cex = out$cex
 	} else if (out$leg$geomtype == "polygons") {
 		out <- .plotPolygons(x, out, density=out$leg$density, angle=out$leg$angle, lty=lty, lwd=lwd, ...)
 	} else {
 		# out <- .plotLines(x, out, ...)
 		lines(x, col=out$main_cols, lty=lty, lwd=lwd, ...)
-		out$leg$lwd = lwd
-		out$leg$lty = lty
+		if (is.null(out$leg$lwd)) out$leg$lwd = lwd
+		if (is.null(out$leg$lty)) out$leg$lty = lty
 	}
 	out
 }
@@ -197,11 +194,12 @@ setMethod("dots", signature(x="SpatVector"),
 
 .vect.legend.classes <- function(out) {
 
-	if (isTRUE(out$legend_sort)) {
-		out$uv <- sort(out$uv, decreasing=out$legend_sort_decreasing)
+	if (isTRUE(out$leg$sort)) {
+		out$uv <- sort(out$uv) # done by legend: decreasing=out$leg$reverse)
 	} else {
 		out$uv <- out$uv[!is.na(out$uv)]
 	}
+
 	ucols <- .getCols(length(out$uv), out$cols, out$alpha)
 
 	i <- match(out$v, out$uv)
@@ -263,7 +261,7 @@ setMethod("dots", signature(x="SpatVector"),
 		}
 	}
 
-	if (is.null(out$leg$loc)) out$leg$loc <- "right"
+#	if (is.null(out$leg$loc)) out$leg$loc <- "right"
 
 	brks <- seq(out$range[1], out$range[2], length.out = length(out$cols))
 	grps <- cut(out$v, breaks = brks, include.lowest = TRUE)
@@ -342,7 +340,7 @@ setMethod("dots", signature(x="SpatVector"),
 		if (!any(is.na(out$mar))) { graphics::par(mar=out$mar) }
 		plot(out$lim[1:2], out$lim[3:4], type="n", xlab="", ylab="", asp=out$asp, xaxs="i", yaxs="i", axes=FALSE, main="")
 		if (!is.null(out$background)) {
-			graphics::rect(out$lim[1], out$lim[3], out$lim[2], out$lim[4], col=out$background, border=TRUE)
+			graphics::rect(out$lim[1], out$lim[3], out$lim[2], out$lim[4], col=out$background, border=x$box)
 		}
 	}
 	if (isTRUE(out$blank)) return(out)
@@ -418,12 +416,14 @@ setMethod("dots", signature(x="SpatVector"),
 			lines(ext(graphics::par("usr")))		
 		}
 	}
+	
+	plot_main(out)
 
-	if (out$main != "") {
-		posx <- out$lim[1] + diff(out$lim[1:2])/2
-		text(posx, out$lim[4], out$main, pos=3, offset=out$line.main, cex=out$cex.main, 
-			font=out$font.main, col=out$col.main, xpd=TRUE)
-	}
+#	if (out$main != "") {
+#		posx <- out$lim[1] + diff(out$lim[1:2])/2
+#		text(posx, out$lim[4], out$main, pos=3, offset=out$line.main, cex=out$cex.main, 
+#			font=out$font.main, col=out$col.main, xpd=TRUE)
+#	}
 
 	if (!out$add) {
 		try(set.clip(out$lim, out$lonlat))
@@ -435,9 +435,18 @@ setMethod("dots", signature(x="SpatVector"),
 .prep.vect.data <- function(x, y, type=NULL, cols=NULL, mar=NULL, legend=TRUE,
 	legend.only=FALSE, levels=NULL, add=FALSE, range=NULL, fill_range=FALSE, breaks=NULL, breakby="eqint",
 	xlim=NULL, ylim=NULL, colNA=NA, alpha=NULL, axes=TRUE, buffer=TRUE, background=NULL,
-	pax=list(), plg=list(), ext=NULL, grid=FALSE, las=0, sort=TRUE, decreasing=FALSE, values=NULL,
-	box=TRUE, xlab="", ylab="", cex.lab=0.8, line.lab=1.5, yaxs="i", xaxs="i", main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, 
-	density=NULL, angle=45, border="black", dig.lab=3, cex=1, clip=TRUE, leg_i=1, asp=NULL, ...) {
+	pax=list(), plg=list(), ext=NULL, grid=FALSE, las=0, sort=TRUE, reverse=FALSE, values=NULL,
+	box=TRUE, xlab="", ylab="", cex.lab=0.8, line.lab=1.5, yaxs="i", xaxs="i", 
+	main="", cex.main=1.2, line.main=0.5, font.main=graphics::par()$font.main, col.main = graphics::par()$col.main, loc.main=NULL, 
+    sub = "", font.sub=1, cex.sub=0.8*cex.main, line.sub =1.75,  col.sub=col.main, loc.sub=NULL,
+	halo=FALSE, hc="white", hw=0.1, 
+	density=NULL, angle=45, border="black", dig.lab=3, cex=1, clip=TRUE, leg_i=1, asp=NULL, xpd=NULL, 
+#catch and kill
+	decreasing=FALSE, font=NULL,
+	...) {
+
+	# backwards compatibility
+	reverse <- isTRUE(reverse) || isTRUE(decreasing)
 
 	out <- list()
 	out$blank <- FALSE
@@ -483,7 +492,9 @@ setMethod("dots", signature(x="SpatVector"),
 			stopifnot(length(ylim) == 2)
 			out$lim[3:4] <- sort(ylim)
 		}
-	} 
+	} else if ((!add) && is.null(xpd)) {
+		xpd <- TRUE
+	}
 	out$ngeom <- nrow(x)
 	out$clip <- isTRUE(clip)
 
@@ -495,11 +506,25 @@ setMethod("dots", signature(x="SpatVector"),
 	}
 	
 	out$main <- main
-	if ((!is.expression(main)) && (is.null(out$main) || any(is.na(out$main)))) out$main <- ""
+#	if ((!is.expression(main)) && (is.null(out$main) || any(is.na(out$main)))) out$main <- ""
+
+	out$halo.main <- halo
+	out$halo.main.hc <- hc
+	out$halo.main.hw <- hw
+
 	out$cex.main  <- cex.main
+	out$loc.main  <- loc.main
 	out$font.main <- font.main
 	out$col.main  <- col.main
 	out$line.main <- line.main
+
+	out$sub <- sub
+	out$loc.sub <- loc.sub
+	out$cex.sub <- cex.sub
+	out$font.sub <- font.sub
+	out$col.sub <- col.sub
+	out$line.sub <- line.sub
+
 	out$dig.lab <- dig.lab
 
 	out$box <- isTRUE(box)
@@ -584,14 +609,15 @@ setMethod("dots", signature(x="SpatVector"),
 
 	if (!is.logical(sort)) {
 		out$uv <- unique(sort)
-		out$legend_sort <- FALSE
+		out$leg$sort <- FALSE
+		out$leg$reverse <- FALSE
 	} else {
 		out$uv <- unique(out$v)
 		if (is.factor(out$v)) {
 			out$uv <- levels(out$v)[levels(out$v) %in% out$uv]
 		}
-		out$legend_sort <- isTRUE(sort)
-		out$legend_sort_decreasing <- isTRUE(decreasing)
+		out$leg$sort <- isTRUE(sort)
+		out$leg$reverse <- isTRUE(reverse)
 	}
 
 	if (is.null(type)) {
@@ -630,16 +656,17 @@ setMethod("dots", signature(x="SpatVector"),
 	out$legend_only <- isTRUE(legend.only)
 	out$leg$leg_i <- leg_i
 
+	out$mar <- mar
+	out <- get_mar(out)
 
-	if (is.null(mar)) {
-		if (out$legend_draw) {
-			mar=c(3.1, 3.1, 2.1, 7.1)
-		} else {
-			mar=c(3.1, 3.1, 2.1, 2.1)
-		}
-	}
-	out$mar <- rep_len(mar, 4)
-
+#	if (is.null(mar)) {
+#		if (out$legend_draw) {
+#			mar=c(3.1, 3.1, 2.1, 7.1)
+#		} else {
+#			mar=c(3.1, 3.1, 2.1, 2.1)
+#		}
+#	}
+#	out$mar <- rep_len(mar, 4)
 	out$skipNA <- TRUE
 	if (!is.null(colNA)) {
 		if (!is.na(colNA)) {
@@ -651,15 +678,15 @@ setMethod("dots", signature(x="SpatVector"),
 		}
 	}
 
-	.plot.vect.map(x, out, ...)
+	.plot.vect.map(x, out, xpd=xpd, ...)
 }
 
 
 setMethod("plot", signature(x="SpatVector", y="character"),
-	function(x, y, col=NULL, type=NULL, mar=NULL, add=FALSE, legend=TRUE, axes=!add,
-	main, buffer=TRUE, background=NULL, grid=FALSE, ext=NULL, 
-	sort=TRUE, decreasing=FALSE, plg=list(), pax=list(), nr, nc, colNA=NA, 
-	alpha=NULL, box=axes, clip=TRUE, ...) {
+	function(x, y, col=NULL, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
+    main="", grid=FALSE, ext=NULL, sort=TRUE, reverse=FALSE, fun=NULL,
+	colNA=NA, alpha=NULL, nr, nc, add=FALSE, buffer=TRUE, background=NULL, 
+	box=axes, clip=TRUE, ...) {
 
 		old.mar <- graphics::par()$mar
 		on.exit(graphics::par(mar=old.mar))
@@ -713,7 +740,10 @@ setMethod("plot", signature(x="SpatVector", y="character"),
 
 			if (missing(col)) col <- NULL
 
-			out <- .prep.vect.data(x, y[i], type=type, cols=col, mar=mar, plg=plg, pax=pax, legend=isTRUE(legend), add=add, axes=axes, main=main[i], buffer=buffer, background=background, grid=grid, ext=ext, sort=sort, decreasing=decreasing, colNA=colNA, alpha=alpha, box=box, clip=clip, leg_i=i, ...)
+			out <- .prep.vect.data(x, y[i], type=type, cols=col, mar=mar, plg=plg, pax=pax, legend=isTRUE(legend), add=add, axes=axes, main=main[i], buffer=buffer, background=background, grid=grid, ext=ext, sort=sort, reverse=reverse, colNA=colNA, alpha=alpha, box=box, clip=clip, leg_i=i, ...)
+
+			add_more(fun, i)
+
 		}
 		invisible(out)
 	}
@@ -781,6 +811,18 @@ setMethod("plot", signature(x="SpatVectorCollection", y="missing"),
 		}
 		for (i in 1:nl) {
 			plot(x[i], main=main[i], mar=mar, ...)
+		}
+	}
+)
+
+setMethod("plot", signature(x="SpatVectorCollection", y="numeric"),
+	function(x, y, main, mar=NULL, ext=NULL, ...) {
+		y <- round(y)
+		if ((y > 0) && (y <= length(x))) {
+			if (is.null(ext)) ext <- ext(x)
+			plot(x[y], main=main, mar=mar, ext=ext, ...)
+		} else {
+			error("plot", "y should be between 1 and length(x)")
 		}
 	}
 )

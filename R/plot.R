@@ -158,14 +158,31 @@ setMethod("pairs", signature(x="SpatRaster"),
 	}
 )
 
+.textbox <- function(x, y=NULL, labels, col="black", hc="white", hw=0.1, ... ) {
+	xy <- grDevices::xy.coords(x, y)
+	hw <- hw[1]
+	n <- nchar(labels)
+	x0 <- hw * graphics::strwidth("A")
+	y0 <- hw * graphics::strheight("A")
+	x1 <- n * x0
+	v <- vect(cbind(xy$x + c(0, x1), xy$y), crs="local")
+	b <- buffer(v, y0)
+}
 
 
 .halo <- function(x, y=NULL, labels, col="black", hc="white", hw=0.1, ... ) {
-	xy <- grDevices::xy.coords(x, y)
+	if (!is.null(y)) { # recycle
+		xy <- grDevices::xy.coords(cbind(x, y))
+	} else {
+		xy <- grDevices::xy.coords(x, y)
+	}
+	hw <- hw[1]
 	xo <- hw * graphics::strwidth("A")
 	yo <- hw * graphics::strheight("A")
 	n <- nchar(labels)
-	theta <- seq(pi/4, 2*pi, length.out=8*hw*10)
+	fact <- 100 * max(1, hw*2)
+	
+	theta <- seq(pi/4, 2*pi, length.out=hw*fact)
 	for (i in theta) {
 		text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=hc, ... )
 	}
@@ -178,7 +195,7 @@ halo <- function(x, y=NULL, labels, col="black", hc="white", hw=0.1, ... ) {
 
 
 setMethod("text", signature(x="SpatRaster"),
-	function(x, labels, digits=0, halo=FALSE, ...) {
+	function(x, labels, digits=0, halo=FALSE, hc="white", hw=0.1, ...) {
 		if (missing(labels)) {
 			labels <- 1
 		}
@@ -202,8 +219,14 @@ setMethod("text", signature(x="SpatRaster"),
 		} else if (is.numeric(labels)) {
 			labels <- as.character(round(labels, digits=digits) )
 		}
-		if (halo) {
-			.halo(xy[,1], xy[,2], labels, ...)
+		if (length(labels) < nrow(xy)) {
+			labels <- rep(labels, nrow(xy))
+		}
+#		if (!overlap) {
+#			xy <- getLabelXY(xy, labels, cex)
+#		}
+		if (halo && (isTRUE(hw > 0))) {
+			.halo(xy[,1], xy[,2], labels, hc=hc, hw=hw, ...)
 		} else {
 			text(xy[,1], xy[,2], labels, ...)
 		}
@@ -212,7 +235,7 @@ setMethod("text", signature(x="SpatRaster"),
 
 
 setMethod("text", signature(x="SpatVector"),
-	function(x, labels, halo=FALSE, inside=FALSE, ...) {
+	function(x, labels, halo=FALSE, inside=FALSE, hc="white", hw=0.1, ...) {
 		if (missing(labels)) {
 			labels <- 1:nrow(x)
 		} else if (length(labels) == 1) {
@@ -229,8 +252,8 @@ setMethod("text", signature(x="SpatVector"),
 			}
 		}
 		xy <- geom(centroids(x, inside=inside))[,c("x","y"),drop=FALSE]
-		if (halo) {
-			.halo(xy[,1], xy[,2], labels, ...)
+		if (halo && (isTRUE(hw > 0))) {
+			.halo(xy[,1], xy[,2], labels, hc=hc, hw=hw, ...)
 		} else {
 			text(xy[,1], xy[,2], labels, ...)
 		}
@@ -314,7 +337,7 @@ shade <- function(slope, aspect, angle=45, direction=0, normalize=FALSE, filenam
 map.pal <- function(name, n=50, ...) { 
 	n <- round(n)
 	if (n < 1) {
-		error("map.pal", "n should be > 0")	
+		error("map.pal", "n should be >= 1")	
 	}
 	f <- system.file("colors/palettes.rds", package="terra")
 	v <- readRDS(f)
@@ -330,7 +353,8 @@ map.pal <- function(name, n=50, ...) {
 		}
 	} else if (name == "random") {
 		if (n > 433) {
-			error("map.pal", "you cannot get more than 433 random colors")
+			warning("map.pal", "you cannot get > 433 random colors; using n=433 instead")
+			n <- 433
 		}
 		s <- sample(grDevices::colors()[grep('gr(a|e)y', grDevices::colors(), invert = TRUE)], n)
 		rgb(t(grDevices::col2rgb(s))/255)

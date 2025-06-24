@@ -30,12 +30,14 @@ bool SpatRaster::readStart() {
 		}
 		if (source[i].memory) {
 			source[i].open_read = true;
-		} else if (source[i].multidim) {
+		} else if (source[i].is_multidim) {
 			if (!readStartMulti(i)) {
+				readStop();
 				return false;
 			}
 		} else {
 			if (!readStartGDAL(i)) {
+				readStop();
 				return false;
 			}
 		}
@@ -48,7 +50,7 @@ bool SpatRaster::readStop() {
 		if (source[i].open_read) {
 			if (source[i].memory) {
 				source[i].open_read = false;
-			} else if (source[i].multidim) {
+			} else if (source[i].is_multidim) {
 				readStopMulti(i);
 			} else {
 				readStopGDAL(i);
@@ -301,8 +303,10 @@ bool SpatRaster::readAll() {
 		if (!source[src].memory) {
 			readChunkGDAL(source[src].values, src, row, nrows, col, ncols);
 			source[src].memory = true;
+			source[src].extset = false;
+			source[src].flipped = false;
 			source[src].filename = "";
-			std::iota(source[src].layers.begin(), source[src].layers.end(), 0);
+			std::iota(source[src].layers.begin(), source[src].layers.end(), 0);			
 		}
 		if (src > 0) {
 			if (!source[0].combine_sources(source[src])) {

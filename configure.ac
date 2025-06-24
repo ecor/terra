@@ -19,15 +19,15 @@ RVER_MAJOR=`echo ${RVER} | cut  -f1 -d"."`
 RVER_MINOR=`echo ${RVER} | cut  -f2 -d"."`
 RVER_PATCH=`echo ${RVER} | cut  -f3 -d"."`
 
-if test [$RVER_MAJOR = "development"]; then
+#if test [$RVER_MAJOR = "development"]; then
     CXX=`"${RBIN}" CMD config CXX`
-else
-    if test [$RVER_MAJOR -lt 3] -o [$RVER_MAJOR -eq 3 -a $RVER_MINOR -lt 3]; then
-        AC_MSG_ERROR([terra is not compatible with R versions before 3.3.0])
-    else
-        CXX=`"${RBIN}" CMD config CXX`
-    fi
-fi
+#else
+#    if test [$RVER_MAJOR -lt 3] -o [$RVER_MAJOR -eq 3 -a $RVER_MINOR -lt 3]; then
+#        AC_MSG_ERROR([terra is not compatible with R versions before 3.3.0])
+#    else
+#        CXX=`"${RBIN}" CMD config CXX`
+#    fi
+#fi
 
 # pick all flags for testing from R
 : ${CC=`"${RBIN}" CMD config CC`}
@@ -107,7 +107,8 @@ else
    AC_MSG_RESULT(yes)
 fi
 
-if test [${GDAL_MAJ_VER} -eq 3] -a [${GDAL_MIN_VER} -eq 6] -a [${GDAL_PATCH_VER} -eq 0] ; then
+#if test [${GDAL_MAJ_VER} -eq 3] -a [${GDAL_MIN_VER} -eq 6] -a [${GDAL_PATCH_VER} -eq 0] ; then
+if test "${GDAL_VERSION}" = "3.6.0" ; then
   AC_MSG_ERROR([GDAL version 3.6.0 has been withdrawn, please update GDAL])
 fi
 
@@ -760,6 +761,87 @@ rm -f geos_test errors.txt geos_test.cpp
 #
 AC_SUBST([PKG_LIBS], ["${PROJ_LIBS} ${PKG_LIBS}"])
 
+
+#### Intel TBB, following the quanteda package
+# Default to no TBB
+TBBFLAGS=
+TBBLIBS=
+
+
+# If tbb/tbb.h and libtbb are found, define TBB and add -ltbb
+  AC_MSG_CHECKING([Intel TBB exists:])
+  TBB_EXISTS=no
+  pkg-config --exists tbb >/dev/null 2>&1
+  SH_TBB_EXISTS=`echo $?`
+  if test ${SH_TBB_EXISTS} = 0 ; then
+    TBB_EXISTS=yes
+    AC_MSG_RESULT(yes)
+  else 
+    if test ${SH_TBB_EXISTS} = 1 ; then
+      TBB_EXISTS=no
+      AC_MSG_RESULT(no)
+      AC_MSG_WARN([to support parallel processing install TBB devel or update the PKG_CONFIG_PATH environment variable])
+    else
+      TBB_EXISTS=no
+      AC_MSG_RESULT(no)
+      AC_MSG_WARN([pkg-config not found; install pkg-config to auto-detect Intel TBB; assumed absent])
+    fi
+  fi
+
+  if test ${TBB_EXISTS} = yes ; then
+    AC_SUBST(TBBFLAGS, ["-DTBB $(pkg-config --cflags tbb)"])
+    AC_SUBST(TBBLIBS, ["$(pkg-config --libs tbb)"])
+
+    AC_MSG_CHECKING([tbb available for compiling and linking:])
+[cat > libtbb_test.cpp <<_EOCONF
+#include <tbb/tbb.h>
+
+int main() { 
+  int H = 1000;
+  tbb::concurrent_vector<bool> v(H, false);
+  tbb::parallel_for(tbb::blocked_range<int>(0, H), [&](tbb::blocked_range<int> r) {
+    for (int h = r.begin(); h < r.end(); ++h) {
+        v[h] = true;
+    }
+  });
+  if (std::find(v.begin(), v.end(), false) == v.end()) { // all true
+    return 0;
+  } else {
+    return 1;
+  }
+}
+_EOCONF]
+    ${CXX} ${CXXFLAGS} ${TBBFLAGS} -o libtbb_test libtbb_test.cpp ${TBBLIBS} 2> errors.txt
+
+    if test `echo $?` -ne 0 ; then
+      AC_MSG_RESULT(no)
+      AC_MSG_WARN([parallel computing is disabled because the TBB devel package is absent])
+      AC_SUBST(TBBFLAGS, [""])
+      AC_SUBST(TBBLIBS, [""])
+    else
+      ./libtbb_test >/dev/null 2>&1
+      if test `echo $?` -ne 0 ; then
+        AC_MSG_RESULT(no)
+        AC_MSG_WARN([parallel computing is disabled because TBB did not load])
+        AC_SUBST(TBBFLAGS, [""])
+        AC_SUBST(TBBLIBS, [""])
+      else
+        AC_MSG_RESULT(yes)
+	    TBB_CFLAGS="${TBB_CFLAGS} -DHAVE_TBB"  
+      fi
+    fi
+    rm -f libtbb_test.cpp libtbb_test errors.txt
+  fi
+
+# Now substitute these variables in src/Makevars.in to create src/Makevars
+
+PKG_CPPFLAGS="${PKG_CPPFLAGS} ${TBB_CFLAGS}"
+AC_SUBST([PKG_LIBS], ["${TBBLIBS} ${PKG_LIBS}"])
+
+##netcdf 
+# AC_SUBST([PKG_LIBS], ["$(nc-config --libs) ${PKG_LIBS}"])
+
+####
 #
 # concluding substitution
 #

@@ -3,34 +3,41 @@
 \alias{metags}
 \alias{metags,SpatRaster-method}
 \alias{metags,SpatRasterDataset-method}
+\alias{metags,SpatRasterCollection-method}
 \alias{metags<-}
 \alias{metags<-,SpatRaster-method}
 \alias{metags<-,SpatRasterDataset-method}
+\alias{metags<-,SpatRasterCollection-method}
 
   
 \title{Set or get metadata}
 
 \description{
-You can set arbitrary metadata to (layers of) a SpatRaster using "name=value" tags. When wring a SpatRaster to a GTiff file, these tags are written to file.
+You can set arbitrary metadata to (layers of) a SpatRaster using "name=value", or "domain:name=value" tags or a two (name, value) or three column (name, value, domain) matrix or data.frame. 
 }
 
 \usage{
-\S4method{metags}{SpatRaster}(x, layer=NULL)<-value
+\S4method{metags}{SpatRaster}(x, layer=NULL, domain="")<-value
 
 \S4method{metags}{SpatRaster}(x, layer=NULL, name=NULL)
+
+\S4method{metags}{SpatRasterDataset}(x, dataset=NULL)<-value
+
+\S4method{metags}{SpatRasterDataset}(x, dataset=NULL, name=NULL)
+
 }
 
 \arguments{
 \item{x}{SpatRaster}
-\item{layer}{NULL or positive integer. If the value is NULL, the tags assigned or returned are for the SpatRaster. Otherwise for the layer number(s)}
-
+\item{layer}{NULL, positive integer or character. If the value is NULL, the tags assigned or returned are for the SpatRaster. Otherwise for the layer number(s) or name(s)}
+\item{domain}{character. Only used if not specified by \code{value}. Use "" for the default domain. Depending on the file format used this may the only domain supported when writing files}
 \item{name}{character}
-
-\item{value}{character of "name=value" or two-column matrix}
+\item{value}{character of "name=value" or two-column (name, value) or three-column (name, value, domain) matrix or data.frame}
+\item{dataset}{NULL, positive integer or character. If the value is NULL, the tags assigned or returned are for the SpatRasterDataset/SpatRasterCollection. Otherwise for the datset number(s) or name(s)}
 }
 
 \value{
-SpatRaster (\code{metags<-}), or named character (\code{metags})
+SpatRaster (\code{metags<-}), or data.frame
 }
 
 \examples{
@@ -42,9 +49,8 @@ metags(r)
 metags(r) <- c("another_tag=another_value", "one more=this value")
 metags(r)
 
-metags(r) <- c(another_tag="44", `one more`="that value")
+metags(r) <- cbind("test", "this", "mydomain")
 metags(r)
-
 
 metags(r, name="two")
 
@@ -53,7 +59,7 @@ metags(r) <- cbind("one", "")
 metags(r) <- "two="
 metags(r)
 
-# remove all metags
+# remove all tags
 metags(r) <- NULL
 metags(r)
 }

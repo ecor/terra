@@ -107,7 +107,7 @@ class SpatOptions {
 		bool todisk = false;
 		double memmax = -1;
 		double memmin = 134217728; // 1024^3 / 8
-		double memfrac = 0.6;
+		double memfrac = 0.5;
 		double tolerance = 0.1;
 		std::vector<double> offset = {0};
 		std::vector<double> scale = {1};
@@ -117,6 +117,9 @@ class SpatOptions {
 		SpatOptions(const SpatOptions &opt);
 		SpatOptions deepCopy();
 		virtual ~SpatOptions(){}
+
+		bool parallel = false;
+		std::vector<std::string> tags;
 
 		size_t ncopies = 4;
 		size_t minrows = 1;
@@ -208,6 +211,11 @@ class SpatOptions {
 		std::vector<double> get_scale();
 
 		SpatMessages msg;
+		bool hasWarning() {return msg.has_warning;}
+		bool hasError() {return msg.has_error;}
+		std::vector<std::string> getWarnings() { return msg.getWarnings();}
+		std::string getError() { return msg.getError();}
+
 };
 
 
@@ -308,6 +316,7 @@ class SpatSRS {
 #endif		
 */
 		double to_meter();
+		bool m_dist(double &m, bool lonlat, std::string unit);
 
 		std::string get(std::string x) {
 			return (x == "proj4" ? proj4 : wkt); 
@@ -329,13 +338,15 @@ class SpatSRS {
 		bool is_same(SpatSRS other, bool ignoreempty);
 
 
-		bool is_lonlat(); // as below, but using GDAL
-
 		bool is_lonlat_text() {
 			bool b1 = proj4.find("longlat") != std::string::npos;
 			bool b2 = proj4.find("epsg:4326") != std::string::npos;
 			return (b1 | b2);
 		}
+
+		bool is_lonlat(); // as above, but using GDAL
+		bool is_not_lonlat();
+
 
 		bool could_be_lonlat(SpatExtent e) {
 			bool b = is_lonlat();

@@ -9,6 +9,12 @@ e <- terra::extract(r, vct, ID = FALSE, fun=sum)
 expect_equal(e[,1], c(0.5121819, 0.81227813))
 
 
+# multiple sources and band subset/order
+s <- rast(system.file("ex/logo.tif", package="terra"))
+e <- extract(c(s[[2:3]], s/10, s[[3:1]]), cbind(41.5, 52.5))
+expect_equal(as.vector(unlist(e)), c(146, 185, 13.7, 14.6, 18.5, 185, 146, 137))
+ 
+
 f <- system.file("ex/lux.shp", package="terra")
 y <- vect(f)[1:2,]
 
@@ -227,3 +233,17 @@ values(x) <- rbind(11:13)
 xy <- data.frame(x=-1:1,y=-1:1)
 e <- extract(x, xy, ID=TRUE, layer=1:3)
 expect_equal(e$value, 11:13)
+
+
+r_win <- terra::rast(system.file("ex/elev.tif", package = "terra"), win = v[12])
+pnt <- centroids(v[12], inside = TRUE)
+expect_equal(extract(r, pnt, ID=FALSE)[[1]], 307)
+expect_equal(extract(r_win, pnt, ID=FALSE)[[1]], 307)
+
+xy <- data.frame(lon=c(50,80), lat=c(30, 60))
+e <- extractRange(s, xy, first=1:2, last=3:2, lyr_fun=sum)
+expect_equal(e, c(522, 67))
+e <- extractRange(s, xy, first=1:2, last=3:2, lyr_fun=sum, ID=T)
+expect_equal(e, data.frame(ID=1:2, value=c(522, 67)))
+ 
+

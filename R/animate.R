@@ -6,7 +6,8 @@ function(x, pause=0.25, main, range, maxcell=50000, n=1, ...) {
 		main <- names(x)
 	}
 
-	x <- spatSample(x, size=maxcell, method="regular", as.raster=TRUE, warn=FALSE)
+#	x <- spatSample(x, size=maxcell, method="regular", as.raster=TRUE, warn=FALSE)
+	x <- sampleRaster(x, maxcell, method="regular", replace=FALSE, ext=NULL, warn=FALSE, overview=TRUE)
 
 	if (missing(range)) {
 		mnmx <- minmax(x)
@@ -20,6 +21,7 @@ function(x, pause=0.25, main, range, maxcell=50000, n=1, ...) {
     while (reps < n) {
         plot(x[[i]], main = main[i], range=range, maxcell=Inf, ...)
         grDevices::dev.flush()
+	grDevices::dev.hold()
         Sys.sleep(pause)
         i <- i + 1
         if (i > nl) {

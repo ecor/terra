@@ -1,46 +1,47 @@
 
-buffer2 <- function(x, width, quadsegs=10) {
-	if (is.character(width)) {
-		if (!(width %in% names(x))) {
-			error("buffer2", paste(width, "is not a field in x"))
-		}
-		width <- x[[width, drop=TRUE]]
-	}
-	if (!is.numeric(width)) {
-		error("buffer2", "width is not numeric")
-	}
-	x@pntr <- x@pntr$buffer2(width, quadsegs)
-	messages(x, "buffer2")
-}
+
+# buffer2 <- function(x, width, quadsegs=10) {
+	# if (is.character(width)) {
+		# if (!(width %in% names(x))) {
+			# error("buffer2", paste(width, "is not a field in x"))
+		# }
+		# width <- x[[width, drop=TRUE]]
+	# }
+	# if (!is.numeric(width)) {
+		# error("buffer2", "width is not numeric")
+	# }
+	# x@pntr <- x@pntr$buffer2(width, quadsegs)
+	# messages(x, "buffer2")
+# }
 
 
-buffer3 <- function(x, width, quadsegs=10) {
-	if (is.character(width)) {
-		if (!(width %in% names(x))) {
-			error("buffer3", paste(width, "is not a field in x"))
-		}
-		width <- x[[width, drop=TRUE]]
-	}
-	if (!is.numeric(width)) {
-		error("buffer3", "width is not numeric")
-	}
-	x@pntr <- x@pntr$buffer3(width, quadsegs)
-	messages(x, "buffer3")
-}
+# buffer3 <- function(x, width, quadsegs=10) {
+	# if (is.character(width)) {
+		# if (!(width %in% names(x))) {
+			# error("buffer3", paste(width, "is not a field in x"))
+		# }
+		# width <- x[[width, drop=TRUE]]
+	# }
+	# if (!is.numeric(width)) {
+		# error("buffer3", "width is not numeric")
+	# }
+	# x@pntr <- x@pntr$buffer3(width, quadsegs)
+	# messages(x, "buffer3")
+# }
 
-buffer4 <- function(x, width, quadsegs=10) {
-	if (is.character(width)) {
-		if (!(width %in% names(x))) {
-			error("buffer4", paste(width, "is not a field in x"))
-		}
-		width <- x[[width, drop=TRUE]]
-	}
-	if (!is.numeric(width)) {
-		error("buffer4", "width is not numeric")
-	}
-	x@pntr <- x@pntr$buffer4(width, quadsegs)
-	messages(x, "buffer4")
-}
+# buffer4 <- function(x, width, quadsegs=10) {
+	# if (is.character(width)) {
+		# if (!(width %in% names(x))) {
+			# error("buffer4", paste(width, "is not a field in x"))
+		# }
+		# width <- x[[width, drop=TRUE]]
+	# }
+	# if (!is.numeric(width)) {
+		# error("buffer4", "width is not numeric")
+	# }
+	# x@pntr <- x@pntr$buffer4(width, quadsegs)
+	# messages(x, "buffer4")
+# }
 
 roundtrip <- function(x, coll=FALSE) {
 	if (coll) {
@@ -350,26 +351,16 @@ setMethod("crop", signature(x="SpatVector", y="ANY"),
 
 
 
-setMethod("convHull", signature(x="SpatVector"),
-	function(x, by="") {
-		x@pntr <- x@pntr$hull("convex", by[1])
-		messages(x, "convHull")
+
+
+setMethod("hull", signature(x="SpatVector"),
+	function(x, type="convex", by="", param=1, allowHoles=TRUE, tight=TRUE) {
+		type <- match.arg(tolower(type), c("convex", "rectangle", "circle", "concave_ratio", "concave_length"))
+		x@pntr <- x@pntr$hull(type, by[1], param, allowHoles, tight)
+		messages(x, "hull")
 	}
 )
 
-setMethod("minRect", signature(x="SpatVector"),
-	function(x, by="") {
-		x@pntr <- x@pntr$hull("minrot", by[1])
-		messages(x, "minRect")
-	}
-)
-
-setMethod("minCircle", signature(x="SpatVector"),
-	function(x, by="") {
-		x@pntr <- x@pntr$hull("circle", by[1])
-		messages(x, "minCircle")
-	}
-)
 
 
 setMethod("disagg", signature(x="SpatVector"),
@@ -410,8 +401,8 @@ setMethod("spin", signature(x="SpatVector"),
 
 
 setMethod("delaunay", signature(x="SpatVector"),
-	function(x, tolerance=0, as.lines=FALSE) {
-		x@pntr <- x@pntr$delaunay(tolerance, as.lines)
+	function(x, tolerance=0, as.lines=FALSE, constrained=FALSE) {
+		x@pntr <- x@pntr$delaunay(tolerance, as.lines, constrained)
 		messages(x, "delaunay")
 	}
 )
@@ -706,8 +697,8 @@ setMethod("split", signature(x="SpatVector", f="ANY"),
 )
 
 
-setMethod("split", signature(x="SpatVector", f="SpatVector"),
-	function(x, f) {
+#setMethod("split", signature(x="SpatVector", f="SpatVector"),
+badsplit <- function(x, f) {
 		if (geomtype(x) != "polygons") error("split", "first argument must be polygons")
 		if (!(geomtype(f) %in% c("lines", "polygons"))) {
 			error("split", "argument 'f' must have a lines or polygons geometry")
@@ -719,12 +710,14 @@ setMethod("split", signature(x="SpatVector", f="SpatVector"),
 			warn("split", "x and f do not intersect")
 			return(x)
 		}
-		r <- r[rowSums(r) > 0, ,drop=FALSE]
-		y <- x	
+		#r <- r[rowSums(r) > 0, ,drop=FALSE]
+		ri <- which(rowSums(r) > 0)
+		y <- x[ri,]	
+		r <- r[ri, , drop=FALSE]
 		values(y) <- NULL
-		ss <- vector("list", nrow(r))
+		ss <- vector("list", nrow(y))
 		if (geomtype(f) == "lines") {
-			for (i in 1:nrow(r)) {
+			for (i in 1:nrow(y)) {
 				yi <- y[i]
 				yi <- disagg(yi)
 				add <- NULL
@@ -762,6 +755,55 @@ setMethod("split", signature(x="SpatVector", f="SpatVector"),
 			values(ss) <- v[ss$id, ]
 			rbind(x[-i,], ss)
 		
+		}
+	}
+#)
+
+
+setMethod("split", signature(x="SpatVector", f="SpatVector"),
+	function(x, f, min_node_dist=10000) {
+		gt <- geomtype(x)
+		if (!(gt %in% c("lines", "polygons"))) {
+			error("split", "argument 'x' must have a lines or polygons geometry")
+		}
+		if (!(geomtype(f) %in% c("lines", "polygons"))) {
+			error("split", "argument 'f' must have a lines or polygons geometry")
+		}
+		
+		values(f) <- NULL
+		f <- as.lines(f)
+		if (is.lonlat(x, perhaps=TRUE)) {
+			stopifnot(min_node_dist > 100)
+			crs(x) <- crs(f) <- "lonlat"
+			x <- densify(x, min_node_dist)
+			f <- densify(f, min_node_dist)
+		}
+		r <- relate(x, f, "intersects")
+		if (sum(r) == 0) {
+			warn("split", "x and f do not intersect")
+			return(x)
+		}
+		if (gt == "polygons") {
+			e <- elongate(intersect(as.lines(f), x), 0.00001)
+			k <- aggregate(rbind(as.lines(x), e))
+			nds <- makeNodes(k)
+			p <- as.polygons(nds)
+			intersect(x, p)
+		} else { # if (gt == "lines") {
+			d <- values(x)
+			values(x) <- data.frame(ID1=1:nrow(x))
+			x <- disagg(x)
+			x$ID2 <- 1:nrow(x)
+			e <- erase(x, f)
+			out <- disagg(e)
+			b <- table(out$ID2)
+			i <- as.numeric(names(b[b==1]))
+			if (length(i) > 0) {
+				a <- aggregate(out[out$ID2 == i, ], by="ID1")[, "ID1"]
+				out <- rbind(a, out[out$ID2 != i, "ID1"])
+			}
+			values(out) <- d[out$ID1, ]
+			out
 		}
 	}
 )

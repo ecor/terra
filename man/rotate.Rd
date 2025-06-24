@@ -11,23 +11,23 @@
 \description{
 Rotate a SpatRaster that has longitude coordinates from 0 to 360, to standard coordinates between -180 and 180 degrees (or vice-versa). Longitude between 0 and 360 is frequently used in global climate models.
 
-Rotate a SpatVector as for a SpatRaster \code{split=TRUE}, or to correct for coordinates that are connected across the date line (and end up at the "other side" of the longitude scale) are reconnected.
+Rotate a SpatVector as for a SpatRaster with, or with \code{split=FALSE} to correct for coordinates that are connected across the date line (and end up at the "other side" of the longitude scale).
 }
 
 \usage{
-\S4method{rotate}{SpatRaster}(x, left=TRUE, filename="", ...)
+\S4method{rotate}{SpatRaster}(x, filename="", ...)
 
-\S4method{rotate}{SpatVector}(x, longitude=0, split=FALSE, left=TRUE, normalize=FALSE)
+\S4method{rotate}{SpatVector}(x, longitude=0, split=TRUE, left=TRUE, normalize=FALSE)
 }
 
 \arguments{
  \item{x}{SpatRaster or SpatVector}
- \item{left}{logical. If \code{TRUE}, rotate to the left, else to the right}
  \item{filename}{character. Output filename}
  \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
 
  \item{longitude}{numeric. The longitude around which to rotate}
  \item{split}{logical. Should geometries be split at \code{longitude}?}
+ \item{left}{logical. Rotate to the left or to the right?}
  \item{normalize}{logical. Should the output be normalized to longitudes between -180 and 180? See \code{\link{normalize.longitude}}}
 }
 
