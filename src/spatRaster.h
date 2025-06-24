@@ -861,7 +861,7 @@ class SpatRaster {
     // watershed2 ecor 20210317; EC 20210702 
 
 		SpatRaster watershed2(int pp_offset,SpatOptions &opt); 
-		SpatRaster pitfinder2(SpatOptions &opt); 
+		SpatRaster pitfinder2(int pits_on_boundary, SpatOptions &opt); // EC 20250623
 		SpatRaster NIDP2(SpatOptions &opt); 
 		SpatRaster flowAccu2(SpatOptions &opt); 
 		SpatRaster flowAccu2_weight(SpatRaster weight,SpatOptions &opt);
