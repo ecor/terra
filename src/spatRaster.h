@@ -859,21 +859,17 @@ class SpatRaster {
 
 
     // watershed2 ecor 20210317; EC 20210702 
-    
-    // watershed2 extension (ecor 201)
-    SpatRaster watershed2(int pp_offset,SpatOptions &opt); 
-SpatRaster pitfinder2(int pits_on_boundary, SpatOptions &opt); 
-SpatRaster NIDP2(SpatOptions &opt); 
-SpatRaster flowAccu2(SpatOptions &opt); 
-SpatRaster flowAccu2_weight(SpatRaster weight,SpatOptions &opt); 
-SpatRaster d8ltd(double lambda,int use_lad,SpatOptions &opt); 
-///	SpatRaster pitfillerm(SpatRaster pits,SpatRaster flowdirs,SpatOptions &opt); // EC 20241026
-///	SpatRaster pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,SpatOptions &opt);
-SpatRaster  pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,
-                       double U,double D,double beta,double theta_exp, // see // see reference doi:10.1016/j.advwatres.2006.11.016)    
-                       SpatOptions &opt);
-	// END watershed2 
-		
+
+		SpatRaster watershed2(int pp_offset,SpatOptions &opt); 
+		SpatRaster pitfinder2(SpatOptions &opt); 
+		SpatRaster NIDP2(SpatOptions &opt); 
+		SpatRaster flowAccu2(SpatOptions &opt); 
+		SpatRaster flowAccu2_weight(SpatRaster weight,SpatOptions &opt);
+		SpatRaster d8ltd(double lambda,int use_lad,SpatOptions &opt); 
+		SpatRaster pitfillerm(SpatRaster pits,SpatRaster flowdirs,int niter, double lambda,int use_lad,
+                         double U,double D,double beta,double theta_exp, // see // see reference doi:10.1016/j.advwatres.2006.11.016)    
+                         SpatOptions &opt);
+	
 
 		SpatRaster hillshade(SpatRaster aspect, std::vector<double> angle, std::vector<double> direction, bool normalize, SpatOptions &opt);
 
