@@ -11,7 +11,7 @@ The current GDAL configuration options and obtained with getGDALconfig and chang
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-38-01</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-58</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,8 @@ The current GDAL configuration options and obtained with getGDALconfig and chang
 <span><span class="fu">setGDALconfig</span><span class="op">(</span><span class="va">option</span>, value<span class="op">=</span><span class="st">""</span><span class="op">)</span></span>
 <span><span class="fu">getGDALconfig</span><span class="op">(</span><span class="va">option</span><span class="op">)</span></span>
 <span><span class="fu">clearVSIcache</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu">libVersion</span><span class="op">(</span>lib<span class="op">=</span><span class="st">"all"</span>, parse<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">libVersion</span><span class="op">(</span>lib<span class="op">=</span><span class="st">"all"</span>, parse<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu">unloadGDALdrivers</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -81,6 +82,9 @@ The current GDAL configuration options and obtained with getGDALconfig and chang
   <dt id="arg-parse">parse<a class="anchor" aria-label="anchor" href="#arg-parse"></a></dt>
 <dd><p>logical. Should the version be parsed into three numerical values (major, minor and sub versions)?</p></dd>
 
+  <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
+<dd><p>character. Drivers names such as "GTiff" to be unloaded. Or "" to reload all drivers</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -94,28 +98,21 @@ The current GDAL configuration options and obtained with getGDALconfig and chang
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">gdal</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "3.11.0"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "3.8.4"</span>
 <span class="r-in"><span><span class="fu">gdal</span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="headtail.html">head</a></span><span class="op">(</span><span class="fu">gdal</span><span class="op">(</span>drivers<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       name raster vector        can   vsi</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  AAIGrid   TRUE  FALSE read/write  TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     ACE2   TRUE  FALSE       read  TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3     ADBC  FALSE   TRUE       read FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4     ADRG   TRUE  FALSE       read  TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5      AIG   TRUE  FALSE       read  TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 AIVector  FALSE   TRUE       read FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                       long.name</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                           Arc/Info ASCII Grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                                          ACE2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                   Arrow Database Connectivity</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4                 ARC Digitized Raster Graphics</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5                          Arc/Info Binary Grid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 Artificial Intelligence powered vector driver</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      name raster vector        can  vsi                     long.name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 AAIGrid   TRUE  FALSE read/write TRUE           Arc/Info ASCII Grid</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    ACE2   TRUE  FALSE       read TRUE                          ACE2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    ADRG   TRUE  FALSE read/write TRUE ARC Digitized Raster Graphics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     AIG   TRUE  FALSE       read TRUE          Arc/Info Binary Grid</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     ARG   TRUE  FALSE read/write TRUE     Azavea Raster Grid format</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  AVCBin  FALSE   TRUE       read TRUE      Arc/Info Binary Coverage</span>
 <span class="r-in"><span><span class="fu">libVersion</span><span class="op">(</span><span class="st">"all"</span>, <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      major minor sub</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> gdal     3    11   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> proj     9     6   2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> geos     3    13   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> gdal     3     8   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> proj     9     4   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> geos     3    12   1</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

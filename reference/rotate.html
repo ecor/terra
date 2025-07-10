@@ -9,7 +9,7 @@ Rotate a SpatVector as for a SpatRaster with, or with split=FALSE to correct for
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-38-01</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-58</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ Rotate a SpatVector as for a SpatRaster with, or with split=FALSE to correct for
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S4 method for class 'SpatRaster'</span></span>
-<span><span class="fu">rotate</span><span class="op">(</span><span class="va">x</span>, left<span class="op">=</span><span class="cn">TRUE</span>, filename<span class="op">=</span><span class="st">""</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">rotate</span><span class="op">(</span><span class="va">x</span>, filename<span class="op">=</span><span class="st">""</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'SpatVector'</span></span>
 <span><span class="fu">rotate</span><span class="op">(</span><span class="va">x</span>, longitude<span class="op">=</span><span class="fl">0</span>, split<span class="op">=</span><span class="cn">TRUE</span>, left<span class="op">=</span><span class="cn">TRUE</span>, normalize<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
@@ -55,9 +55,6 @@ Rotate a SpatVector as for a SpatRaster with, or with split=FALSE to correct for
     <p></p>
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>SpatRaster or SpatVector</p></dd>
-
- <dt id="arg-left">left<a class="anchor" aria-label="anchor" href="#arg-left"></a></dt>
-<dd><p>logical. If <code>TRUE</code>, rotate to the left, else to the right</p></dd>
 
  <dt id="arg-filename">filename<a class="anchor" aria-label="anchor" href="#arg-filename"></a></dt>
 <dd><p>character. Output filename</p></dd>
@@ -71,6 +68,9 @@ Rotate a SpatVector as for a SpatRaster with, or with split=FALSE to correct for
 
  <dt id="arg-split">split<a class="anchor" aria-label="anchor" href="#arg-split"></a></dt>
 <dd><p>logical. Should geometries be split at <code>longitude</code>?</p></dd>
+
+ <dt id="arg-left">left<a class="anchor" aria-label="anchor" href="#arg-left"></a></dt>
+<dd><p>logical. Rotate to the left or to the right?</p></dd>
 
  <dt id="arg-normalize">normalize<a class="anchor" aria-label="anchor" href="#arg-normalize"></a></dt>
 <dd><p>logical. Should the output be normalized to longitudes between -180 and 180? See <code><a href="normalize.longitude.html">normalize.longitude</a></code></p></dd>
