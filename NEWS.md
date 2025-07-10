@@ -1,13 +1,19 @@
-# version 1.8-56
+# version 1.8-58
 
 ## bug fixes
 
 - `freq` failed when using zones polygons that did not overlap with any cell centers [SO 79654752](https://stackoverflow.com/q/79654752) by M. Beausoleil
 - `as.lines<SpatVector>` with an empty SpatVector crashed R [#1847](https://github.com/rspatial/terra/issues/1847) by Andrew Gene Brown
+- `resample` with method="median" did not work [#1855](https://github.com/rspatial/terra/issues/1855) by vmombo
+- terra did not install on 32-bit systems [#1846](https://github.com/rspatial/terra/issues/1846) by Sergey Fedorov
+- terra did not install with GDAL < 3.1 [#1853](https://github.com/rspatial/terra/issues/1853) by BastienFR
+
 
 ## enhancements
 
 - `freq` has new argument "touches" to determine which cell to include if a zones polygon is used [SO 79654752](https://stackoverflow.com/q/79654752) by M. Beausoleil
+- `plot` with a continuous legend has new `plg` parameter "format" so that you can use scientific notation [#1861](https://github.com/rspatial/terra/issues/1861) by Andrea Titolo
+- `sprc<character>` now also works for a single datasource raster [#1860](https://github.com/rspatial/terra/issues/1860) by Anrew Gene Brown
 
 ## new
 
