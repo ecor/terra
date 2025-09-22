@@ -43,7 +43,6 @@ std::string geomType(OGRLayer *poLayer) {
 }
 
 
-#include "Rcpp.h"
 
 SpatDataFrame readAttributes(OGRLayer *poLayer, bool as_proxy) {
 	SpatDataFrame df;
@@ -247,11 +246,14 @@ SpatGeom getPointGeom(OGRGeometry *poGeometry) {
 }
 
 SpatGeom getMultiPointGeom(OGRGeometry *poGeometry) {
+	SpatGeom g(points);
+	if (poGeometry->IsEmpty()) {
+		return g;
+	}
 	OGRMultiPoint *poMultipoint = ( OGRMultiPoint * )poGeometry;
 	unsigned ng = poMultipoint->getNumGeometries();
 	std::vector<double> X(ng);
 	std::vector<double> Y(ng);
-	SpatGeom g(points);
 	for (size_t i=0; i<ng; i++) {
 	   	OGRGeometry *poMpGeometry = poMultipoint->getGeometryRef(i);
 		#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2,3,0)
@@ -269,8 +271,12 @@ SpatGeom getMultiPointGeom(OGRGeometry *poGeometry) {
 
 
 SpatGeom getLinesGeom(OGRGeometry *poGeometry) {
-
+	SpatGeom g(lines);
+	if (poGeometry->IsEmpty()) {
+		return g;
+	}
 	OGRLineString *poGeom = (OGRLineString *) poGeometry;
+
 	unsigned np = poGeom->getNumPoints();
 	std::vector<double> X(np);
 	std::vector<double> Y(np);
@@ -281,13 +287,15 @@ SpatGeom getLinesGeom(OGRGeometry *poGeometry) {
 		Y[i] = ogrPt.getY();
 	}
 	SpatPart p(X, Y);
-	SpatGeom g(lines);
 	g.addPart(p);
 	return g;
 }
 
 SpatGeom getMultiLinesGeom(OGRGeometry *poGeometry) {
 	SpatGeom g(lines);
+	if (poGeometry->IsEmpty()) {
+		return g;
+	}
 	OGRMultiLineString *poGeom = ( OGRMultiLineString * )poGeometry;
 	unsigned ng = poGeom->getNumGeometries();
 	OGRPoint ogrPt;
@@ -308,10 +316,12 @@ SpatGeom getMultiLinesGeom(OGRGeometry *poGeometry) {
 	return g;
 }
 
-//#include "Rcpp.h"
 
 SpatGeom getPolygonsGeom(OGRGeometry *poGeometry) {
 	SpatGeom g(polygons);
+	if (poGeometry->IsEmpty()) {
+		return g;
+	}
 	OGRPoint ogrPt;
 //	OGRwkbGeometryType geomtype = poGeometry->getGeometryType();
 //	if ( geomtype == wkbPolygon ) {
@@ -346,10 +356,13 @@ SpatGeom getPolygonsGeom(OGRGeometry *poGeometry) {
 
 
 SpatGeom getMultiPolygonsGeom(OGRGeometry *poGeometry) {
+	SpatGeom g(polygons);
+	if (poGeometry->IsEmpty()) {
+		return g;
+	}
 	OGRMultiPolygon *poGeom = ( OGRMultiPolygon * )poGeometry;
 	OGRPoint ogrPt;
 	unsigned ng = poGeom->getNumGeometries();
-	SpatGeom g(polygons);
 	for (size_t i=0; i<ng; i++) {
 		OGRGeometry *poPolygonGeometry = poGeom->getGeometryRef(i);
 		OGRPolygon *poPolygon = ( OGRPolygon * )poPolygonGeometry;
@@ -380,6 +393,65 @@ SpatGeom getMultiPolygonsGeom(OGRGeometry *poGeometry) {
 	}
 	return g;
 }
+
+
+void addOGRgeometry(SpatVector &x, OGRGeometry *poGeometry) {
+	SpatGeom g;
+		
+	OGRwkbGeometryType gtype = wkbFlatten(poGeometry->getGeometryType());
+	if (gtype == wkbPoint) {
+		g = getPointGeom(poGeometry);
+	} else if (gtype == wkbMultiPoint) {
+		g = getMultiPointGeom(poGeometry);
+	} else if (gtype == wkbLineString) {
+		g = getLinesGeom(poGeometry);
+	} else if (gtype == wkbMultiLineString) {
+		g = getMultiLinesGeom(poGeometry);
+	} else if (gtype == wkbPolygon) {
+		g = getPolygonsGeom(poGeometry);
+	} else if (gtype == wkbMultiPolygon) {
+		g = getMultiPolygonsGeom(poGeometry);
+	} else {
+		const char *geomtypechar = OGRGeometryTypeToName(gtype);
+		std::string strgeomtype = geomtypechar;
+		x.setError("cannot read geometry type: " + strgeomtype);
+		return;
+	}
+	if ((x.size() > 1) && (x.geoms[0].gtype != g.gtype)) {
+		if (x.geoms[0].gtype != null) {
+			x.setError("a SpatVector can only have a single geometry type");
+			return;
+		}
+	}
+	x.addGeom(g);
+	OGRGeometryFactory::destroyGeometry(poGeometry);
+}
+
+
+bool SpatVector::addRawGeoms(std::vector<unsigned char*> wkbs, std::vector<size_t> sizes) {
+	
+	if (wkbs.size() == 0) {
+		SpatGeom g = emptyGeom();
+		addGeom(g);
+		return true;
+	}
+	
+	for (size_t i=0; i<wkbs.size(); i++) {
+		OGRGeometry *poGeometry;
+		OGRErr err = OGRGeometryFactory::createFromWkb(wkbs[i], NULL, &poGeometry, sizes[i]);
+		if (err == OGRERR_NONE) {
+			if (poGeometry != NULL) {				
+				addOGRgeometry(*this, poGeometry);
+			}
+		} else {
+			setError("not valid WKB");
+			return false;
+		}
+	}
+	
+	return true;
+}
+
 
 std::vector<std::string> SpatVector::layer_names(std::string filename) {
 
@@ -498,6 +570,9 @@ bool layerQueryFilter(GDALDataset *&poDS, OGRLayer *&poLayer, std::string &layer
 }
 
 
+
+
+
 bool SpatVector::read_ogr(GDALDataset *&poDS, std::string layer, std::string query, std::vector<double> ext, SpatVector filter, bool as_proxy, std::string what, std::string dialect) {
 
 	if (poDS == NULL) {
@@ -521,7 +596,7 @@ bool SpatVector::read_ogr(GDALDataset *&poDS, std::string layer, std::string que
 		for (size_t i=0; i < wrnmsg.size(); i++) addWarning(wrnmsg[i]);
 	}
 
-	OGRSpatialReference *poSRS = poLayer->GetSpatialRef();
+	const OGRSpatialReference *poSRS = poLayer->GetSpatialRef();
 	if (poSRS) {
 		char *psz = NULL;
 	#if GDAL_VERSION_MAJOR >= 3
@@ -859,7 +934,7 @@ bool SpatVectorCollection::read_ogr(GDALDataset *&poDS, std::string layer, std::
 		for (size_t i=0; i < wrnmsg.size(); i++) addWarning(wrnmsg[i]);
 	}
 	std::string crs = "";
-	OGRSpatialReference *poSRS = poLayer->GetSpatialRef();
+	const OGRSpatialReference *poSRS = poLayer->GetSpatialRef();
 	if (poSRS) {
 		char *psz = NULL;
 	#if GDAL_VERSION_MAJOR >= 3

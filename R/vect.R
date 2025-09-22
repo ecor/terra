@@ -27,7 +27,6 @@ setMethod("vect", signature(x="missing"),
 		p <- methods::new("SpatVector")
 		p@pntr <- SpatVector$new()
 		messages(p, "vect")
-		return(p)
 	}
 )
 
@@ -312,7 +311,7 @@ setReplaceMethod("[[", c("SpatVector", "character"),
 			}
 			value <- value[,1]
 		} else if (inherits(value, "list")) {
-			value <- unlist(value)
+			value <- sapply(value, function(x) if (is.null(x)) NA else x)
 		}
 
 		if (NCOL(value)	> 1) {
@@ -426,13 +425,19 @@ setMethod("vect", signature(x="data.frame"),
 
 setMethod("vect", signature(x="list"),
 	function(x, type="points", crs="") {
-		x <- lapply(x, function(i) {
-			if (inherits(i, "SpatVector")) return(i)
-			vect(i, type=type)
-		})
-		x <- svc(x)
+	
 		v <- methods::new("SpatVector")
-		v@pntr <- x@pntr$append()
+		if (inherits(x[[1]], "raw")) {
+			v@pntr <- SpatVector$new()
+			v@pntr$addWKB(x)
+		} else {
+			x <- lapply(x, function(i) {
+				if (inherits(i, "SpatVector")) return(i)
+				vect(i, type=type)
+			})
+			x <- svc(x)
+			v@pntr <- x@pntr$append()
+		}
 		if (crs != "") {
 			crs(v) <- crs
 		}

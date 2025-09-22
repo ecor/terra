@@ -18,7 +18,7 @@ function(x, index, fun, ..., cores=1, filename="", overwrite=FALSE, wopt=list())
 				error("tapp", paste("invalid time step. Use one of:", paste(choices, collapse=", ")))
 			}
 			if (!x@pntr$hasTime) {
-				error("tapp", "x has no time data")
+				error("tapp", "x has no time stamps")
 			}
 			choice <- choices[i]
 			if (choice == "doy") {
@@ -52,7 +52,7 @@ function(x, index, fun, ..., cores=1, filename="", overwrite=FALSE, wopt=list())
 				index <- as.integer(format(time(x, "days"), "%j"))
 				index <- as.character((index-1) %/% 15 + 1)
 				prename <- "d15_"
-			} else {
+			} else { 
 				index <- time(x, choice)	
 				out_time <- time_as_seconds(x)[!duplicated(index)]
 				out_tstep <- choice
@@ -84,9 +84,10 @@ function(x, index, fun, ..., cores=1, filename="", overwrite=FALSE, wopt=list())
 	nl <- nlyr(x)
 	if (length(index) > nl) {
 		error("tapp", "length(index) > nlyr(x)")
-	} else if (length(unique(index)) == 1) {
-		warn("tapp", "it is not sensible to a single value as index (use app instead)")	
-	}
+	} 
+	# else if (length(unique(index)) == 1) {
+	#	warn("tapp", "it is not sensible to a single value as index (use app instead)")	
+	#}
 	index <- rep_len(index, nl)
 	if (!is.factor(index)) {
 		index <- factor(index, levels=unique(index))

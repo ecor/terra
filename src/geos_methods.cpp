@@ -1121,6 +1121,7 @@ SpatVector SpatVector::hull(std::string htype, std::string by, double param, boo
 
 
 
+
 SpatVector SpatVector::voronoi(SpatVector bnd, double tolerance, int onlyEdges) {
 	SpatVector out;
 
@@ -2631,8 +2632,16 @@ SpatVector SpatVector::symdif(SpatVector v) {
 	if (ve.hasError()) {
 		return ve;
 	}
-	out = out.append(ve, true);
-	return out;
+	if ((out.type() == "polygons") && (ve.type() == "polygons")) {
+		return out.append(ve, true);
+	} else if (ve.type() == "polygons") {
+		return ve;
+	} else if (out.type() == "polygons") {
+		return out;
+	} else {
+		SpatVector empty;
+		return empty;
+	} 
 
 /*
 	SpatVector out;
@@ -3037,7 +3046,16 @@ SpatVector SpatVector::nearest_point(SpatVector v, bool parallel, const std::str
 	out.srs = srs;
 
 	
-	if (lonlat && (type() == "points") && (v.type() == "points")) {
+	if (lonlat) {
+		SpatVector x = *this;
+		if (x.type() != "points") {
+			x = x.densify(1000, false, false);
+			x = x.as_points(false);
+		}
+		if (v.type() != "points") {
+			v = v.densify(1000, false, false);
+			v = v.as_points(false);
+		}
 		std::vector<double> nlon, nlat, dist;
 		std::vector<long> id;
 		std::vector<std::vector<double>> p = coordinates();

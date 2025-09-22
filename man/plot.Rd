@@ -46,7 +46,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 
 \S4method{plot}{SpatVector,missing}(x, y, values=NULL, ...)
 
-\S4method{plot}{SpatVectorCollection,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, ...)
+\S4method{plot}{SpatVectorCollection,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, col=NULL, ...)
 
 \S4method{plot}{SpatVectorCollection,numeric}(x, y, main, mar=NULL, ext=NULL, ...)
 }
@@ -54,7 +54,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 \arguments{
   \item{x}{SpatRaster or SpatVector}
   \item{y}{missing or positive integer or name indicating the layer(s) to be plotted}
-  \item{col}{character vector to specify the colors to use. The default is \code{map.pal("viridis", 100)}. The default can be changed with the \code{terra.pal} option. For example: \code{options(terra.pal=terrain.colors(10))}. If \code{x} is a \code{SpatRaster}, it can also be a \code{data.frame} with two columns (value, color) to get a "classes" type legend or with three columns (from, to, color) to get an "interval" type legend}
+  \item{col}{character vector to specify the colors to use. The default is \code{map.pal("viridis", 100)}. The default can be changed with the \code{terra.pal} option. For example: \code{options(terra.pal=terrain.colors(10))}. If \code{x} is a \code{SpatRaster}, it can also be a \code{data.frame} with two columns (value, color) to get a "classes" type legend or with three columns (from, to, color) to get an "interval" type legend. If \code{x} us a SpatVectorCollection, a list can be provided with colors for each SpatVector}
   \item{type}{character. Type of map/legend. One of "continuous", "classes", or "interval". If not specified, the type is chosen based on the data}
   \item{mar}{numeric vector of length 4 to set the margins of the plot (to make space for the legend). The default is (3.1, 3.1, 2.1, 7.1) for a single plot with a legend and (3.1, 3.1, 2.1, 2.1) otherwise. The default for a RGB raster is 0. Use \code{mar=NA} to not set the margins}
   \item{legend}{logical or character. If not \code{FALSE} a legend is drawn. The character value can be used to indicate where the legend is to be drawn. For example "topright" or "bottomleft". Use \code{plg} for more refined placement. Not supported for continuous legends (the default for raster data)}
@@ -77,6 +77,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 	\item \code{at} to set the location of the tickmarks
 	\item \code{format} as in \code{\link{formatC}} to format the numbers. For example, you can use \code{format="g"} for scientific notation. The default is \code{"f"}
 	\item \code{tick} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout". 
+	\item \code{tick.length} to change the tickmark length (default = 1). Only relevant when \code{tick} is "throughout" or "out".
 	\item \code{tick.col}, \code{tick.box.col} and \code{tick.lwd} to change the appearance of the tickmarks
 	\item \code{title.srt} to rotate the legend title
 	\item \code{title.x} and \code{title.y} to place the legend title at specific coordinates  
@@ -88,7 +89,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
     \item \code{tick} numeric to indicate for which of the axes to draw tickmarks. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
     \item \code{lab} numeric to indicate for which of the axes to draw labels. Default is \code{1:2} unless \code{side} is changed, in which case the default is the same as \code{side}
     \item \code{xat}/\code{yat} numeric with the values at which tickmarks are to be drawn on the horizontal/vertical axis.
-    \item \code{xlab}/\code{ylab} this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis. 
+    \item \code{xlabs}/\code{ylabs} this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis. 
     \item \code{retro} a logical value that can be set to \code{TRUE} to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation. For longitude/latitude data only. See \code{\link{graticule}} for projected data.
   }}
   

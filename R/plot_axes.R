@@ -42,14 +42,14 @@ retro_labels <- function(x, lat=TRUE) {
 	x$axs$cex.axis <- x$axs$cex.axis * 0.7
 	
 	if (is.null(x$axs$mgp)) {
-		x$axs$mgp = c(2, .25, 0)
+		x$axs$mgp = c(2, .25, .3)
 	}
 	if (is.null(x$axs$tcl)) {
 		x$axs$tcl <- -0.25
 	}
 	if ((!x$clip) & x$draw_grid) {
 		x$axs$tck <- 1
-		x$axs$mgp <- c(2, .15, 0)
+		x$axs$mgp <- c(2, .15, .2)
 	}
 
 	xlab <- ylab <- NULL
@@ -105,7 +105,7 @@ retro_labels <- function(x, lat=TRUE) {
 	y <- x$axs
 	retro <- isTRUE(y$retro) 
 	if (retro && (!x$lonlat)) {
-		warn("plot", "'retro' labels can only be used with lonlat data") 
+		warn("plot", "'retro' labels can only be used with lon/lat data")
 		retro <- FALSE
 	}
 	y$retro <- y$lab <- y$tick <- NULL
@@ -122,6 +122,7 @@ retro_labels <- function(x, lat=TRUE) {
 	}
 	for (s in 1:4) {
 		y$side <- s
+		y$mgp <- x$axs$mgp
 		y$labels <- NULL
 		if (s %in% c(1,3)) {
 			ur <- usr[2] - usr[1]
@@ -171,6 +172,7 @@ retro_labels <- function(x, lat=TRUE) {
 					}
 				}
 			}
+			y$mgp[2] <- y$mgp[3]
 		}
 		z <- y
 		z$lwd <- 0
