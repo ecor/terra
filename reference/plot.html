@@ -11,7 +11,7 @@ There is a separate help file for plotting a SpatGraticule or SpatExtent."><meta
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-58</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-66</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +73,7 @@ There is a separate help file for plotting a SpatGraticule or SpatExtent."><meta
 <span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, values<span class="op">=</span><span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'SpatVectorCollection,missing'</span></span>
-<span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">main</span>, mar<span class="op">=</span><span class="cn">NULL</span>, <span class="va">nc</span>, <span class="va">nr</span>, maxnl<span class="op">=</span><span class="fl">16</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">main</span>, mar<span class="op">=</span><span class="cn">NULL</span>, <span class="va">nc</span>, <span class="va">nr</span>, maxnl<span class="op">=</span><span class="fl">16</span>, col<span class="op">=</span><span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'SpatVectorCollection,numeric'</span></span>
 <span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">main</span>, mar<span class="op">=</span><span class="cn">NULL</span>, ext<span class="op">=</span><span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
@@ -89,7 +89,7 @@ There is a separate help file for plotting a SpatGraticule or SpatExtent."><meta
 <dd><p>missing or positive integer or name indicating the layer(s) to be plotted</p></dd>
 
   <dt id="arg-col">col<a class="anchor" aria-label="anchor" href="#arg-col"></a></dt>
-<dd><p>character vector to specify the colors to use. The default is <code>map.pal("viridis", 100)</code>. The default can be changed with the <code>terra.pal</code> option. For example: <code>options(terra.pal=terrain.colors(10))</code>. If <code>x</code> is a <code>SpatRaster</code>, it can also be a <code>data.frame</code> with two columns (value, color) to get a "classes" type legend or with three columns (from, to, color) to get an "interval" type legend</p></dd>
+<dd><p>character vector to specify the colors to use. The default is <code>map.pal("viridis", 100)</code>. The default can be changed with the <code>terra.pal</code> option. For example: <code>options(terra.pal=terrain.colors(10))</code>. If <code>x</code> is a <code>SpatRaster</code>, it can also be a <code>data.frame</code> with two columns (value, color) to get a "classes" type legend or with three columns (from, to, color) to get an "interval" type legend. If <code>x</code> us a SpatVectorCollection, a list can be provided with colors for each SpatVector</p></dd>
 
   <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
 <dd><p>character. Type of map/legend. One of "continuous", "classes", or "interval". If not specified, the type is chosen based on the data</p></dd>
@@ -128,6 +128,7 @@ There is a separate help file for plotting a SpatGraticule or SpatExtent."><meta
 <li><p><code>at</code> to set the location of the tickmarks</p></li>
 <li><p><code>format</code> as in <code><a href="https://rdrr.io/r/base/formatc.html" class="external-link">formatC</a></code> to format the numbers. For example, you can use <code>format="g"</code> for scientific notation. The default is <code>"f"</code></p></li>
 <li><p><code>tick</code> One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout".</p></li>
+<li><p><code>tick.length</code> to change the tickmark length (default = 1). Only relevant when <code>tick</code> is "throughout" or "out".</p></li>
 <li><p><code>tick.col</code>, <code>tick.box.col</code> and <code>tick.lwd</code> to change the appearance of the tickmarks</p></li>
 <li><p><code>title.srt</code> to rotate the legend title</p></li>
 <li><p><code>title.x</code> and <code>title.y</code> to place the legend title at specific coordinates</p></li>
@@ -139,7 +140,7 @@ There is a separate help file for plotting a SpatGraticule or SpatExtent."><meta
 <li><p><code>tick</code> numeric to indicate for which of the axes to draw tickmarks. Default is <code>1:2</code> unless <code>side</code> is changed, in which case the default is the same as <code>side</code></p></li>
 <li><p><code>lab</code> numeric to indicate for which of the axes to draw labels. Default is <code>1:2</code> unless <code>side</code> is changed, in which case the default is the same as <code>side</code></p></li>
 <li><p><code>xat</code>/<code>yat</code> numeric with the values at which tickmarks are to be drawn on the horizontal/vertical axis.</p></li>
-<li><p><code>xlab</code>/<code>ylab</code> this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis.</p></li>
+<li><p><code>xlabs</code>/<code>ylabs</code> this can either be a logical value specifying whether (numerical) annotations are to be made at the tickmarks, or a character or expression vector of labels to be placed at the tickmarks of the horizontal/vertical axis.</p></li>
 <li><p><code>retro</code> a logical value that can be set to <code>TRUE</code> to use a sexagesimal notation for the labels (degrees/minutes/hemisphere) instead of the standard decimal notation. For longitude/latitude data only. See <code><a href="graticule.html">graticule</a></code> for projected data.</p></li>
 </ul></dd>
 

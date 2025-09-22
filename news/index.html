@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-58</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-66</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,9 +34,47 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.8-58" id="version-18-58">version 1.8-58<a class="anchor" aria-label="anchor" href="#version-18-58"></a></h2>
+<h2 class="pkg-version" data-toc-text="1.8-66" id="version-18-66">version 1.8-66<a class="anchor" aria-label="anchor" href="#version-18-66"></a></h2>
 <div class="section level3">
-<h3 id="bug-fixes-1-8-58">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-8-58"></a></h3>
+<h3 id="bug-fixes-1-8-66">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-8-66"></a></h3>
+<ul><li>
+<code>project(mask=TRUE)</code> could fail with high-resolution global rasters because of date-line flipping <a href="https://stackoverflow.com/q/79708536/635245" class="external-link">SO 79708536</a> by Patrick</li>
+<li>
+<code>plot(pax=list(mgp=c(1,1,2))</code> now sets mgp seperately for horizontal and vertical axes <a href="https://github.com/rspatial/terra/issues/1873" class="external-link">#1873</a> by Hu shiyu</li>
+<li>
+<code>coltab(x, ..., layer=1)&lt;-</code> argument layer did not work for layer names <a href="https://github.com/rspatial/terra/issues/1879" class="external-link">#1879</a> by Alex Ilich</li>
+<li>
+<code>sds</code> could create a SpatRasterDataset with SpatRasters with different spatial resolutions <a href="https://github.com/rspatial/terra/issues/1884" class="external-link">#1884</a> by Stefan Fallert</li>
+<li>
+<code>identical</code> did not consider NA values <a href="https://github.com/rspatial/terra/issues/1890" class="external-link">#1890</a> by Facundo Muñoz</li>
+<li>
+<code>add_grid</code> did not respect the clipping region if a second raster was added with <code>add=TRUE</code> <a href="https://github.com/rspatial/terra/issues/1889" class="external-link">#1889</a> by Lucas Salinas Morales</li>
+<li>
+<code>rast(x, type = "xyz")</code> did not inherit CRS from a SpatVector <a href="https://github.com/rspatial/terra/issues/1886" class="external-link">#1886</a> by Danielle Ferraro</li>
+<li>
+<code>distance(values = TRUE)</code> returned unexpected results <a href="https://github.com/rspatial/terra/issues/1891" class="external-link">#1891</a> by Jason Flower</li>
+<li>
+<code>plot</code> with arguments for a continuous legend failed if no such legend was drawn <a href="https://github.com/rspatial/terra/issues/1897" class="external-link">#1897</a> by François Rousseu</li>
+</ul></div>
+<div class="section level3">
+<h3 id="enhancements-1-8-66">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-8-66"></a></h3>
+<ul><li>when computing aggregated time steps such as days from POSIXct (seconds) time, terra now uses the date in the specified time zone, unlike base <code>as.Date</code> that seems to return the date in the UTC time zone <a href="https://github.com/rspatial/terra/issues/1896" class="external-link">#1896</a> by Kodi Arfer</li>
+<li>better support for creating a SpatVector with an EMPTY wkt geometry <a href="https://github.com/rspatial/terra/issues/1903" class="external-link">#1903</a> by Anatolii Tsyplenkov</li>
+<li>
+<code>makeTiles</code> gains argument “value” to set the returned value to be the filenames (default), a SpatRaster or a SpatRasterCollection <a href="https://github.com/rspatial/terra/issues/1894" class="external-link">#1894</a> by Márcia Barbosa</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-1-8-66">new<a class="anchor" aria-label="anchor" href="#new-1-8-66"></a></h3>
+<ul><li>it is now possible to create a SpatVector from Well Known Binary (WKB) data <a href="https://github.com/rspatial/terra/pull/1895" class="external-link">#1895</a> by Jan Hartman</li>
+<li>
+<code>resample</code> now also accepts, instead of a template SpatRaster, one or two numbers to set the resolution of the output SpatRaster <a href="https://github.com/rspatial/terra/pull/1874" class="external-link">#1874</a> by Agustin Lobo</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.8-60" id="version-18-60">version 1.8-60<a class="anchor" aria-label="anchor" href="#version-18-60"></a></h2><p class="text-muted">CRAN release: 2025-07-21</p>
+<p>Released 2025-07-18</p>
+<div class="section level3">
+<h3 id="bug-fixes-1-8-60">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-8-60"></a></h3>
 <ul><li>
 <code>freq</code> failed when using zones polygons that did not overlap with any cell centers <a href="https://stackoverflow.com/q/79654752" class="external-link">SO 79654752</a> by M. Beausoleil</li>
 <li>
@@ -45,9 +83,15 @@
 <code>resample</code> with method=“median” did not work <a href="https://github.com/rspatial/terra/issues/1855" class="external-link">#1855</a> by vmombo</li>
 <li>terra did not install on 32-bit systems <a href="https://github.com/rspatial/terra/issues/1846" class="external-link">#1846</a> by Sergey Fedorov</li>
 <li>terra did not install with GDAL &lt; 3.1 <a href="https://github.com/rspatial/terra/issues/1853" class="external-link">#1853</a> by BastienFR</li>
+<li>better assignment of a list to a new subsetted SpatVector variable <a href="https://github.com/rspatial/terra/issues/1867" class="external-link">#1867</a> by Alexandre Courtiol</li>
+<li>
+<code>nearest</code> did not work well for lonlat polygons <a href="https://github.com/rspatial/terra/issues/1869" class="external-link">#1869</a> and with methods “cosine” and “haversine” by Alexandre Courtiol</li>
+<li>polygon union failure when symdif returns lines <a href="https://github.com/rspatial/terra/issues/1866" class="external-link">#1866</a> by Reed Humphrey</li>
+<li>where.max did not work properly when processing large files in chunks. <a href="https://github.com/rspatial/terra/issues/1868" class="external-link">#1858</a> by Tyler Hoecker</li>
+<li>numerical layer indexing in extract was broken <a href="https://github.com/rspatial/terra/issues/1862" class="external-link">#1862</a> identified and fixed [#1863] (<a href="https://github.com/rspatial/terra/pull/1863" class="external-link uri">https://github.com/rspatial/terra/pull/1863</a>) by Finn Lindgren</li>
 </ul></div>
 <div class="section level3">
-<h3 id="enhancements-1-8-58">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-8-58"></a></h3>
+<h3 id="enhancements-1-8-60">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-8-60"></a></h3>
 <ul><li>
 <code>freq</code> has new argument “touches” to determine which cell to include if a zones polygon is used <a href="https://stackoverflow.com/q/79654752" class="external-link">SO 79654752</a> by M. Beausoleil</li>
 <li>
@@ -55,9 +99,6 @@
 <li>
 <code>sprc&lt;character&gt;</code> now also works for a single datasource raster <a href="https://github.com/rspatial/terra/issues/1860" class="external-link">#1860</a> by Anrew Gene Brown</li>
 </ul></div>
-<div class="section level3">
-<h3 id="new-1-8-58">new<a class="anchor" aria-label="anchor" href="#new-1-8-58"></a></h3>
-</div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.8-54" id="version-18-54">version 1.8-54<a class="anchor" aria-label="anchor" href="#version-18-54"></a></h2><p class="text-muted">CRAN release: 2025-06-01</p>
@@ -454,7 +495,7 @@
 <li>
 <code>geom</code> can now return “wkb” <a href="https://github.com/rspatial/terra/issues/1609" class="external-link">#1609</a>
 </li>
-<li>faster plotting when color names are used. In response to question by Olle on <a href="https://gis.stackexchange.com/questions/487112/plotting-discrete-categorical-rasters-with-custom-colors-slows-down-r-terra/488012#488012" class="external-link">gis.stackexchange.com</a>
+<li>faster plotting when color names are used. In response to question by Olle on <a href="https://gis.stackexchange.com/questions/487112/plotting-discrete-categorical-rasters-with-custom-colors-slows-down-r-terra/488012" class="external-link">gis.stackexchange.com</a>
 </li>
 </ul></div>
 <div class="section level3">
