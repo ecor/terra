@@ -53,6 +53,7 @@ setMethod("flowdirD8ltd", signature(x="SpatRaster"),
             opt <- spatOptions(filename, ...)
           ##  uselad=0
             x@pntr <- x@pntr$d8ltd(lambda,use_lad,opt)
+            names(x) <- sprintf("flowdir_%s_l=%s",deviation_type[1],as.character(lambda))
             messages(x, "flowdirD8ltd") ## EC 20210318
           }
 )

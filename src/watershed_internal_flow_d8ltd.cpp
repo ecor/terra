@@ -140,10 +140,11 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
     /// facet=j;
     double mean_e=(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
     slope_mgn_temp=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
-    if (e0<mean_e) {
-      
-      slope_mgn_temp=0;
-      
+    slope_mgn=pow(pow(mean_e-e1,2)+pow(e1-e2,2),0.5)/L;
+    if (e0<mean_e) { // uncommented on EC 20250717
+       
+       slope_mgn_temp=0;
+       
     }
     double flow_angle_tan=(e1-e2)/(e0-e1);
     if (flow_angle_tan>1)  {
