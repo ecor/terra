@@ -6,8 +6,11 @@ This function overlays directional arrows on a plotted \code{\link[terra]{SpatRa
 typically used to represent vector fields such as wind directions, drainage flow directions, or other angular data.
 }
 \usage{
-arrows_on_rast(x="flowdir",x_base=NULL,unit=c("deg","rad","flowdir"),arrow_length=NA,clockwise=FALSE,
-                           angle_from_h_axis=0,angle_from_x_axis=angle_from_h_axis,length=0,...)
+arrows_on_rast(x="flowdir",x_base=NULL,unit=c("deg","rad","flowdir"),
+                arrow_length=NA,clockwise=FALSE,
+                angle_from_h_axis=0,
+                angle_from_x_axis=angle_from_h_axis,
+                length=0,...)
 }
 \arguments{
   \item{x}{A \code{\link[terra]{SpatRaster}} object representing angles or directions (in degrees or radians or flowdirs).}
