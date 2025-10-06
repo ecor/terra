@@ -563,7 +563,9 @@ make.panel <- function(x, maxcell) {
 	}
 	if (type == "continuous") {
 		if (inherits(cols, "function")) {
-			cols <- cols(100)
+			if (is.null(attr(cols, "colorType"))) {
+				cols <- cols(100)
+			}
 		}
 		return(list(type=type, x=x, cols=cols))
 	}
@@ -602,7 +604,7 @@ make.panel <- function(x, maxcell) {
 setMethod("plet", signature(x="SpatRaster"),
 	function(x, y=1, col, alpha=0.8, main=names(x), tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
 		wrap=TRUE, maxcell=500000, stretch=NULL, legend="bottomright", shared=FALSE, panel=FALSE, collapse=TRUE, 
-		type=NULL, breaks=NULL, breakby="eqint", map=NULL, ...)  {
+		type=NULL, breaks=NULL, breakby="eqint", range=NULL, fill_range=FALSE, map=NULL, ...)  {
 
 		#checkLeafLetVersion()
 		
@@ -615,7 +617,6 @@ setMethod("plet", signature(x="SpatRaster"),
 			ext(x) <- c(0, rx/m, 0, ry/m)
 			crs(x) <- "EPSG:3857"
 			notmerc <- FALSE
-
 		} else {
 			notmerc <- isTRUE(crs(x, describe=TRUE)$code != "3857")
 		}
@@ -708,17 +709,30 @@ setMethod("plet", signature(x="SpatRaster"),
 		}
 		
 		if (nlyr(x) == 1) {
-			map <- leaflet::addRasterImage(map, x, colors=col, opacity=alpha, project=notmerc)
-			if (!is.null(legend)) {
-				if (leg$type == "continuous") {
-					if (!all(hasMinMax(x))) setMinMax(x)
-					r <- minmax(x)
-					v <- seq(r[1], r[2], length.out=5)
-					pal <- leaflet::colorNumeric(col, v, reverse = TRUE)
-					map <- leaflet::addLegend(map, legend, pal=pal, values=v, opacity=1, title=main[1],
-						  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
+			if (leg$type == "continuous") {
+				if (!all(hasMinMax(x))) setMinMax(x)
+				if ((inherits(col, "function")) && (!is.null(attr(col, "colorType")))) {
+					pal <- col
+					range <- environment(pal)$rng
 				} else {
-					map <- leaflet::addLegend(map, position=legend, colors=leg$cols, 
+					v <- minmax(x)
+					if (is.null(range)) {
+						range <- c(v[1], v[2])
+					} else if (fill_range) {
+						x <- clamp(x, range[1], range[2], values=TRUE)
+					}
+					pal <- leaflet::colorNumeric(col, range, na.color=NA)
+				}
+				map <- leaflet::addRasterImage(map, x, colors=pal, opacity=alpha, project=notmerc)
+				if (!is.null(legend)) {
+					environment(pal)$reverse <- TRUE
+					map <- leaflet::addLegend(map, legend, pal=pal, values=range, opacity=1, title=main[1],
+					  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
+				}
+			} else {
+				map <- leaflet::addRasterImage(map, x, colors=col, opacity=alpha, project=notmerc)
+				if (!is.null(legend)) {
+					map <- leaflet::addLegend(map, position=legend, colors=col, 
 							labels=levels(x)[[1]][,2], opacity=alpha, title=main)
 				}
 			}
@@ -730,27 +744,53 @@ setMethod("plet", signature(x="SpatRaster"),
 		} else {
 			nms <- make.unique(names(x))
 			many_legends <- one_legend <- FALSE
-			if (!is.null(legend)) {
-				if (!all(hasMinMax(x))) setMinMax(x)
-				r <- minmax(x)
-				if (shared) {
-					rr <- range(r)
-					pal <- leaflet::colorNumeric(col, rr, na.color="#00000000")
-					one_legend <- TRUE
-				} else {
-					many_legends <- TRUE
-				}
-			} else {
-				one_legend <- FALSE
+			if (!all(hasMinMax(x))) setMinMax(x)
+			r <- minmax(x)
+			hasColFun <- FALSE
+			if ((inherits(col, "function")) && (!is.null(attr(col, "colorType")))) {
+				hasColFun <- TRUE
+				shared <- TRUE
 			}
+			if (shared) {
+				#rr <- range(r)
+				if (hasColFun) {
+					pal <- col
+					range <- environment(col)$rng
+				} else {
+					r <- minmax(x)
+					if (is.null(range)) {
+						range <- range(r)
+					} else if (fill_range) {
+						x <- clamp(x, range[1], range[2], values=TRUE)
+					}
+					pal <- leaflet::colorNumeric(col, range, na.color=NA)
+				}
+				v <- seq(range[1], range[2], length.out=5)
+				one_legend <- TRUE
+			} else {
+				many_legends <- TRUE
+			}
+			add_legend <- !is.null(legend)
+			
 			for (i in 1:nlyr(x)) {
 				if (one_legend) {
 					map <- leaflet::addRasterImage(map, x[[i]], colors=pal, opacity=alpha, group=nms[i], project=notmerc)
 				} else {
-					map <- leaflet::addRasterImage(map, x[[i]], colors=col, opacity=alpha, group=nms[i], project=notmerc)
-					if (many_legends) {
-						v <- seq(r[1,i], r[2,i], length.out=5)
-						pal <- leaflet::colorNumeric(col, v, reverse=TRUE)
+					if (hasColFun) {
+						pal <- col
+						range <- environment(col)$rng
+					} else {
+						if (is.null(range)) {
+							range <- range(r)
+						} else if (fill_range) {
+							x[[i]] <- clamp(x[[i]], range[1], range[2], values=TRUE)
+						}
+						pal <- leaflet::colorNumeric(col, range, na.color=NA)
+					}
+					map <- leaflet::addRasterImage(map, x[[i]], colors=pal, opacity=alpha, group=nms[i], project=notmerc)
+					if (add_legend) {
+						environment(pal)$reverse <- TRUE
+						v <- seq(range[1], range[2], length.out=5)
 						map <- leaflet::addLegend(map, position=legend, pal=pal, values=v, 
 							  title=main[i], opacity=1, group=nms[i],
 							  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
@@ -759,7 +799,7 @@ setMethod("plet", signature(x="SpatRaster"),
 			}
 			map <- leaflet::addLayersControl(map, baseGroups=nms,
 				options = leaflet::layersControlOptions(collapsed=collapse))
-			if (many_legends) {	# show one legend at a time
+			if (many_legends && add_legend) {	# show one legend at a time
 				map <- htmlwidgets::onRender(map, 
 					"function(el, x) {
 						var updateLegend = function () {
@@ -771,9 +811,8 @@ setMethod("plet", signature(x="SpatRaster"),
 					};
 					updateLegend();
 					this.on('baselayerchange', e => updateLegend());}")
-			} else if (one_legend) {
-				v <- seq(rr[1], rr[2], length.out=5)
-				pal <- leaflet::colorNumeric(col, v, reverse = TRUE)
+			} else if (one_legend && add_legend) {
+				environment(pal)$reverse <- TRUE
 				map <- leaflet::addLegend(map, position=legend, pal=pal, values=v, opacity=1, group=nms[i],
 						  labFormat = leaflet::labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
 			}
@@ -783,3 +822,31 @@ setMethod("plet", signature(x="SpatRaster"),
 )
 
 
+
+setMethod("plet", signature(x="SpatRasterCollection"),
+	function(x, col, alpha=0.8, main=names(x), tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
+		wrap=TRUE, maxcell=500000, stretch=NULL, legend="bottomright",  
+		type=NULL, breaks=NULL, breakby="eqint", range=NULL, fill_range=FALSE, map=NULL, ...)  {
+
+		if (is.null(range)) {
+			mnmx <- sapply(x, \(r) minmax(r, compute=TRUE)[,1])
+			range <- c(min(mnmx[1,]), max(mnmx[2,]))
+		}
+
+		
+		r <- x[1][[1]]
+		map <- plet(r, 1, col=col, alpha=alpha, main=names(r), tiles=tiles, wrap=wrap, maxcell=maxcell, stretch=stretch, 
+			legend=legend, shared=FALSE, panel=FALSE, collapse=TRUE, type=type, breaks=breaks, breakby=breakby, 
+			range=range, fill_range=fill_range, map=NULL)
+		
+		if (length(x) == 1) return(map)
+		
+		for (i in 2:length(x)) {
+			r <- x[i][[1]]
+			map <- plet(r, 1, col=col, alpha=alpha, main=names(r), tiles=NULL, wrap=wrap, maxcell=maxcell, stretch=stretch, 
+				legend=NULL, shared=FALSE, panel=FALSE, collapse=TRUE, type=type, breaks=breaks, breakby=breakby, 
+				range=range, fill_range=fill_range, map=map)
+		}
+		map
+	}
+)

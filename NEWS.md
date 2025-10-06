@@ -1,4 +1,23 @@
-# version 1.8-66
+# version 1.8-71
+
+## bug fixes
+
+## enhancements
+
+- `plet<SpatRaster>` can (again) use a color function returned by `leaflet::colorNumeric` [#1904](https://github.com/rspatial/terra/issues/1904) by Ignacio Marzan
+- argument `animate<SpatRaster>` can now be set to `NA` to not get a shared legend  [#1909](https://github.com/rspatial/terra/pull/1909) by Márcia Barbosa
+- `text<SpatRaster>` and `text<SpatVector>` gained argument "jitter=0" [#1910](https://github.com/rspatial/terra/pull/1910) by Márcia Barbosa
+- `points<SpatVector>` gained argument "jitter=0"
+- `plet<SpatRaster>` gained arguments "range" and "fill_range" 
+
+## new
+
+- `plet<SpatRasterCollection>` method
+
+
+# version 1.8-70
+
+Released 2025-09-27
 
 ## bug fixes
 
@@ -271,7 +290,7 @@ Released 2024-12-12
 - `plet<SpatRaster>` now works for RGB rasters and rasters with a color table [#1596](https://github.com/rspatial/terra/issues/1596) by Agustin Lobo
 - `vect<MULTIPOINT WKT>` did not work properly [#1376](https://github.com/rspatial/terra/issues/1376) by silasprincipe
 - `compareGeom<SpatVector>` did not work [#1654](https://github.com/rspatial/terra/issues/1654) by Jason Flower
-- `buffer<SpatVector>` is now more accurate buffers for lonlat polygons [#1616](https://github.com/rspatial/terra/issues/1616) by Roberto Amaral-Santos
+- `buffer<SpatVector>` is now more accurate for lonlat polygons [#1616](https://github.com/rspatial/terra/issues/1616) by Roberto Amaral-Santos
 - `terra:interpNear` used square windows, not circles, beyond 100 points [#1509](https://github.com/rspatial/terra/issues/1509) by Jean-Luc Dupouey
 - `vect` read INT64 fields as integers, sometimes leading to overflows. [#1666](https://github.com/rspatial/terra/issues/1666) by bengannon-fc
 - `plot` showed a legend title even if none was requested if title parameters were specified . [#1664](https://github.com/rspatial/terra/issues/1664) by Márcia Barbosa
