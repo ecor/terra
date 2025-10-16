@@ -11,12 +11,14 @@
 Calculate a buffer around all cells that are not \code{NA} in a SpatRaster, or around the geometries of a SpatVector.
 
 SpatRaster cells inside the buffer distance get a value of 1.
- 
+
 Note that the distance unit of the buffer \code{width} parameter is meters if the CRS is (\code{+proj=longlat}), and in map units (typically also meters) if not. 
+
+If your data has a longitude/latitude CRS do \bold{not} project them to a planar CRS because that makes the results less precise (see Examples).
 }
 
 \usage{
-\S4method{buffer}{SpatRaster}(x, width, background=0, filename="", ...)
+\S4method{buffer}{SpatRaster}(x, width, background=0, include=TRUE, filename="", ...)
 
 \S4method{buffer}{SpatVector}(x, width, quadsegs=10, capstyle="round", 
 		joinstyle="round", mitrelimit=NA, singlesided=FALSE)
@@ -28,6 +30,7 @@ Note that the distance unit of the buffer \code{width} parameter is meters if th
   \item{filename}{character. Output filename}
   \item{...}{additional arguments for writing files as in \code{\link{writeRaster}}}
   \item{background}{numeric. value to assign to cells outside the buffer. If this value is zero or FALSE, a boolean SpatRaster is returned}  
+  \item{include}{logical. If \code{TRUE} the raster cells that are not \code{NA} are included in the buffer. Otherwise these cells get the background value}  
   \item{quadsegs}{positive integer. Number of line segments to use to draw a quart circle}  
   \item{capstyle}{character. One of "round", "square" or "flat". Ignored if \code{is.lonlat(x)}}
   \item{joinstyle}{character. One of "round", "mitre" or "bevel". Ignored if \code{is.lonlat(x)}}  
@@ -52,7 +55,7 @@ r[500] <- 1
 b <- buffer(r, width=5000000) 
 plot(b)
 
-v <- vect(rbind(c(10,10), c(0,60)), crs="+proj=merc")
+v <- vect(rbind(c(170,10), c(0,60)), crs="+proj=merc")
 b <- buffer(v, 20)
 plot(b)
 points(v)

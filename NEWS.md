@@ -1,18 +1,26 @@
-# version 1.8-71
+# version 1.8-73
 
 ## bug fixes
+
+- `plot<SpatRaster>` with arguments "break=n" and "breakby='cases'" could break if there the number of computed quantile breaks is lower than expected because of duplicates [#1913](https://github.com/rspatial/terra/pull/1913) by Bradley W. Compton
+- `buffer<SpatRaster>` for lon/lat rasters did not include the non `NA` cells outside of the buffer distance from the edges as part of the buffer [#1929](https://github.com/rspatial/terra/issues/1929) by Márcia Barbosa
+
 
 ## enhancements
 
 - `plet<SpatRaster>` can (again) use a color function returned by `leaflet::colorNumeric` [#1904](https://github.com/rspatial/terra/issues/1904) by Ignacio Marzan
-- argument `animate<SpatRaster>` can now be set to `NA` to not get a shared legend  [#1909](https://github.com/rspatial/terra/pull/1909) by Márcia Barbosa
+- argument `animate<SpatRaster>` can now be set to `NA` to not get a shared legend [#1909](https://github.com/rspatial/terra/pull/1909) by Márcia Barbosa
 - `text<SpatRaster>` and `text<SpatVector>` gained argument "jitter=0" [#1910](https://github.com/rspatial/terra/pull/1910) by Márcia Barbosa
 - `points<SpatVector>` gained argument "jitter=0"
 - `plet<SpatRaster>` gained arguments "range" and "fill_range" 
+- `unique<SpatVector>` gained arguments "geom=TRUE" and "atts=TRUE" to allow uniqueness to be based on geometry or attributes only [#1928](https://github.com/rspatial/terra/issues/1928) by Andrea Titolo
+- `buffer<SpatRaster>` gains argument "include=TRUE" to allow exclusion of the cells that are not `NA` from the buffer  [#1929](https://github.com/rspatial/terra/issues/1929) by Márcia Barbosa
+
 
 ## new
 
 - `plet<SpatRasterCollection>` method
+- `cartogram<SpatRaster>` can now return a "circles" (dorling) cartogram [#1911](https://github.com/rspatial/terra/issues/1911) by Márcia Barbosa 
 
 
 # version 1.8-70

@@ -328,6 +328,11 @@
 	} else {
 		Z <- as.matrix(x, wide=TRUE)
 		Z[is.nan(Z) | is.infinite(Z)] <- NA
+		nZ <- length(unique(na.omit(as.vector(Z))))	
+		if (nZ <= 1) {
+			return(.as.raster.classes(out, x, Z=Z, ...))
+		}
+
 		out <- .generic.interval(out, Z)
 		Z[] <- out$leg$fill[out$vcut]
 	}
@@ -381,7 +386,7 @@
 	}
 	if (!x$legend_only) {
 		graphics::rasterImage(x$r, x$ext[1], x$ext[3], x$ext[2], x$ext[4], angle = 0, interpolate = x$interpolate)
-		if (x$axes) x <- .plot.axes(x)
+		x <- .plot.axes(x)
 	}
 	
 	if (x$legend_draw) {

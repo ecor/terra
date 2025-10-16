@@ -1,22 +1,36 @@
 
 setMethod("cartogram", signature(x="SpatVector"),
-	function(x, var, type)  {
+	function(x, var, type="nc")  {
 		if (geomtype(x) != "polygons") {
 			error("cartogram", "x must be polygons")
 		}
-		type <- match.arg(tolower(type), "nc")
+		type <- tolower(type[1])
+		type <- match.arg(type, c("nc", "circles"))
 		stopifnot(var %in% names(x))
 		v <- as.numeric(as.vector(x[[var, drop=TRUE]]))
-		if (!any(!is.na(v))) stop(paste("no numeric values in", var))
-		if (any(v <= 0)) stop(paste("non-positive values in", var))
-		x <- x[!is.na(v)]
-		v <- v[!is.na(v)]
+		i <- !is.na(v)
+		x <- x[i]
+		v <- v[i]
+
+		i <- v > 0
+		x <- x[i]
+		v <- v[i]
+		
+		if (nrow(x) == 0) return(vect("POLYGON EMPTY"))
+
 		f <- v / max(v)
-		cxy <- crds(centroids(x, inside=TRUE))
+		cntrds <- centroids(x, inside=TRUE)
+		cxy <- crds(cntrds)
 		r <- lapply(1:length(v), function(i) {
 			rescale(x[i,], f[i], x0=cxy[i,1], y0=cxy[i,2])
 		})
-		do.call(rbind, r)
+		out <- do.call(rbind, r)
+		
+		if (type == "circles") {
+			out <- buffer(cntrds, width(out)/2)
+		}
+		
+		out
 	}
 )
 

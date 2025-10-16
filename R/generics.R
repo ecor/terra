@@ -673,7 +673,12 @@ setMethod("project", signature(x="SpatRaster"),
 				method <- "bilinear"
 			}
 		} else {
-			method <- match.arg(tolower(method[1]), c("near", "bilinear", "cubic", "cubicspline", "lanczos", "average", "sum", "mode", "min", "q1", "median", "q3", "max", "rms"))			
+			method <- .makeTextFun(method)
+			if (!inherits(method, "character")) {
+				error("project", "not a valid method argument")
+			}
+			method <- match.arg(tolower(method[1]), c("near", "bilinear", "cubic", "cubicspline", "lanczos", "mean", "average", "sum", "mode", "min", "q1", "median", "q3", "max", "rms"))
+			method[method == "mean"] <- "average"
 		}
 		opt <- spatOptions(filename, threads=threads, ...)
 
@@ -1246,9 +1251,22 @@ setMethod("unique", signature(x="SpatRaster", incomparables="ANY"),
 
 
 setMethod("unique", signature(x="SpatVector", incomparables="ANY"),
-	function(x, incomparables=FALSE, ...) {
-		u <- unique(as.data.frame(x, geom="WKT"), incomparables=incomparables, ...)
-		vect(u, geom="geometry", crs(x))
+	function(x, incomparables=FALSE, geom=TRUE, atts=TRUE, ...) {
+		if (geom && atts) {
+			u <- unique(as.data.frame(x, geom="WKT"), incomparables=incomparables, ...)
+			vect(u, geom="geometry", crs(x))
+		} else if (geom) {
+			g <- geom(x, hex=TRUE)
+			i <- !duplicated(g, ...)
+			x[i,]
+		} else if (atts) {
+			d <- data.frame(x)
+			i <- !duplicated(d, ...)
+			x[i,]
+		} else {
+			warn("unique", "geom and atts are both FALSE")
+			x
+		}
 	}
 )
 
