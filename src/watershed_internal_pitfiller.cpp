@@ -74,6 +74,7 @@ void pitfiller(int nx,int ny,double ipit, double *pitf,double *e,double *eout,do
     //ev[0]=*(e+jv[0]);
     int is_one_pixel=1;
     ev[0] = *(e+jv[0]);
+    //printf("ev0=%f _",ev[0]);
     double evavg=0;
     double evdown=*(e+jv[1]);;
     for (int is = 1;is<jv.size();is++) {
@@ -114,7 +115,7 @@ void pitfiller(int nx,int ny,double ipit, double *pitf,double *e,double *eout,do
     
     }
     
-    
+    //printf("evout0=%f _\n",ev[0]);
     *(eout+jv[0])=ev[0];
    //20241218 if (is_one_pixel==1) printf("pit number %f : e=%f eout=%f one_pixel=%d\n",ipit,*(e+jv[0]),*(eout+jv[0]),is_one_pixel);
     

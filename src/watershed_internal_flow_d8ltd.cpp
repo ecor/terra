@@ -124,6 +124,7 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
     y = getRow(nx, ny, i);
     double slope_mgn_temp=0;
     double slope_mgn=0;
+    double mean_e=0;
     int facet=0;
  
     
@@ -138,29 +139,42 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
     //if (std::isnan(e2) | std::isnan(e0) | e2==e0) e2=1.05*e0;
        
     /// facet=j;
-    double mean_e=(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
+    double mean_e_temp=(e0+e1+e2)/3; //EXPERIMENTAL    /////pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
     slope_mgn_temp=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
-    slope_mgn=pow(pow(mean_e-e1,2)+pow(e1-e2,2),0.5)/L;
-    if (e0<mean_e) { // uncommented on EC 20250717
+    //double flow_angle_tan=(e1-e2)/(e0-e1); //ec 20251023
+    double flow_angle_tan=abs((e1-e2)/(e0-e1));
+    //slope_mgn=slope_mgn_temp; //pow(pow(mean_e-e1,2)+pow(e1-e2,2),0.5)/L;
+    if (e0<mean_e_temp) { // uncommented on EC 20250717
        
        slope_mgn_temp=0;
-       
-    }
-    double flow_angle_tan=(e1-e2)/(e0-e1);
-    if (flow_angle_tan>1)  {
-      slope_mgn_temp=0;
-    } else if (flow_angle_tan<0) {
       
+      
+    } else if (flow_angle_tan>1)  {
+      slope_mgn_temp=abs(e0-e2)/(L*sqrt(2));
+    } else if (flow_angle_tan<0) {
       slope_mgn_temp=0;
-    } // 20240913
+    } // 20251022
     
     //if (slope_mgn_temp<0) slope_mgn_temp=0;
    
     if (slope_mgn_temp>slope_mgn) {
         slope_mgn=slope_mgn_temp;
+        mean_e=mean_e_temp;
         facet=j;
+        
+     } else if (slope_mgn_temp==slope_mgn) {
       
-       }
+        if (mean_e_temp<mean_e) {
+          slope_mgn=slope_mgn_temp;
+          mean_e=mean_e_temp;
+          facet=j;
+          
+          
+        }
+    //  facet=0;
+       
+     }
+      
     }
     
     double e_temp=e0;
@@ -192,17 +206,18 @@ void slope_direction(double* e, int nx, int ny, double *sr,double *sm,int *sface
     //if (std::isnan(e1) | std::isnan(e0) | e1==e0) e1=1.05*e0;
     //if (std::isnan(e2) | std::isnan(e0) | e2==e0) e2=1.05*e0;
     *(sfacet+i)=facet;
-    *(sr+i)=(std::atan((e1-e2)/(e0-e1))); // RAD 20240912
+    //*(sr+i)=(std::atan((e1-e2)/(e0-e1))); // RAD 20240912
+    *(sr+i)=(std::atan((e1-e2)/(e0-e1))); // mod ec 20250322 //RAD 20240912
     *(sm+i)=pow(pow(e0-e1,2)+pow(e1-e2,2),0.5)/L;
-    if (*(sr+i)<=0) {
+    if (*(sr+i)<0) {
       
       *(sr+i)=0;
-      *(sm+i)=(e0-e1)/L;
+      *(sm+i)=abs(e0-e1)/L;
       
-    } else if (*(sr+i)>=M_PI/4) {
+    } else if (*(sr+i)>M_PI/4) {
       
         *(sr+i)=M_PI/4;
-        *(sm+i)=(e0-e2)/(L*sqrt(2));
+        *(sm+i)=abs(e0-e2)/(L*sqrt(2));
     }
     
     if (use_lad==1) {
@@ -302,12 +317,12 @@ void transverse_deviation(double *e, double *tdc, double *tdd,double *sr,double 
     } else if (abs(*(atdc+i))<=abs(*(atdd+i))) {
         
       pflow_estimate=ddp1[facet];
-      nextp=nextc;
+      nextp=nextc; // cardinal
       atdplus_temp=*(atdc+nextp);
    // } else if (abs(*(atdd+i))<abs(*(atdc+i))) {
     } else  {
       pflow_estimate=ddp2[facet];
-      nextp=nextd;
+      nextp=nextd; // diagonal
       atdplus_temp=*(atdd+nextp);
         
     }
