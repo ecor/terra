@@ -1,4 +1,5 @@
 
+
 .txt.loc <- function(x, main=TRUE) {
 	if (main) {
 		cex <- "cex.main"
@@ -79,7 +80,7 @@ add_box <- function(...) {
 
 add_grid <- function(nx=NULL, ny=nx, col="lightgray", lty="dotted", lwd=1) {
 
-	p <- get.clip()
+	p <- unlist(get.clip())
 	reset.clip()
 
 	## adapted from graphics::grid 
@@ -87,22 +88,32 @@ add_grid <- function(nx=NULL, ny=nx, col="lightgray", lty="dotted", lwd=1) {
 		if (is.null(n)) {
 			stopifnot(is.numeric(ax <- axp), length(ax) == 3L)
 			graphics::axTicks(side, axp=ax, usr=usr2, log=FALSE)
-		}
-		else if (!is.na(n) && (n <- as.integer(n)) >= 1L) {
+		} else if (!is.na(n) && (n <- as.integer(n)) >= 1L) {
 			at <- seq.int(usr2[1L], usr2[2L], length.out = n + 1L)
 			at[-c(1L, n + 1L)]
 		}
 	}
 
     atx <- if (is.null(nx) || (!is.na(nx) && nx >= 1)) 
-        g.grid.at(1L, nx, axp = graphics::par("xaxp"), usr2 = p[1:2])
+        g.grid.at(1L, nx, axp=graphics::par("xaxp"), usr2 = p[1:2])
     aty <- if (is.null(ny) || (!is.na(ny) && ny >= 1)) 
         g.grid.at(2L, ny, axp = graphics::par("yaxp"), usr2 = p[3:4])
     graphics::abline(v = atx, h = aty, col = col, lty = lty, lwd = lwd)
     invisible(list(atx = atx, aty = aty))
 }
 
+add_abline <- function(h=NULL, v=NULL, ...) {
+	p <- unlist(get.clip())
+	reset.clip()
+	if (!is.null(h)) {
+		lines(as.lines(cbind(p[1], p[2], h, h)), ...)
+	}
+	if (!is.null(v)) {
+		lines(as.lines(cbind(v, v, p[3], p[4])), ...)	
+	}
+}
 
+	
 add_mtext <- function(text, side=3, line=0, ...) {
 
 	stopifnot(side %in% 1:4)
