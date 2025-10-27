@@ -159,7 +159,13 @@ rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5)
 rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1)
 
 plot(rr$elev)
-plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+arrows_on_rast(rr$flow_dir, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl0, unit="flowdir",col="blue")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdlm, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl1, unit="flowdir",col="black")
 
 ## V-Shape Watershed  Geometry using calculus R package 
 
@@ -212,8 +218,22 @@ rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
 rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
 rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
 rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
+
 plot(rr$elev)
-plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+arrows_on_rast(rr$flow_dir, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladl0, unit="flowdir",col="blue")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladlm, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladl1, unit="flowdir",col="black")
+
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl0, unit="flowdir",col="blue")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdlm, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl1, unit="flowdir",col="black")
 
 
 
@@ -272,8 +292,25 @@ rr$flow_dirladl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="lad")
 rr$flow_dirltdl0 <- flowdirD8ltd(rr$elev,lambda=0,deviation_type="ltd")
 rr$flow_dirltdlm <- flowdirD8ltd(rr$elev,lambda=0.5,deviation_type="ltd")
 rr$flow_dirltdl1 <- flowdirD8ltd(rr$elev,lambda=1,deviation_type="ltd")
+
 plot(rr$elev)
-plot(rr[[str_detect(names(rr),"flow_dir")]],type="classes")
+arrows_on_rast(rr$flow_dir, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladl0, unit="flowdir",col="blue")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladlm, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirladl1, unit="flowdir",col="black")
+
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl0, unit="flowdir",col="blue")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdlm, unit="flowdir",col="black")
+plot(rr$elev)
+arrows_on_rast(rr$flow_dirltdl1, unit="flowdir",col="black")
+
+
+
 
 
 ### Further examples
