@@ -31,15 +31,15 @@ Emanuele Cordano
 \examples{
 
 f <- system.file("ex/elev_vinschgau.tif", package="terra")
-r <- rast(f)  #|> aggregate(fact=5,fun=min)
+r <- rast(f)  |> aggregate(fact=2,fun=min)
 d <- terrain(r, "flowdir")
-dl0 <- flowdirD8lad(r,lambda=0)
-dl1 <- flowdirD8lad(r,lambda=1)
+##dl0 <- flowdirD8lad(r,lambda=0)
+##dl1 <- flowdirD8lad(r,lambda=1)
 
 plot(r,col=terrain.colors(10))
 
-arrows_on_rast(dl0, unit="flowdir",col="blue")
-arrows_on_rast(dl1, unit="flowdir",col="red")
+##arrows_on_rast(dl0, unit="flowdir",col="blue")
+##arrows_on_rast(dl1, unit="flowdir",col="red")
 arrows_on_rast(d, unit="flowdir",col="black")
 ###
 
