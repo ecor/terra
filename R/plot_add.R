@@ -45,18 +45,18 @@
 
 
 
-add_legend <- function(x, y, ...) {
+add_legend <- function(x, y, xpd=TRUE, ...) {
 	if (inherits(x, "character")) {
 		e <- unlist(get.clip())
 		if (!is.null(e)) {
-			rct <- graphics::legend(x=x, y=y, plot=FALSE, ...)$rect
+			rct <- graphics::legend(x=x, y=y, plot=FALSE, xpd=xpd, ...)$rect
 			xy <- get_legxy(rct, e[1:4], x, NULL)
-			graphics::legend(x=xy[1], y=xy[2], ...)
+			graphics::legend(x=xy[1], y=xy[2], xpd=xpd, ...)
 		} else {
-			graphics::legend(x=x, y=y, ...)
+			graphics::legend(x=x, y=y, xpd=xpd, ...)
 		}
 	} else {
-		graphics::legend(x=x, y=y, ...)
+		graphics::legend(x=x, y=y, xpd=xpd, ...)
 	}
 }
 
@@ -77,22 +77,21 @@ add_box <- function(...) {
 	}
 }
 
+## adapted from graphics::grid 
+g.grid.at <- function (side, n, axp, usr2) {
+	if (is.null(n)) {
+		stopifnot(is.numeric(ax <- axp), length(ax) == 3L)
+		graphics::axTicks(side, axp=ax, usr=usr2, log=FALSE)
+	} else if (!is.na(n) && (n <- as.integer(n)) >= 1L) {
+		at <- seq.int(usr2[1L], usr2[2L], length.out = n + 1L)
+		at[-c(1L, n + 1L)]
+	}
+}
 
 add_grid <- function(nx=NULL, ny=nx, col="lightgray", lty="dotted", lwd=1) {
 
 	p <- unlist(get.clip())
 	reset.clip()
-
-	## adapted from graphics::grid 
-	g.grid.at <- function (side, n, axp, usr2) {
-		if (is.null(n)) {
-			stopifnot(is.numeric(ax <- axp), length(ax) == 3L)
-			graphics::axTicks(side, axp=ax, usr=usr2, log=FALSE)
-		} else if (!is.na(n) && (n <- as.integer(n)) >= 1L) {
-			at <- seq.int(usr2[1L], usr2[2L], length.out = n + 1L)
-			at[-c(1L, n + 1L)]
-		}
-	}
 
     atx <- if (is.null(nx) || (!is.na(nx) && nx >= 1)) 
         g.grid.at(1L, nx, axp=graphics::par("xaxp"), usr2 = p[1:2])

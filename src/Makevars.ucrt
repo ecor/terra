@@ -10,9 +10,8 @@ else
   PKG_CXXFLAGS += -DHAVE_TBB 
 endif
 
-#PKG_CXXFLAGS += -Wconversion -Wno-sign-conversion 
-
-CXX_STD = CXX
+##PKG_CXXFLAGS += -Wconversion -Wno-sign-conversion 
+##CXX_STD = CXX
 
 all: clean winlibs
 

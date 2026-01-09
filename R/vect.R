@@ -183,6 +183,7 @@ setMethod("vect", signature(x="matrix"),
 		type <- tolower(type)
 		type <- match.arg(tolower(type), c("points", "lines", "polygons"))
 		stopifnot(NCOL(x) > 1)
+		stopifnot(NCOL(x) < 6)
 
 		crs <- character_crs(crs, "vect")
 		p <- methods::new("SpatVector")
@@ -303,8 +304,20 @@ setReplaceMethod("[[", c("SpatVector", "character"),
 				}
 			}
 			return(x);
+		} else if (length(value) == 0) {
+			if (nrow(x) == 0) {
+				d <- values(x)
+				for (name in i) {
+					d[[name]] <- value
+				}
+				values(x) <- d
+				return(x)
+			} else {
+				values(x) <- NA
+				#error("[[<-,SpatVector", "cannot use an empty value")
+				return(x)
+			}
 		}
-
 		if (inherits(value, "data.frame")) {
 			if (ncol(value)	> 1) {
 				warn("`[[<-`", "only using the first column")
@@ -319,6 +332,14 @@ setReplaceMethod("[[", c("SpatVector", "character"),
 			value <- value[,1]
 		}
 		name <- i[1]
+
+		nr <- nrow(x)
+		if (length(value) > nr) {
+			error("$<-", paste("replacement has", length(value), "rows, data has", nr))
+		}
+		if ((nr %% length(value)) != 0) {
+			warn("$<-", "replacement is not a multiple of the number of rows")
+		}
 		value <- rep(value, length.out=nrow(x))
 
 		if (name %in% names(x)) {
@@ -391,25 +412,95 @@ setMethod("$<-", "SpatVector",
 
 
 setMethod("vect", signature(x="data.frame"),
-	function(x, geom=c("lon", "lat"), crs="", keepgeom=FALSE) {
-		if (!all(geom %in% names(x))) {
-			error("vect", "the variable name(s) in argument `geom` are not in `x`")
+	function(x, geom=NULL, crs=NULL, keepgeom=FALSE, quiet=TRUE) {
+		
+		guessed_geom <- FALSE; lonlat <- FALSE
+		if (!is.null(geom)) {
+			if (!all(geom %in% names(x))) {
+				error("vect", "the variable name(s) in argument `geom` are not in `x`")
+			}
+		} else {
+			if (all(c("lon", "lat") %in% names(x))) { 
+				# backwards compatability
+				geom <- c("lon", "lat")
+				# guessed_geom <- TRUE	
+			} else {
+				if (ncol(x) <= 2) { 
+					geom <- names(x)				
+				} else {
+					nms <- tolower(names(x))
+					m <- rbind(	match(c("longitude", "latitude"), nms),
+								match(c("long", "lat"), nms),								
+								match(c("lon", "lat"), nms),
+								match(c("x", "y"), nms))
+					test <- !apply(is.na(m), 1, any) 
+					if (sum(test) == 1) {
+						m <- m[test, ]
+						geom <- names(x)[m]
+						lonlat <- which(test) < 4
+					} else if (sum(test) == 0) {
+						lon <- which(sapply(nms, function(n) grepl(n, "longitude")))
+						lat <- which(sapply(nms, function(n) grepl(n, "latitude")))
+						if ((length(lon) == 0) && (length(lat) == 0)) {
+							lon <- which(sapply(nms, function(n) grepl(n, "lon")))
+							lat <- which(sapply(nms, function(n) grepl(n, "lat")))
+						}
+						if ((length(lon) == 1) && (length(lat) == 1)) {
+							geom <- names(x)[c(lon, lat)]
+							lonlat <- TRUE
+						} 
+					} 
+					if (is.null(geom) && (ncol(x) == 2) && all(sapply(x, is.numeric))) { 
+						geom <- names(x)
+					}
+					guessed_geom <- TRUE
+				}
+			}
+			if (is.null(geom)) {
+				error("vect", "geom=NULL and no unique lon/lat or x/y variable name pairs detected")
+			}
 		}
-		crs <- character_crs(crs, "vect")
+		
+		guessed_crs <- FALSE
+		if (is.null(crs)) {
+			if ((guessed_geom && lonlat) || ((!guessed_geom) && grepl("lon", geom[1], TRUE) && grepl("lat", geom[2], TRUE))) {
+				xr <- range(x[,geom[1]], na.rm=TRUE)
+				yr <- range(x[,geom[2]], na.rm=TRUE)
+				if ((xr[1] > -181) && (xr[2] < 361)  && (yr[1] > -90.01) && (yr[2] < 90.01)) {
+					guessed_crs <- TRUE
+					crs <- "+proj=longlat"
+				}
+			} else {
+				crs <- ""
+			}
+		} else {
+			crs <- character_crs(crs, "vect")
+		}
 		if (length(geom) == 2) {
 			geom <- match(geom[1:2], names(x))
 			if (inherits(x[,geom[1]], "integer")) {
-				x[,geom[1]] = as.numeric(x[,geom[1]])
+				x[,geom[1]] <- as.numeric(x[,geom[1]])
 			}
 			if (inherits(x[,geom[2]], "integer")) {
-				x[,geom[2]] = as.numeric(x[,geom[2]])
+				x[,geom[2]] <- as.numeric(x[,geom[2]])
 			}
 			p <- methods::new("SpatVector")
 			p@pntr <- SpatVector$new()
 			x <- .makeSpatDF(x)
 
 			p@pntr$setPointsDF(x, geom-1, crs, keepgeom)
-			return(messages(p, "vect"))
+
+			p <- messages(p, "vect")
+			if (!quiet) {
+				if (guessed_geom & guessed_crs) {
+					warn("vect", "guessed geom and crs")
+				} else if (guessed_geom) {
+					warn("vect", "guessed geom")
+				} else if (guessed_crs) {
+					warn("vect", "guessed crs")
+				}			
+			}
+			return(p)
 		} else if (length(geom) == 1) {
 			v <- vect(unlist(x[,geom]), crs=crs)
 			if (!keepgeom) {

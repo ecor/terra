@@ -3,6 +3,22 @@
 # Version 1.0
 # License GPL v3
 
+
+setMethod("centroids", signature(x="SpatRaster"),
+	function(x, weighted=FALSE) {
+		opt <- spatOptions()
+		if (nlyr(x) > 1) {
+			out <- lapply(1:nlyr(x), function(i) centroids(x[[i]], weighted=weighted))
+			do.call(rbind, out)
+		} else {
+			out <- x@pntr$centroid(weighted[1], opt)
+			messages(x, "centroids")
+			data.frame(x=out[1], y=out[2])
+		}
+	}
+)
+
+
 setMethod("is.rotated", signature(x="SpatRaster"),
 	function(x) {
 		x@pntr$is_rotated()
@@ -24,7 +40,6 @@ setMethod("rangeFill", signature(x="SpatRaster"),
 		messages(x, "rangeFill")
 	}
 )
-
 
 
 setMethod("weighted.mean", signature(x="SpatRaster", w="numeric"),
@@ -172,11 +187,12 @@ setMethod("atan_2", signature(y="SpatRaster", x="SpatRaster"),
 )
 
 
+
 setMethod("boundaries", signature(x="SpatRaster"),
-	function(x, classes=FALSE, inner=TRUE, directions=8, falseval=0, filename="", ...) {
+	function(x, classes=FALSE, inner=TRUE, directions=8, falseval=0, ignoreNA=FALSE, filename="", ...) {
 		opt <- spatOptions(filename, ...)
 		type <- ifelse(inner[1], "inner", "outer")
-		x@pntr <- x@pntr$boundaries(classes[1], type, directions[1], falseval[1], opt)
+		x@pntr <- x@pntr$boundaries(classes[1], ignoreNA, type, directions[1], falseval[1], opt)
 		messages(x, "boundaries")
 	}
 )
@@ -860,7 +876,6 @@ setMethod("resample", signature(x="SpatRaster", y="numeric"),
 		r <- rast(x)
 		res(r) <- res(r) * fact
 		r <- crop(extend(r, c(0,1,0,1)), ext(x), snap="out") 
-
 		if (!hasValues(x)) { 
 			return(r)
 		}	
@@ -1069,35 +1084,51 @@ setMethod("scale", signature(x="SpatRaster"),
 
 
 setMethod("stretch", signature(x="SpatRaster"),
-	function(x, minv=0, maxv=255, minq=0, maxq=1, smin=NA, smax=NA, histeq=FALSE, scale=1, maxcell=500000, filename="", ...) {
+	function(x, minv=0, maxv=255, minq=0, maxq=1, smin=NA, smax=NA, histeq=FALSE, scale=1, maxcell=500000, bylayer=TRUE, filename="", ...) {
 		if (histeq) {
 			nms <- names(x)
-			if (nlyr(x) > 1) {
-				x <- lapply(1:nlyr(x), function(i) stretch(x[[i]], histeq=TRUE, scale=scale, maxcell=maxcell))
-				x <- rast(x)
-				names(x) <- nms 
-				if (filename != "") {
-					x <- writeRaster(x, filename=filename, ...)
-				}
-				return(x)
-			}
-			scale <- scale[1]
-			if (scale == 1) {
-				ecdfun <- stats::ecdf(na.omit(spatSample(x, maxcell, "regular")[,1]))
-			} else {
-				ecdfun <- function(y) {
-					f <- stats::ecdf(na.omit(spatSample(x, maxcell, "regular")[,1]))
-					f(y) * scale
-				}
-			}
 			wopt <- list(...)
 			if (is.null(wopt$names)) {
 				wopt$names <- nms
 			}
-			app(x, ecdfun, filename=filename, wopt=wopt)
+
+			if (bylayer) {	
+				if (nlyr(x) > 1) {
+					x <- lapply(1:nlyr(x), function(i) stretch(x[[i]], histeq=TRUE, scale=scale, maxcell=maxcell, bylayer=TRUE))
+					x <- rast(x)
+					names(x) <- nms 
+					if (filename != "") {
+						x <- writeRaster(x, filename=filename, ...)
+					}
+					return(x)
+				}
+				scale <- scale[1]
+				if (scale == 1) {
+					ecdfun <- stats::ecdf(na.omit(spatSample(x, maxcell, "regular")[,1]))
+				} else {
+					ecdfun <- function(y) {
+						f <- stats::ecdf(na.omit(spatSample(x, maxcell, "regular")[,1]))
+						f(y) * scale
+					}
+				}
+				app(x, ecdfun, filename=filename, wopt=wopt)
+			} else {
+				scale <- scale[1]
+				ecdfun <- stats::ecdf(na.omit(unlist(spatSample(x, maxcell, "regular"))))
+				if (scale == 1) {
+					app(x, ecdfun, filename=filename, wopt=wopt)
+				} else {
+					out <- app(x, ecdfun) * scale
+					names(out) <- nms
+					if (filename != "") {
+						x <- writeRaster(x, filename=filename, ...)
+					}
+					x
+				}
+			}
 		} else {
 			opt <- spatOptions(filename, ...)
-			x@pntr <- x@pntr$stretch(minv, maxv, minq, maxq, smin, smax, opt)
+			x@pntr <- x@pntr$stretch(minv, maxv, minq, maxq, smin, smax, bylayer, maxcell, opt)
 			messages(x, "stretch")
 		}
 	}

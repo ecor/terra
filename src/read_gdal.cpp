@@ -180,7 +180,7 @@ bool GetRAT(GDALRasterAttributeTable *pRAT, SpatCategories &cats, const std::str
 		std::string name = pRAT->GetNameOfCol(i);
 		ratnms.push_back(name);
 		lowercase(name);
-		if (!hasvalue && ((name == "value") || (name == "id") || (name == "ids"))) {
+		if (!hasvalue && ((name == "value") || (name == "pixel value") || (name == "id") || (name == "ids"))) {
 			id.insert(id.begin(), i);
 			hasvalue = true;
 		} else {
@@ -211,9 +211,18 @@ bool GetRAT(GDALRasterAttributeTable *pRAT, SpatCategories &cats, const std::str
 	}
 
 	if (!hasvalue) {
-		std::vector<long> vid(nr);
-		std::iota(vid.begin(), vid.end(), 0);
-		cats.d.add_column(vid, "value");
+// more checking would be needed if there are indeed cases
+// where there simply is no index variable which is what is assumed now
+// based on the naming of the variables
+//		std::string name = pRAT->GetNameOfCol(0);
+//		GDALRATFieldType nc_type = pRAT->GetTypeOfCol(0);
+//		if ((nc_type == GFT_Integer) || (nc_type == GFT_Real)) {
+//			good_rat = true;
+//		} else {
+			std::vector<long> vid(nr);
+			std::iota(vid.begin(), vid.end(), 0);
+			cats.d.add_column(vid, "value");
+//		}
 	}
 
 	int first_string = -1;
@@ -1001,7 +1010,7 @@ bool SpatRaster::constructFromFile(std::string fname, std::vector<int> subds, st
 	std::string crs = getDsWKT(poDataset);
 
 	if (crs.empty()) {
-		if (guessCRS && hasExtent && s.extent.xmin >= -180 && s.extent.xmax <= 360 && s.extent.ymin >= -90 && s.extent.ymax <= 90) {
+		if (guessCRS && hasExtent && s.extent.xmin >= -180.1 && s.extent.xmax <= 360.1 && s.extent.ymin >= -90.1 && s.extent.ymax <= 90.1) {
 			crs = "OGC:CRS84";
 			s.parameters_changed = true;
 		} else {

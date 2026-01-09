@@ -1,8 +1,6 @@
 #if (!isGeneric("#")) { setGeneric("#", function(x, ...) standardGeneric("#")) }
 #if (!isGeneric("prcomp")) {setGeneric("prcomp", function(x, ...) standardGeneric("princomp"))}
 
-
-
 ## ADDED BY ecor
 if (!isGeneric("watershed")) {setGeneric("watershed", function(x, ...) standardGeneric("watershed"))}
 if (!isGeneric("pitfinder")) {setGeneric("pitfinder", function(x, ...) standardGeneric("pitfinder"))}
@@ -14,7 +12,8 @@ if (!isGeneric("pitfiller")) {setGeneric("pitfiller", function(x,pit, ...) stand
 
 
 
-
+if (!isGeneric("nany")) {setGeneric("nany", function(x, ...) standardGeneric("nany"))}
+if (!isGeneric("chunk")) {setGeneric("chunk", function(x, ...) standardGeneric("chunk"))}
 if (!isGeneric("thresh")) {setGeneric("thresh", function(x, ...) standardGeneric("thresh"))}
 if (!isGeneric("divide")) {setGeneric("divide", function(x, ...) standardGeneric("divide"))}
 

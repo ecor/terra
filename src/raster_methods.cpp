@@ -793,6 +793,52 @@ SpatRaster SpatRaster::aggregate(std::vector<size_t> fact, std::string fun, bool
 }
 
 
+std::vector<double> SpatRaster::centroid(bool weights, SpatOptions &opt) {
+	if (!hasValues()) {
+		SpatExtent e = getExtent();
+		std::vector<double> out = {e.xmin + (e.xmax - e.xmin)/2, e.ymin + (e.ymax - e.ymin)/2};
+		return out;
+	}
+	
+	std::vector<double> out;
+	double x=0, y=0, s=0, n=0;
+
+	BlockSize bs = getBlockSize(opt);
+	if (!readStart()) {
+		return(out);
+	}
+	size_t nc = ncol();
+
+	for (size_t i = 0; i < bs.n; i++) {
+		std::vector<double> v;
+		readValues(v, bs.row[i], bs.nrows[i], 0, nc);
+		size_t base = (bs.row[i] * nc);
+		size_t szv = v.size();
+		for (size_t j=0; j<szv; j++) {
+			if (!std::isnan(v[j])) {
+				std::vector<std::vector<double>> xy = xyFromCell(base+j);
+				if (weights) {
+					double cv = v[j] / 1000.;
+					x += cv * xy[0][0];
+					y += cv * xy[1][0];
+					s += cv;
+				} else {
+					x += xy[0][0]/1000;
+					y += xy[1][0]/1000;
+					n++;
+				}
+			}
+		}
+	}
+	readStop();
+	if (weights) {
+		out = {x/s, y/s};		
+	} else {
+		out = {1000*x/n, 1000*y/n};			
+	}
+	return out;
+}
+
 
 
 SpatRaster SpatRaster::weighted_mean(SpatRaster w, bool narm, SpatOptions &opt) {
@@ -1098,13 +1144,14 @@ std::vector<std::vector<double>> SpatRaster::is_in_cells(std::vector<double> m, 
 
 
 
-SpatRaster SpatRaster::stretch(std::vector<double> minv, std::vector<double> maxv, std::vector<double> minq, std::vector<double> maxq, std::vector<double> smin, std::vector<double> smax, SpatOptions &opt) {
+SpatRaster SpatRaster::stretch(std::vector<double> minv, std::vector<double> maxv, std::vector<double> minq, std::vector<double> maxq, std::vector<double> smin, std::vector<double> smax, bool bylayer, double maxcell, SpatOptions &opt) {
 
     SpatRaster out = geometry(nlyr(), true, true, true, true);
 
 	if (!hasValues()) return(out);
 
 	size_t nl = nlyr();
+	if (!bylayer) { nl = 1;}
 	recycle(minv, nl);
 	recycle(maxv, nl);
 	recycle(minq, nl);
@@ -1146,11 +1193,26 @@ SpatRaster SpatRaster::stretch(std::vector<double> minv, std::vector<double> max
 			if ((minq[i]==0) && (maxq[i]==1) && hR[i]) {
 				std::vector<double> rmn = range_min();
 				std::vector<double> rmx = range_max();
-				q[i] = {rmn[i], rmx[i]};
+				if (bylayer) {
+					q[i] = {rmn[i], rmx[i]};
+				} else {
+					q[i] = {vmin(rmn, true), vmax(rmx, true)};					
+				}
 			} else {
 				std::vector<double> probs = {minq[i], maxq[i]};
 				SpatOptions xopt(opt);
-				std::vector<double> v = getValues(i, xopt);
+				std::vector<double> v;
+				if (bylayer) {
+					SpatRaster xx = subset({i}, xopt);
+					std::vector<std::vector<double>> vv = xx.sampleRegularValues(maxcell, xopt);
+					v = vv[0];
+				} else {
+					std::vector<std::vector<double>> vv = sampleRegularValues(maxcell, xopt);
+					v.reserve(vv.size() * vv[0].size());
+					for (const auto& r : vv) {
+						v.insert(v.end(), r.begin(), r.end());
+					}
+				}
 				q[i] = vquantile(v, probs, true);
 			}
 		}
@@ -1166,17 +1228,31 @@ SpatRaster SpatRaster::stretch(std::vector<double> minv, std::vector<double> max
 		readStop();
 		return out;
 	}
-	for (size_t i = 0; i < out.bs.n; i++) {
-		std::vector<double> v;
-		readBlock(v, out.bs, i);
-		size_t nc = out.bs.nrows[i] * ncol();
-		for (size_t j=0; j<v.size(); j++) {
-			size_t lyr = j / nc;
-			v[j] = mult[lyr] * (v[j] - q[lyr][0]);
-			if (v[j] < minv[lyr]) v[j] = minv[lyr];
-			if (v[j] > maxv[lyr]) v[j] = maxv[lyr];
+	if (bylayer) {
+		for (size_t i = 0; i < out.bs.n; i++) {
+			std::vector<double> v;
+			readBlock(v, out.bs, i);
+			size_t nc = out.bs.nrows[i] * ncol();
+			for (size_t j=0; j<v.size(); j++) {
+				size_t lyr = j / nc;
+				v[j] = mult[lyr] * (v[j] - q[lyr][0]);
+				if (v[j] < minv[lyr]) v[j] = minv[lyr];
+				if (v[j] > maxv[lyr]) v[j] = maxv[lyr];
+			}
+			if (!out.writeBlock(v, i)) return out;
 		}
-		if (!out.writeBlock(v, i)) return out;
+	} else {
+		for (size_t i = 0; i < out.bs.n; i++) {
+			std::vector<double> v;
+			readBlock(v, out.bs, i);
+			size_t lyr = 0;
+			for (size_t j=0; j<v.size(); j++) {
+				v[j] = mult[lyr] * (v[j] - q[lyr][0]);
+				if (v[j] < minv[lyr]) v[j] = minv[lyr];
+				if (v[j] > maxv[lyr]) v[j] = maxv[lyr];
+			}
+			if (!out.writeBlock(v, i)) return out;
+		}
 	}
 	readStop();
 	out.writeStop();
@@ -1491,6 +1567,9 @@ SpatRaster SpatRaster::mask(SpatVector &x, bool inverse, double updatevalue, boo
 	}
 		
 	if (inverse) {
+		if (opt.names.empty()) {
+			opt.names = getNames();
+		}
 		out = rasterize(x, "", {updatevalue}, NAN, touches, "", false, true, true, opt);
 	} else {
 		SpatOptions topt(opt);
@@ -6710,9 +6789,8 @@ SpatRaster SpatRaster::combineCats(SpatRaster x, SpatOptions &opt) {
 	//return(out);
 }
 
-
 SpatRaster SpatRaster::intersect(SpatRaster &x, SpatOptions &opt) {
-	
+
 	size_t nl = std::max(nlyr(), x.nlyr());
 	SpatRaster out = geometry(nl);
 	out.setValueType(3);
@@ -6734,9 +6812,9 @@ SpatRaster SpatRaster::intersect(SpatRaster &x, SpatOptions &opt) {
 				return(out);
 			}
 			SpatOptions xopt(opt);
-			x = x.crop(e, "near", false, xopt);
+			SpatRaster xc = x.crop(e, "near", false, xopt);
 			SpatRaster y = crop(e, "near", false, xopt);
-			return y.intersect(x, opt);
+			return y.intersect(xc, opt);
 		}
 	}
 

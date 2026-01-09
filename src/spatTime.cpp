@@ -247,10 +247,8 @@ SpatTime_t get_time_noleap(int syear, int smonth, int sday, int shour, int smin,
 	static const int md[13] =  {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 
 	// set start to beginning of year 
-	double s = ssec + smin * 60 + shour * 3600 + (sday-1) * 24 * 3600;
-	for (int i=0; i < smonth; i++) {
-		s += (md[i] * 24 * 3600);
-	}
+	double s = ssec + smin * 60 + shour * 3600 + (sday-1) * 86400;
+	s += md[smonth-1] * 86400;
 
 	double ndays;
 	if (step == "hours") {
@@ -268,12 +266,17 @@ SpatTime_t get_time_noleap(int syear, int smonth, int sday, int shour, int smin,
 
 	int year = ndays / 365;
 	double rem = ndays - year * 365;
+	if (rem < 0) {
+		year--;
+		rem = 365 + rem;
+	}
 	int month;
 	for (month=1; month<13; month++) {
 		if (rem < md[month]) {
 			break;
 		}
 	}
+
 	rem -= md[month-1];
 	int day = rem;
 	rem -= day;
@@ -293,7 +296,8 @@ SpatTime_t get_time_noleap(int syear, int smonth, int sday, int shour, int smin,
 SpatTime_t get_time_360(int syear, int smonth, int sday, int shour, int smin, int ssec, double n, std::string step) {
 
 	// set start to beginning of year 
-	double s = ssec + smin * 60 + shour * 3600 + (sday-1) * 24 * 3600 + (smonth-1) * 30;
+	int sdays = (smonth-1) * 30 + (sday-1);
+	double s = ssec + smin * 60 + shour * 3600 + sdays * 86400;
 
 	double ndays;
 	if (step == "hours") {
@@ -311,6 +315,12 @@ SpatTime_t get_time_360(int syear, int smonth, int sday, int shour, int smin, in
 
 	int year = ndays / 360;
 	double rem = ndays - year * 360;
+
+	if (rem < 0) {
+		year--;
+		rem = 365 + rem;
+	}
+
 	int month = rem / 30;
 	rem -= month * 30;
 	month++;

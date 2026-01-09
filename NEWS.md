@@ -1,13 +1,75 @@
-# version 1.8-75
+# version 1.8-91
+
+## bug fixes
+
+- `plot<SpatRaster>(add=TRUE)` did not put the legend in the right place if the first raster had a larger extent and the number of cells was larger than maxcell. [#1979](https://github.com/rspatial/terra/issues/1979) by Mehmet Göktuğ Öztürk
+- `plot<SpatVector>(ext=...)` plotted polygons outside plotting region if argument 'col' was used. [#1986](https://github.com/rspatial/terra/issues/1986) by Márcia Barbosa
+- `plot<SpatRaster>` with an "ext" argument could lead to misalignment as only entire cells were mapped. [#1989](https://github.com/rspatial/terra/issues/1989) by Márcia Barbosa
+- `distance<matrix,missing>` was not working [#1992](https://github.com/rspatial/terra/issues/1992) by Wencheng Lau-Medrano
+- `polys` ignored argument "border" [#1997](https://github.com/rspatial/terra/issues/1989) by Márcia Barbosa
+
+## enhancements
+
+- `vect<data.frame>` has improved guessing of variable names (if argument geom is not supplied) and crs (if that argument is not supplied, and gets argument "quiet=TRUE" that can be set to false to get warnings if either of these is guessed. [#1984](https://github.com/rspatial/terra/issues/1984) and [#1985](https://github.com/rspatial/terra/issues/1985) by Márcia Barbosa
+- `extract<SpatVector>` is now less memory hungry when using argument layers [#1983](https://github.com/rspatial/terra/issues/1983) by Kodi Arfer
+- `split<SpatVector>` now behaves like the data.frame method when using multiple split variables [#1987](https://github.com/rspatial/terra/issues/1987) by WillhKessler
+- `$<-<SpatVector>` now gives an error if the replacement is longer than the data, and a warning if recylcing of a shorter replacement is imperfect. [#1980](https://github.com/rspatial/terra/issues/1980) by Margaret Bolton
+- `cartogram` gets new arguments "inside" and "exp" and better scaling [#1982](https://github.com/rspatial/terra/issues/1982) by Márcia Barbosa
+`spatSample<SpatRaster>` gains argument "as.mask" [#1981](https://github.com/rspatial/terra/issues/1981) by Agustin Lobo
+- `vect<character>` now handles MultiSurface geometries (as polygons) [#1994](https://github.com/rspatial/terra/issues/1994) by Márcia Barbosa
+- `plet<SpatVector>` and `polys<leaflet>` gain argument "lty" [#1997](https://github.com/rspatial/terra/issues/1989) by Márcia Barbosa
+
+
+## new
+
+- `proj_ok` helper function to check if the GDAL/PROJ install is functional [#1996](https://github.com/rspatial/terra/issues/1996) by Andrew Gene Brown
+- `nany<SpatRaster>` method (`!all` in one step) "nany" is short for "not any". This is used because "none" creates a conflict 
+
+
+# version 1.8-87
+
+Released 2025-11-28
+
+## bug fixes
+
+- `writeVector` gave an error with an empty (0-row) SpatVector [#1960](https://github.com/rspatial/terra/pull/1960) by Andrew Gene Brown
+- terra did not compile with GEOS < 3.10 [#1961](https://github.com/rspatial/terra/issues/1961) by Wolfgang Viechtbauer
+- `intersect<SpatRaster,SpatRaster>` changed the extent of the second input SpatRaster if it did not match that of the first [#1964](https://github.com/rspatial/terra/issues/1964) by Greg Schmidt
+- `boundaries` with argument "classes=TRUE" ignored argument "inner=TRUE" (it was always FALSE). [#1963](https://github.com/rspatial/terra/issues/1963) by Oleg Zheleznyy
+- `cellFromXY` with NA coordinates returned 1 instead of NA on macOS [#1967](https://github.com/rspatial/terra/issues/1967) by John Baums
+- `stretch` crashed R with very large rasters [#1962](https://github.com/rspatial/terra/issues/1962) by Agustin Lobo
+- `focalReg` did not handle of custom functions with a weights argument [#1965](https://github.com/rspatial/terra/issues/1965) by Pedro Tarroso
+
+
+## enhancements
+
+- `boundaries` has new argument "ignoreNA=FALSE" to only detect boundaries between different classes, not between classes and missing values [#1963](https://github.com/rspatial/terra/issues/1963) by Oleg Zheleznyy
+- `stretch` gains argument "bylayer=TRUE" [#1970](https://github.com/rspatial/terra/issues/1970) by Michael Sumner
+- `makeValid` gains argument `buffer=FALSE` [#1955](https://github.com/rspatial/terra/issues/1955) by Márcia Barbosa
+- `plot<SpatVector>` argument "col" can now be a named vector or two-column matrix/data.frame to match character/factor values to colors [#1976](https://github.com/rspatial/terra/issues/1976) by Richard Cooper 
+
+## new
+
+- `fillHoles` method for SpatRaster
+- `chunk` method to run a non-memory-safe SpatRaster function in chunks
+- `centroids<SpatRaster>` method
+
+
+# version 1.8-80
+
+Released 2025-11-05
+
 
 ## bug fixes
 
 - `plot<SpatRaster>` with arguments "break=n" and "breakby='cases'" could break if there the number of computed quantile breaks is lower than expected because of duplicates [#1913](https://github.com/rspatial/terra/pull/1913) by Bradley W. Compton
 - `buffer<SpatRaster>` for lon/lat rasters did not include the non `NA` cells outside of the buffer distance from the edges as part of the buffer [#1929](https://github.com/rspatial/terra/issues/1929) by Márcia Barbosa
 - computing dates for years < 1 failed (regression introduced when fixing #1896) [#1951](https://github.com/rspatial/terra/issues/1951) by Taras Zakharko
+- computing dates for 365 day calendars was not accurate in some cases [#1951](https://github.com/rspatial/terra/issues/1951) by Taras Zakharko
 - `values(x[["name"]])<-` failed if `x` had a single layer [#1944](https://github.com/rspatial/terra/issues/1944) by Wenbo Lv
 - colors specified in a vat.dbf file were no longer extracted due to a change in GDAL [#1943](https://github.com/rspatial/terra/issues/1943) by Josh O'Brien
 - `buffer<SpatVector>` with lon/lat coordinates did not behave well for very large buffers; especially around areas near the dateline [#1926](https://github.com/rspatial/terra/issues/1926) by Márcia Barbosa
+- `mask<SpatRaster,SpatVector>` "inverse=TRUE" lost the layernames. [#1959](https://github.com/rspatial/terra/issues/1959) by Alex Ilich
 
 ## enhancements
 
@@ -19,6 +81,7 @@
 - `unique<SpatVector>` gained arguments "geom=TRUE" and "atts=TRUE" to allow uniqueness to be based on geometry or attributes only [#1928](https://github.com/rspatial/terra/issues/1928) by Andrea Titolo
 - `buffer<SpatRaster>` gains argument "include=TRUE" to allow exclusion of the cells that are not `NA` from the buffer  [#1929](https://github.com/rspatial/terra/issues/1929) by Márcia Barbosa
 - argument "names" to `distance<SpatVector,missing>` [#1942](https://github.com/rspatial/terra/issues/1942) by Márcia Barbosa
+- `subset<SpatVector>` now works without a value for argument "subset", to allow subsetting variables only [#1953](https://github.com/rspatial/terra/issues/1953) by Márcia Barbosa
 
 
 ## new
@@ -26,6 +89,9 @@
 - `plet<SpatRasterCollection>` method
 - `cartogram<SpatRaster>` can now return a "circles" (dorling) cartogram [#1911](https://github.com/rspatial/terra/issues/1911) by Márcia Barbosa 
 - `subset<SpatVector>` can now use a Spat object to spatially subset [#1937](https://github.com/rspatial/terra/issues/1937) by Márcia Barbosa
+- `plot<SpatRaster>` and `plot<SpatVector>` have new argument "zebra=FALSE", to create a zebra-box. [https://github.com/rspatial/terra/issues/1956](https://github.com/rspatial/terra/issues/1956) by Lucas Salinas Morales
+
+
 
 # version 1.8-70
 
@@ -272,7 +338,7 @@ Released 2025-01-13
 - using overviews for faster plotting of COGs over http [#1353](https://github.com/rspatial/terra/issues/1353) by Michael Sumner and [#1412](https://github.com/rspatial/terra/issues/1412); and argument `plot(x, overview=)` to change the default behavior. 
 - `extract` with points is now faster for rasters accessed over http [#1504](https://github.com/rspatial/terra/issues/1504) by Krzysztof Dyba
 - `extract` with many points on very large rasters was slower in compared to doing the same with "raster" (which uses terra for that!) [#1584](https://github.com/rspatial/terra/issues/1584) by Hassan Masoomi
-- `merge` now has three alternative algorithms [1366](https://github.com/rspatial/terra/issues/1366) by Hassan Masoomi and [#1650](https://github.com/rspatial/terra/issues/1650) by Agustin Lobo
+- `merge` now has three alternative algorithms [#1366](https://github.com/rspatial/terra/issues/1366) by Hassan Masoomi and [#1650](https://github.com/rspatial/terra/issues/1650) by Agustin Lobo
 
 
 ## new 

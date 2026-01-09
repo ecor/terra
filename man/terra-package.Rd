@@ -313,7 +313,6 @@ Cell numbers start at 1 in the upper-left corner. They increase within rows, fro
    \code{\link{writeStop}} \tab Close the file after writing \cr
    \code{\link{blocks}} \tab Get blocksize for reading files (when not writing) \cr
   --------------------------- \tab ------------------------------------------------------------------------------------------ \cr
-\cr
 }
 }
 }
