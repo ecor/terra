@@ -7,7 +7,8 @@ Calculate focal ("moving window") values for each cell.
 ``` r
 # S4 method for class 'SpatRaster'
 focal(x, w=3, fun="sum", ..., na.policy="all", fillvalue=NA, 
-    expand=FALSE, silent=TRUE, filename="", overwrite=FALSE, wopt=list())
+    expand=FALSE, silent=TRUE, cores=1, cpkgs=NULL,
+    filename="", overwrite=FALSE, wopt=list())
 ```
 
 ## Arguments
@@ -48,7 +49,7 @@ focal(x, w=3, fun="sum", ..., na.policy="all", fillvalue=NA,
 
   logical. If `TRUE`, the value of the cells in the virtual rows and
   columns outside of the raster are set to be the same as the value on
-  the border. Only available for "build-in" `fun`s such as mean, sum,
+  the border. Only available for "built-in" `fun`s such as mean, sum,
   min and max
 
 - silent:
@@ -56,6 +57,24 @@ focal(x, w=3, fun="sum", ..., na.policy="all", fillvalue=NA,
   logical. If `TRUE` error messages are printed that may occur when
   trying `fun` to determine the length of the returned value. This can
   be useful in debugging a `fun` that does not work
+
+- cores:
+
+  controls per-block parallelism when `fun` is a user-supplied R
+  function (the "built-in" `fun`s such as "mean" and "sum" are already
+  multi-threaded via TBB and ignore `cores`). Can be a positive integer
+  (the number of local PSOCK workers), an existing `parallel::cluster`,
+  the string `"future"` to use the currently registered
+  [`future plan`](https://future.futureverse.org/reference/plan.html),
+  or a future strategy itself (e.g.
+  [`future::multisession`](https://future.futureverse.org/reference/multisession.html)).
+  The per-block focal-values matrix is split into row-chunks and
+  dispatched across workers
+
+- cpkgs:
+
+  character. Names of R packages to load on each worker when `cores > 1`
+  – pass any package that `fun` depends on
 
 - filename:
 
@@ -166,4 +185,10 @@ plot(focal(r, 5, f, na.policy="omit", na.rm=TRUE), fun=lines(v))
 
 # does not do anything
 # focal(r, 5, f, na.policy="only", na.rm=FALSE)
+
+# \donttest{
+# parallel apply for a user-supplied R function (no effect on built-in funs)
+r <- rast(ncols=200, nrows=200, ext(0, 200, 0, 200), vals=runif(40000))
+f <- focal(r, w=5, fun=function(x) quantile(x, 0.9, na.rm=TRUE), cores=2)
+# }
 ```

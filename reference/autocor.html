@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-91</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9-23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,8 @@
 <span><span class="fu">autocor</span><span class="op">(</span><span class="va">x</span>, <span class="va">w</span>, method<span class="op">=</span><span class="st">"moran"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'SpatRaster'</span></span>
-<span><span class="fu">autocor</span><span class="op">(</span><span class="va">x</span>, w<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="c.html">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>,<span class="fl">3</span><span class="op">)</span>, method<span class="op">=</span><span class="st">"moran"</span>, global<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">autocor</span><span class="op">(</span><span class="va">x</span>, w<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="c.html">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>,<span class="fl">3</span><span class="op">)</span>, method<span class="op">=</span><span class="st">"moran"</span>, </span>
+<span>    global<span class="op">=</span><span class="cn">TRUE</span>, standardize<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -58,6 +59,9 @@
 
   <dt id="arg-global">global<a class="anchor" aria-label="anchor" href="#arg-global"></a></dt>
 <dd><p>logical. If <code>TRUE</code> global autocorrelation is computed instead of local autocorrelation</p></dd>
+
+  <dt id="arg-standardize">standardize<a class="anchor" aria-label="anchor" href="#arg-standardize"></a></dt>
+<dd><p>logical. If <code>TRUE</code>, apply row standardization to the weights matrix. This divides each weight by the row sum so that the weights for each cell sum to one. For Moran's I, row standardization ensures that the result is bounded between -1 and 1. Only used when <code>global=TRUE</code></p></dd>
 
   <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>character. If <code>x</code> is numeric or SpatRaster: "moran" for Moran's I and "geary" for Geary's C. If <code>x</code> is numeric also: "Gi", "Gi*" (the Getis-Ord statistics), locmor (local Moran's I) and "mean" (local mean)</p></dd>
@@ -93,6 +97,11 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span>     lyr.1 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 0.8362573 </span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># row-standardized (result bounded between -1 and 1)</span></span></span>
+<span class="r-in"><span><span class="fu">autocor</span><span class="op">(</span><span class="va">r</span>, standardize<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     lyr.1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.9330909 </span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># rook's case neighbors</span></span></span>
 <span class="r-in"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="c.html">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span><span class="op">)</span>, nrow<span class="op">=</span><span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">autocor</span><span class="op">(</span><span class="va">r</span>, <span class="va">f</span><span class="op">)</span></span></span>
@@ -122,7 +131,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Robert J. Hijmans.</p>
+  <p>Developed by Robert J. Hijmans, Andrew Brown, Márcia Barbosa.</p>
 </div>
 
 <div class="pkgdown-footer-right">

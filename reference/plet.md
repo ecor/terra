@@ -15,7 +15,7 @@ plet(x, y=1, col, alpha=0.8, main=names(x),
   tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
   wrap=TRUE, maxcell=500000, stretch=NULL, legend="bottomright", 
   shared=FALSE, panel=FALSE, collapse=TRUE, type=NULL, breaks=NULL,
-  breakby="eqint", range=NULL, fill_range=FALSE, map=NULL, ...) 
+  breakby="eqint", range=NULL, fill_range=FALSE, hover=FALSE, map=NULL, ...) 
 
 
 # S4 method for class 'SpatRasterCollection'
@@ -27,8 +27,8 @@ plet(x, col, alpha=0.8, main=names(x),
 
 # S4 method for class 'SpatVector'
 plet(x, y="", col, main=y, cex=1, 
-  lwd=2, lty=NULL, border="black", alpha=c(0.3, 1), popup=TRUE, label=FALSE, split=FALSE,
-  tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
+  lwd=2, lty=NULL, border="black", alpha=c(0.3, 1), popup=TRUE, label=FALSE,
+  split=FALSE, tiles=c("Streets", "Esri.WorldImagery", "OpenTopoMap"), 
   wrap=TRUE, legend="bottomright", collapse=FALSE, type=NULL, breaks=NULL,
   breakby="eqint", sort=TRUE, reverse=FALSE, map=NULL, fill=NULL, ...)
 
@@ -42,7 +42,8 @@ plet(x, y="", col, main=y, cex=1,
 
 
 # S4 method for class 'leaflet'
-lines(x, y, col, lwd=2, lty=NULL, alpha=1, ...)
+lines(x, y, col, lwd=2, lty=NULL, alpha=1, 
+  label=NULL, popup=FALSE,...)
 
 # S4 method for class 'leaflet'
 points(x, y, col, border=col, cex=1, lwd=2, lty=NULL, 
@@ -50,7 +51,7 @@ points(x, y, col, border=col, cex=1, lwd=2, lty=NULL,
 
 # S4 method for class 'leaflet'
 polys(x, y, col, lwd=2, lty=NULL, 
-  border="black", alpha=c(0.3, 1), popup=TRUE, label=FALSE, fill=NULL, ...)
+  border="black", alpha=c(0.3, 1), popup=TRUE, label=NULL, fill=NULL, ...)
 ```
 
 ## Arguments
@@ -116,7 +117,7 @@ polys(x, y, col, lwd=2, lty=NULL,
 - ...:
 
   additional arguments for drawing points, lines, or polygons passed on
-  the the relevant leaflet function
+  the relevant leaflet function
 
 - border:
 
@@ -192,6 +193,12 @@ polys(x, y, col, lwd=2, lty=NULL,
   logical. If `TRUE`, values outside of `range` get the colors of the
   extreme values; otherwise they get colored as `NA`
 
+- hover:
+
+  logical. If `TRUE`, the approximate raster cell values are shown when
+  hovering the mouse over the map. Not available for RGB rasters or
+  panel mode
+
 - reverse:
 
   logical. If `TRUE`, the legends order is reversed
@@ -212,7 +219,7 @@ if (require(leaflet) && (packageVersion("leaflet") > "2.1.1")) {
 
 v <- vect(system.file("ex/lux.shp", package="terra"))
 p <- spatSample(as.polygons(v, ext=T), 30)
-values(p) = data.frame(id=11:40, name=letters[1:30])
+values(p) = data.frame(id=11:40, name=sample(letters, 30, replace=TRUE))
 
 m <- plet(v, "NAME_1", tiles="", border="blue")
 m <- points(m, p, col="red", cex=2, popup=T)
@@ -229,6 +236,9 @@ plet(s, col=c("red", "blue"), lwd=1)
 
 r <- rast(system.file("ex/elev.tif", package="terra"))
 plet(r, main="Hi\nthere", tiles=NULL) |> lines(v, lwd=1)
+
+# hover to see raster values
+plet(r, hover=TRUE)
 
 plet(r, tiles="OpenTopoMap") |> lines(v, lwd=2, col="blue")
 

@@ -215,15 +215,15 @@ elev <- elev1
 flowdir <- flowdirD8lad(elev, lambda = lambda)
 pits <- pitfinder(flowdir, pits_on_boundary = FALSE)
 elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda,niter=1000)
-#> class       : SpatRaster 
+#> class       : SpatRaster
 #> size        : 10, 10, 1  (nrow, ncol, nlyr)
 #> resolution  : 100, 100  (x, y)
 #> extent      : 0, 1000, 0, 1000  (xmin, xmax, ymin, ymax)
-#> coord. ref. :  
+#> coord. ref. : 
 #> source(s)   : memory
-#> name        : flowdir_lad_l=0 
-#> min value   :               0 
-#> max value   :               2 
+#> name        : flowdir_lad_l=0
+#> min value   :               0
+#> max value   :               2
 
 
 flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
@@ -252,15 +252,15 @@ lambda <- 0.5 ## try also 0 (default)
 flowdir <- flowdirD8lad(elev, lambda = lambda)
 pits <- pitfinder(flowdir, pits_on_boundary = FALSE)
 elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda)
-#> class       : SpatRaster 
+#> class       : SpatRaster
 #> size        : 111, 78, 1  (nrow, ncol, nlyr)
 #> resolution  : 772.033, 772.033  (x, y)
 #> extent      : 263811.2, 324029.8, 5479328, 5565024  (xmin, xmax, ymin, ymax)
-#> coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632) 
+#> coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632)
 #> source(s)   : memory
-#> name        : flowdir_lad_l=0.5 
-#> min value   :                 0 
-#> max value   :               112 
+#> name        : flowdir_lad_l=0.5
+#> min value   :                 0
+#> max value   :               112
 flowdir2 <- terrain(elev2, "flowdir")
 flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
 pits2 <- pitfinder(flowdir, pits_on_boundary = FALSE)

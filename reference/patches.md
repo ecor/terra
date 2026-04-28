@@ -30,7 +30,7 @@ patches(x, directions=4, values=FALSE, zeroAsNA=FALSE, allowGaps=TRUE, filename=
 - zeroAsNA:
 
   logical. If `TRUE` treat cells that are zero as if they were `NA`.
-  Ignored if `byvalue=TRUE`
+  Ignored if `values=TRUE`
 
 - allowGaps:
 
@@ -51,6 +51,10 @@ patches(x, directions=4, values=FALSE, zeroAsNA=FALSE, allowGaps=TRUE, filename=
 ## Value
 
 SpatRaster. Cell values are patch numbers
+
+## Author
+
+Andrew Gene Brown, Robert J. Hijmans
 
 ## See also
 

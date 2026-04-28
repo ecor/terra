@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-91</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9-23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,9 +46,9 @@
 
     <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
-    <p></p>
+    <p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>SpatRaster wih flow-direcion. See <code><a href="terrain.html">terrain</a></code></p></dd>
+<dd><p>SpatRaster with flow-direcion. See <code><a href="terrain.html">terrain</a></code></p></dd>
 
    <dt id="arg-pits-on-boundary">pits_on_boundary<a class="anchor" aria-label="anchor" href="#arg-pits-on-boundary"></a></dt>
 <dd><p>logical if <code>TRUE</code> (default) pits are considered also on the boundary. If <code>FALSE</code> pits are considered only within the terrain domain.</p></dd>
@@ -218,7 +218,7 @@
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">pits</span> <span class="op">&lt;-</span> <span class="fu">pitfinder</span><span class="op">(</span><span class="va">flowdir</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co">## Application wth example DEM</span></span></span>
+<span class="r-in"><span><span class="co">## Application with example DEM</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">elev</span> <span class="op">&lt;-</span> <span class="fu"><a href="rast.html">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'ex/elev.tif'</span>,package<span class="op">=</span><span class="st">"terra"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">flowdir</span> <span class="op">&lt;-</span> <span class="fu"><a href="terrain.html">terrain</a></span><span class="op">(</span><span class="va">elev</span>,<span class="st">"flowdir"</span><span class="op">)</span></span></span>
@@ -237,7 +237,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Robert J. Hijmans.</p>
+  <p>Developed by Robert J. Hijmans, Andrew Brown, Márcia Barbosa.</p>
 </div>
 
 <div class="pkgdown-footer-right">

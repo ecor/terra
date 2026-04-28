@@ -11,9 +11,11 @@ pitfinder(x,pits_on_boundary=TRUE,filename="",...)
 
 ## Arguments
 
+\<\<\<\<\<\<\< HEAD
+
 - x:
 
-  SpatRaster wih flow-direcion. See
+  SpatRaster with flow-direcion. See
   [`terrain`](https://rspatial.github.io/terra/reference/terrain.md)
 
 - pits_on_boundary:
@@ -185,7 +187,7 @@ t(array(flowdir[],rev(dim(flowdir)[1:2])))
 
 pits <- pitfinder(flowdir)
 
-## Application wth example DEM
+## Application with example DEM
 
 elev <- rast(system.file('ex/elev.tif',package="terra"))
 flowdir <- terrain(elev,"flowdir")

@@ -11,7 +11,7 @@ You can create a SpatRasterCollection from a file with subdatasets."><meta prope
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8-91</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9-23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -79,7 +79,7 @@ You can create a SpatRasterCollection from a file with subdatasets."><meta prope
 <dd><p>logical. If <code>TRUE</code>, a raster (e.g. JPEG image) that is not georeferenced and that GDAL assigns a flipped extent to (<code>ymax &lt; ymin</code>), is not considered flipped. This avoids the need to <code><a href="flip.html">flip</a></code> the raster vertically</p></dd>
 
 <dt id="arg-guesscrs">guessCRS<a class="anchor" aria-label="anchor" href="#arg-guesscrs"></a></dt>
-<dd><p>logical. If <code>TRUE</code> and the the file does not specify a CRS but has an extent that is within longitude/latitude bounds, the longitude/latitude crs is assigned to the SpatRaster</p></dd>
+<dd><p>logical. If <code>TRUE</code> and the file does not specify a CRS but has an extent that is within longitude/latitude bounds, the longitude/latitude crs is assigned to the SpatRaster</p></dd>
 
 <dt id="arg-domains">domains<a class="anchor" aria-label="anchor" href="#arg-domains"></a></dt>
 <dd><p>character. Metadata domains to read (see <code><a href="metags.html">metags</a></code> to retrieve their values if there are any. "" is the default domain</p></dd>
@@ -107,13 +107,13 @@ You can create a SpatRasterCollection from a file with subdatasets."><meta prope
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu">sprc</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">z</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> class       : SpatRasterCollection </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> length      : 2 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> nrow        : 30, 30 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ncol        : 60, 60 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> nlyr        :  1,  1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> class       : SpatRasterCollection</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> length      : 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> nrow        : 30, 30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ncol        : 60, 60</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> nlyr        :  1,  1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> extent      : -110, -20, 30, 70  (xmin, xmax, ymin, ymax)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> crs (first) : lon/lat WGS 84 (CRS84) (OGC:CRS84) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> crs (first) : lon/lat WGS 84 (CRS84) (OGC:CRS84)</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -121,7 +121,7 @@ You can create a SpatRasterCollection from a file with subdatasets."><meta prope
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Robert J. Hijmans.</p>
+  <p>Developed by Robert J. Hijmans, Andrew Brown, Márcia Barbosa.</p>
 </div>
 
 <div class="pkgdown-footer-right">
