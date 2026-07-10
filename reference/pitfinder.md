@@ -11,8 +11,6 @@ pitfinder(x,pits_on_boundary=TRUE,filename="",...)
 
 ## Arguments
 
-\<\<\<\<\<\<\< HEAD
-
 - x:
 
   SpatRaster with flow-direcion. See
@@ -49,6 +47,7 @@ Emanuele Cordano
 ## Examples
 
 ``` r
+
 ## Creation of a Digital Elevation Model 
 
 elev <- array(NA,c(9,9))

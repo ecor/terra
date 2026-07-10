@@ -80,6 +80,7 @@ Emanuele Cordano
 ## Examples
 
 ``` r
+
 f <- system.file("ex/elev_vinschgau.tif", package="terra")
 r <- rast(f)  |> aggregate(fact=2,fun=min)
 d <- terrain(r, "flowdir")
