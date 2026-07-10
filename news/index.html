@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">terra</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9-23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9-39</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,9 +34,87 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.9-23" id="version-19-23">version 1.9-23<a class="anchor" aria-label="anchor" href="#version-19-23"></a></h2>
+<h2 class="pkg-version" data-toc-text="1.9-39" id="version-19-39">version 1.9-39<a class="anchor" aria-label="anchor" href="#version-19-39"></a></h2>
 <div class="section level3">
-<h3 id="bug-fixes-1-9-23">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-9-23"></a></h3>
+<h3 id="bug-fixes-1-9-39">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-9-39"></a></h3>
+<ul><li>multidim vrt can now be opened <a href="https://github.com/rspatial/terra/issues/2107" class="external-link">#2107</a> by Michael Sumner</li>
+<li>terra did not compile with GDAL &gt; 3.04 &amp; &lt; 3.8 <a href="https://github.com/rspatial/terra/issues/2109" class="external-link">#2109</a> by Andrew Gene Brown</li>
+<li>terra did not compile with GDAL &lt; 3.5.0 <a href="https://github.com/rspatial/terra/issues/2111" class="external-link">#2111</a> by Wolfgang Viechtbauer</li>
+</ul></div>
+<div class="section level3">
+<h3 id="enhancements-1-9-39">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-9-39"></a></h3>
+<ul><li>faster sampling of multidim rasters <a href="https://github.com/rspatial/terra/issues/2110" class="external-link">#2110</a> by Michael Sumner</li>
+<li>
+<code>centroids</code> gained argument “correct” that moves centroids that are not on their geometry to the nearest location on the geometry (<code>inside=FALSE</code>) or to an alternative location that is inside the polygon (<code>inside=TRUE</code>)</li>
+<li>
+<code>points</code>, <code>lines</code> and <code>polys</code> can now color the geometries by the values of a variable (argument <code>y</code>) <a href="https://github.com/rspatial/terra/issues/2119" class="external-link">#2119</a> by Márcia Barbosa</li>
+<li>
+<code>focal</code> can now use TBB parallelization for built-in functions “max”, “min”, “median”, “modal” and “sd” (in addition to “sum”/“mean”) <a href="https://github.com/rspatial/terra/issues/2115" class="external-link">#2115</a> by Breeze-Hu</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-1-9-39">new<a class="anchor" aria-label="anchor" href="#new-1-9-39"></a></h3>
+<ul><li>
+<code>furdist</code> method to get the furthest distance from a point to any location on another geometry</li>
+<li>
+<code>snapTo</code> method to move points to the nearest location on lines or polygons</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.9-34" id="version-19-34">version 1.9-34<a class="anchor" aria-label="anchor" href="#version-19-34"></a></h2><p class="text-muted">CRAN release: 2026-06-19</p>
+<p>Released 2026-06-20</p>
+<div class="section level3">
+<h3 id="bug-fixes-1-9-34">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-9-34"></a></h3>
+<ul><li>terra did not build with GDAL &lt; 3.4 <a href="https://github.com/rspatial/terra/issues/2080" class="external-link">#2080</a> by Wolfgang Viechtbauer</li>
+<li>
+<code>spatSample&lt;SpatRaster&gt;(method="random")</code> on large lon/lat rasters had become very slow <a href="https://github.com/rspatial/terra/issues/2086" class="external-link">#2086</a> by Jason Flower</li>
+<li>recurring <code>Cannot take exclusive lock on cache.db</code> PROJ warnings during <code>project</code> are now collapsed into a single, actionable message <a href="https://github.com/rspatial/terra/issues/2088" class="external-link">#2088</a>
+</li>
+<li>retro labels generated with <code>plot(x, pax=list(retro=TRUE))</code> were incorrect in the W and S hemispheres <a href="https://github.com/rspatial/terra/issues/2090" class="external-link">#2090</a> by Lucas Salinas Morales</li>
+<li>
+<code>trim</code> failed with “invalid extent” if the trimmed bounding box was within <code>padding</code> cells of the raster edge <a href="https://github.com/rspatial/terra/issues/2092" class="external-link">#2092</a> by James Howard</li>
+<li>With the new default “md=TRUE”, <code>rast</code> reported a “file does not exist” error with a GDAL DSN string (e.g. <code>NETCDF:".../file.nc":VAR</code>). , <code>rast</code> now splits a <code>DRIVER:"path":VAR</code> DSN so the multidim API can find the file. It reuses the classic 2D driver’s geotransform so the extent is reported in CRS units instead of raw coordinate-variable values <a href="https://github.com/rspatial/terra/issues/2093" class="external-link">#2093</a> by Michael Sumner</li>
+<li>
+<code>writeRaster(x, filename, filetype="COG")</code> segfaulted with GDAL 3.13.0 because the COG driver now has <code>Create()</code> that crashes with <code>RasterIO</code> crashes; terra now always writes COGs via the original <code>CreateCopy()</code> path <a href="https://github.com/rspatial/terra/issues/2095" class="external-link">#2095</a> by Andrew Brown</li>
+</ul></div>
+<div class="section level3">
+<h3 id="enhancements-1-9-34">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-9-34"></a></h3>
+<ul><li>
+<code>extract&lt;SpatRaster,SpatVector&gt;</code> with polygons had become <em>much</em> slower <a href="https://github.com/rspatial/terra/issues/2100" class="external-link">#2100</a> by Torsten Hauffe</li>
+<li>
+<code>regress</code> gained a <code>&lt;SpatRaster,data.frame&gt;</code> method to specify levels of factors</li>
+<li>
+<code>extract(x, polygons, fun=...)</code> could fail with large polygons/high-res rasters. For standard functions (<code>sum</code>, <code>sum2</code>, <code>mean</code>, <code>min</code>, <code>max</code>, <code>prod</code>, <code>sd</code>, <code>std</code>, <code>isNA</code>, <code>notNA</code>) processing is now by block and memory safe <a href="https://github.com/rspatial/terra/issues/2097" class="external-link">#2097</a>
+</li>
+<li>
+<code>sprc(&lt;character&gt;)</code> gained argument <code>group=TRUE</code> to combine rasters with the same geometry; convenient for “one folder per tile, one file per band” situations</li>
+<li>automatic addition of required “/vsicurl/” and/or “/vsizip/” to remote vector data sources <a href="https://github.com/rspatial/terra/issues/2103" class="external-link">#2103</a> by Márcia Barbosa</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-1-9-34">new<a class="anchor" aria-label="anchor" href="#new-1-9-34"></a></h3>
+<ul><li>
+<code>make.RGB</code> function <a href="https://github.com/rspatial/terra/issues/2085" class="external-link">#2085</a> by Jérôme Guélat</li>
+<li>
+<code>netw</code> to create <code>SpatNetwork</code> objects. The network can be directed or undirected and is by default weighted by edge length.</li>
+<li>
+<code>SpatNetwork</code> methods: <code>shortestPath</code>, , <code>writeNetwork``net_nodes</code>, <code>net_edges</code>, <code>net_nnodes</code>, <code>net_nedges</code>, <code>net_directed</code>, <code>net_weights</code> and <code>net_weights&lt;-</code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.9-27" id="version-19-27">version 1.9-27<a class="anchor" aria-label="anchor" href="#version-19-27"></a></h2><p class="text-muted">CRAN release: 2026-05-10</p>
+<p>Released 2026-05-08</p>
+<div class="section level3">
+<h3 id="bug-fixes-1-9-27">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-9-27"></a></h3>
+<ul><li>terra did not build with Apple clang 14 on CRAN</li>
+<li>terra did not build with PROJ &lt; 7 <a href="https://github.com/rspatial/terra/issues/2080" class="external-link">#2080</a> by Wolfgang Viechtbauer</li>
+<li>
+<code>project</code> without template failed <a href="https://github.com/rspatial/terra/issues/2081" class="external-link">#2081</a> by Ethan Plunkett</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.9-25" id="version-19-25">version 1.9-25<a class="anchor" aria-label="anchor" href="#version-19-25"></a></h2><p class="text-muted">CRAN release: 2026-05-06</p>
+<p>Released 2026-05-04</p>
+<div class="section level3">
+<h3 id="bug-fixes-1-9-25">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-9-25"></a></h3>
 <ul><li>terra now distinguishes between the “standard”/“Gregorian” and the “proleptic_gregorian” calendars <a href="https://github.com/rspatial/terra/issues/1599" class="external-link">#1599</a> by Hu shiyu</li>
 <li>
 <code>spatSample&lt;SpatRaster&gt;(method="stratified")</code> could cause an out of bounds error <a href="https://github.com/rspatial/terra/issues/1858" class="external-link">#1858</a> by Felipe)</li>
@@ -55,7 +133,7 @@
 <code>distance&lt;SpatRaster&gt;</code> with haversine method could overflow from N to S pole <a href="https://github.com/rspatial/terra/issues/2077" class="external-link">#2077</a> by brshipley</li>
 </ul></div>
 <div class="section level3">
-<h3 id="enhancements-1-9-23">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-9-23"></a></h3>
+<h3 id="enhancements-1-9-25">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-9-25"></a></h3>
 <ul><li>
 <code>memmax</code> now defaults to 16 GB to prevent allocation failures on very large memory systems <a href="https://github.com/rspatial/terra/issues/2073" class="external-link">#2073</a> by Will Kessler</li>
 <li>
@@ -80,7 +158,7 @@
 <li>PROJ CDN warnings (e.g. SSL errors when downloading datum grids) are now collapsed into a single summary warning with guidance to use <code>projNetwork(FALSE)</code> <a href="https://github.com/rspatial/terra/issues/1351" class="external-link">#1351</a> by Hassan Masoomi</li>
 </ul></div>
 <div class="section level3">
-<h3 id="new-1-9-23">new<a class="anchor" aria-label="anchor" href="#new-1-9-23"></a></h3>
+<h3 id="new-1-9-25">new<a class="anchor" aria-label="anchor" href="#new-1-9-25"></a></h3>
 <ul><li>
 <code>costDistance</code> and <code>gridDistance</code> can now return the nearest target cell number <a href="https://github.com/rspatial/terra/issues/2034" class="external-link">#2034</a> by chrislittleboy</li>
 <li>
@@ -1577,7 +1655,7 @@
 <h2 class="pkg-version" data-toc-text="1.5-21" id="version-15-21">version 1.5-21<a class="anchor" aria-label="anchor" href="#version-15-21"></a></h2><p class="text-muted">CRAN release: 2022-02-16</p>
 <p>Released 2022-02-17</p>
 <ul><li>
-<code>writeVector</code> and <code>vect</code> now work with GPGK if the path has non-ascii characters [#518]</li>
+<code>writeVector</code> and <code>vect</code> now work with GPKG if the path has non-ascii characters [#518]</li>
 <li>The results of <code>predict</code> with <code>cores &gt; 1</code> and more than one output variable were garbled</li>
 <li>
 <code>zonal</code> dropped category names when using an external (R) function [#527] by Jakub Nowosad</li>
@@ -1621,7 +1699,7 @@
 <ul><li>
 <code>distance</code>, <code>gridDistance</code>, <code>direction</code> and <code>patches</code> now process all layers of the input SpatRaster. [#503] by Chris Haak</li>
 <li>consistent copy-on-modify behavior in <code>()&lt;-</code> methods. in-place updating available with <code>set.</code> methods such as <code>set.names</code> and <code>set.values</code>. [#493] by Jean Romain and [#511] by Bryan Fuentes</li>
-<li>much faster writing of GPGK vector data by using a single transaction (following sf) [#460] by Krzysztof Dyba</li>
+<li>much faster writing of GPKG vector data by using a single transaction (following sf) [#460] by Krzysztof Dyba</li>
 <li>
 <code>aggregate&lt;SpatRaster&gt;</code> now accepts functions that return more than one value per aggregated cell</li>
 <li>
@@ -1715,7 +1793,7 @@
 <code>inset</code> argument <code>border</code> changed to <code>perimeter</code> to allow passing <code>border</code> on to <code>plot&lt;Spat*&gt;</code>. [#456] by Márcia Barbosa</li>
 <li>The compile-time and run-time versions of GEOS are now compared and a warning is given if they are not the same. [#459] by Edzer Pebesma</li>
 <li>it is now possible to add sub-datasets to GPKG and GTiff files. [#300] by gtitov</li>
-<li>general option <code>memfrac</code> can now be set to zero (in stead of not lower than 0.1). [#476] by Matt Strimas-Mackey</li>
+<li>general option <code>memfrac</code> can now be set to zero (instead of not lower than 0.1). [#476] by Matt Strimas-Mackey</li>
 <li>new argument <code>allowGaps</code> in <code>patches</code> to disallow gaps between patch IDs. See [#478] by Dunbar Carpenter.</li>
 </ul></div>
 <div class="section level3">
