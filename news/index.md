@@ -30,6 +30,8 @@
 - `focal` can now use TBB parallelization for built-in functions “max”,
   “min”, “median”, “modal” and “sd” (in addition to “sum”/“mean”)
   [\#2115](https://github.com/rspatial/terra/issues/2115) by Breeze-Hu
+- `focal` with “min” or “max” and an unweighted window is now faster,
+  especially with large windows
 
 ### new
 
@@ -104,9 +106,9 @@ Released 2026-06-20
   Guélat
 - `netw` to create `SpatNetwork` objects. The network can be directed or
   undirected and is by default weighted by edge length.
-- `SpatNetwork` methods: `shortestPath`, ,
-  ``` writeNetwork``net_nodes ```, `net_edges`, `net_nnodes`,
-  `net_nedges`, `net_directed`, `net_weights` and `net_weights<-`.
+- `SpatNetwork` methods: `shortestPath`, `writeNetwork`, `net_nodes`,
+  `net_edges`, `net_nnodes`, `net_nedges`, `net_directed`, `net_weights`
+  and `net_weights<-`.
 
 ## version 1.9-27
 

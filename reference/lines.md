@@ -13,7 +13,7 @@ not NA in the first layer are used.
 
 ``` r
 # S4 method for class 'SpatVector'
-points(x, y=NULL, col, cex=0.7, pch=16, alpha=1, jitter=0, legend=NULL, ...)
+points(x, y=NULL, col, cex=0.7, pch=16, alpha=1, jitter=0, legend=FALSE, ...)
 
 # S4 method for class 'SpatVector'
 lines(x, y=NULL, col, lwd=1, lty=1, arrows=FALSE, alpha=1, legend=FALSE, ...)
