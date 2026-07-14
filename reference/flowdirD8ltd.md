@@ -7,9 +7,9 @@ methods over grid-based digital elevation models.
 
 ``` r
 # S4 method for class 'SpatRaster'
-flowdirD8ltd(x,lambda=0.5,deviation_type=c("ltd","lad"),filename="", ...) 
+flowdirD8ltd(x,lambda=0.5,deviation_type=c("ltd","lad"),max_iters=10^6,filename="", ...) 
 # S4 method for class 'SpatRaster'
-flowdirD8lad(x,lambda=0.5,deviation_type="lad",filename="",...)
+flowdirD8lad(x,lambda=0.5,deviation_type=c("lad","ltd"),max_iters=10^6,filename="",...)
 ```
 
 ## Arguments
@@ -29,6 +29,10 @@ flowdirD8lad(x,lambda=0.5,deviation_type="lad",filename="",...)
   If `"ltd"` (default) flow direction dispersion is deteceted with LTD
   criterion, if `"lad"` flow direction dispersion is deteceted with LTD
   criterion. See Orlandini et al,2003 for further details.
+
+- max_iters:
+
+  maximum iterations for drainage path starting points detection
 
 - filename:
 

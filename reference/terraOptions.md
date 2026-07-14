@@ -103,7 +103,7 @@ terraOptions()
 #> memmax    : 16
 #> todisk    : FALSE
 #> threads   : 0
-#> tempdir   : /tmp/RtmpJW1oBZ
+#> tempdir   : /tmp/Rtmpo2ONQh
 #> datatype  : FLT4S
 #> memmin    : 1
 #> progress  : 3
@@ -119,7 +119,7 @@ terraOptions()
 #> memmax    : 16
 #> todisk    : FALSE
 #> threads   : 4
-#> tempdir   : /tmp/RtmpJW1oBZ
+#> tempdir   : /tmp/Rtmpo2ONQh
 #> datatype  : FLT4S
 #> memmin    : 1
 #> progress  : 10

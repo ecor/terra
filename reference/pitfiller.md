@@ -8,7 +8,7 @@ Fills pits (depressions with no outlet) in a digital elevation model
 ``` r
 # S4 method for class 'SpatRaster'
 pitfiller(x, pit = NULL, flowdir = NULL, niter = 10, lambda = 0,
-                 deviation_type = "lad", U = 1, D = 300, beta = 0.9,
+                 deviation_type = "lad", max_iters=10^6, U = 1, D = 300, beta = 0.9,
                  theta_exp = 0.5, filename = "", ...)
 ```
 
@@ -40,6 +40,11 @@ pitfiller(x, pit = NULL, flowdir = NULL, niter = 10, lambda = 0,
 - deviation_type:
 
   Type of deviation. Default is `"lad"`. See
+  [`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md).
+
+- max_iters:
+
+  maximum iterations for drainage path starting points detection.See
   [`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md).
 
 - U:
@@ -261,6 +266,26 @@ elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda)
 #> name        : flowdir_lad_l=0.5
 #> min value   :                 0
 #> max value   :               112
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
+#> 
+#> Exceeding
 flowdir2 <- terrain(elev2, "flowdir")
 flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
 pits2 <- pitfinder(flowdir, pits_on_boundary = FALSE)
