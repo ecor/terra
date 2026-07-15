@@ -267,25 +267,25 @@ elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda)
 #> min value   :                 0
 #> max value   :               112
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 #> 
-#> Exceeding
+#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
 flowdir2 <- terrain(elev2, "flowdir")
 flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
 pits2 <- pitfinder(flowdir, pits_on_boundary = FALSE)

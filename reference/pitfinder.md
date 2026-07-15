@@ -38,7 +38,7 @@ A
 
 ## Author
 
-Emanuele Cordano
+Emanuele Cordano (implemantation of the source code)
 
 ## See also
 
