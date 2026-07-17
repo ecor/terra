@@ -1,7 +1,7 @@
 # Pit Filler
 
-Fills pits (depressions with no outlet) in a digital elevation model
-(DEM) using the PEM4PIT terrain erosion model.
+Fills pits (depressions with no outlet) in a elevation raster using the
+PEM4PIT terrain erosion model.
 
 ## Usage
 
@@ -16,69 +16,67 @@ pitfiller(x, pit = NULL, flowdir = NULL, niter = 10, lambda = 0,
 
 - x:
 
-  SpatRaster with digital elevation model.
+  SpatRaster with elevation values
 
 - pit:
 
   SpatRaster with pits. See
-  [`pitfinder`](https://rspatial.github.io/terra/reference/pitfinder.md).
+  [`pitfinder`](https://rspatial.github.io/terra/reference/pitfinder.md)
 
 - flowdir:
 
   SpatRaster with flow direction or `NULL`. If `NULL`, it is calculated
   internally. See
-  [`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md).
+  [`flowDir`](https://rspatial.github.io/terra/reference/flowDir.md)
 
 - niter:
 
-  Number of iterations. Default is 10.
+  Number of iterations. Default is 10
 
 - lambda:
 
-  Deviation parameter. Default is 0.
+  Deviation parameter. Default is 0
 
 - deviation_type:
 
   Type of deviation. Default is `"lad"`. See
-  [`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md).
+  [`flowDir`](https://rspatial.github.io/terra/reference/flowDir.md)
 
 - max_iters:
 
   maximum iterations for drainage path starting points detection.See
-  [`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md).
+  [`flowDir`](https://rspatial.github.io/terra/reference/flowDir.md)
 
 - U:
 
-  Uplift rate. See equation parameters \[Grimaldi at al, 2007\].
+  Uplift rate. See Details
 
 - D:
 
-  Diffusion coefficient. See equation parameters \[Grimaldi at al,
-  2007\].
+  Diffusion coefficient. See Details
 
 - beta:
 
-  Erosion coefficient. See equation parameters \[Grimaldi at al, 2007\].
+  Erosion coefficient. See Details
 
 - theta_exp:
 
-  Exponent for contributing area. See equation parameters \[Grimaldi at
-  al, 2007\].
+  Exponent for contributing area. See Details
 
 - filename:
 
-  Character. Output filename.
+  Character. Output filename
 
 - ...:
 
   Additional arguments for writing files, as in
-  [`writeRaster`](https://rspatial.github.io/terra/reference/writeRaster.md).
+  [`writeRaster`](https://rspatial.github.io/terra/reference/writeRaster.md)
 
 ## Value
 
 A
 [`SpatRaster`](https://rspatial.github.io/terra/reference/SpatRaster-class.md)
-object with pits filled.
+with pits filled.
 
 ## Details
 
@@ -150,145 +148,26 @@ Emanuele Cordano
 
 [`terrain`](https://rspatial.github.io/terra/reference/terrain.md),
 [`watershed`](https://rspatial.github.io/terra/reference/watershed.md),
-[`flowdirD8lad`](https://rspatial.github.io/terra/reference/flowdirD8ltd.md),
+[`flowDir`](https://rspatial.github.io/terra/reference/flowDir.md),
 [`pitfinder`](https://rspatial.github.io/terra/reference/pitfinder.md)
 
 ## Examples
 
 ``` r
-#### PLANAR HILLSOPE WITH PIT EXAMPLE 
-
-### PLANAR HILLSLOPE CREATION
-# Parameters
-res <- 100           # resolution in meters
-size_km <- 1       # size of the area in kilometers
-size_m <- size_km * 1000  # convert to meters
-
-ncol <- size_m / res  # number of columns
-nrow <- size_m / res  # number of rows
-
-# Create an empty raster
-r <- rast(nrows = nrow, ncols = ncol,
-          xmin = 0, xmax = size_m, ymin = 0, ymax = size_m,
-          resolution = res, crs = "")
-
-# Slope angle in degrees
-slope_deg <- 20
-slope_rad <- slope_deg * pi / 180  # convert to radians
-
-# Get Y coordinates of cell centers
-y_coords <- yFromRow(r, 1:nrow)
-
-# Compute elevation: elevationkg = distance * tan(slope)
-elevation <- outer(y_coords, rep(1, ncol), function(y, x) y * tan(slope_rad))
-# Assign elevation values to raster
-values(r) <- as.vector(elevation)
-elev0 <- r 
-
-### PLANAR HILLSLOPE 
-lambda=0##
-
-flowdir0 <- flowdirD8lad(elev0, lambda = lambda)
-
-
-
-
-plot(elev0,col=rev(terrain.colors(10)))
-arrows_on_rast(flowdir0, unit="flowdir",col="black",code=2,length=0.1)
-
-#> NULL
-
-### PLANAR HILLSOPE WITH PIT 
-
-elev1 <- elev0
-elev1[47] <- elev1[47]-40 ##40
-flowdir1 <- flowdirD8ltd(elev1, lambda = lambda)
-flowdir1a <- terrain(elev1,"flowdir")
-flowdir1a[flowdir1==0] <- 0
-plot(elev1,col=rev(terrain.colors(10)))
-##plot(elev1>as.numeric(elev1[47]))
-##arrows_on_rast(flowdir1a, unit="flowdir",col="blue",code=2,length=0.1)
-arrows_on_rast(flowdir1, unit="flowdir",col="black",code=2,length=0.1)
-
-#> NULL
-
-#### PIT DETECION AND FILLING 
-
-elev <- elev1
-
-
-flowdir <- flowdirD8lad(elev, lambda = lambda)
-pits <- pitfinder(flowdir, pits_on_boundary = FALSE)
-elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda,niter=1000)
-#> class       : SpatRaster
-#> size        : 10, 10, 1  (nrow, ncol, nlyr)
-#> resolution  : 100, 100  (x, y)
-#> extent      : 0, 1000, 0, 1000  (xmin, xmax, ymin, ymax)
-#> coord. ref. : 
-#> source(s)   : memory
-#> name        : flowdir_lad_l=0
-#> min value   :               0
-#> max value   :               2
-
-
-flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
-flowdir2a <- terrain(elev2, "flowdir")
-flowdir2a[flowdir2==0] <- 0
-
-pits2 <- pitfinder(flowdir2, pits_on_boundary = FALSE)
-
-plot(elev2,col=rev(terrain.colors(10)))
-
-arrows_on_rast(flowdir2a, unit="flowdir",col="blue",code=2,length=0.1)
-#> NULL
-arrows_on_rast(flowdir2, unit="flowdir",col="black",code=2,length=0.1)
-
-#> NULL
-
-
-
-
-#### LUX DIGITAL ELEVATION MODEL 
 f <- system.file("ex/elev.tif", package = "terra")
 elev <- rast(f) |> project(y = "epsg:32632")
 
-
 lambda <- 0.5 ## try also 0 (default)
-flowdir <- flowdirD8lad(elev, lambda = lambda)
+flowdir <- flowDir(elev, lambda = lambda)
+#> Error in match.args(tolower(deviation_type), c("ltd", "lad")): could not find function "match.args"
 pits <- pitfinder(flowdir, pits_on_boundary = FALSE)
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'pitfinder': object 'flowdir' not found
 elev2 <- pitfiller(x = elev, pit = pits,lambda=lambda)
-#> class       : SpatRaster
-#> size        : 111, 78, 1  (nrow, ncol, nlyr)
-#> resolution  : 772.033, 772.033  (x, y)
-#> extent      : 263811.2, 324029.8, 5479328, 5565024  (xmin, xmax, ymin, ymax)
-#> coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632)
-#> source(s)   : memory
-#> name        : flowdir_lad_l=0.5
-#> min value   :                 0
-#> max value   :               112
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
-#> 
-#> Exceeding number of iterations in d8ltd/d8lad flow directions computation
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'i' in selecting a method for function '[<-': object 'pits' not found
 flowdir2 <- terrain(elev2, "flowdir")
-flowdir2 <- flowdirD8lad(elev2, lambda = lambda)
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'terrain': object 'elev2' not found
+flowdir2 <- flowDir(elev2, lambda = lambda)
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'flowDir': object 'elev2' not found
 pits2 <- pitfinder(flowdir, pits_on_boundary = FALSE)
-
-
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'pitfinder': object 'flowdir' not found
 ```
