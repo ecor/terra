@@ -24,11 +24,11 @@ flowDir(x, lambda=0.5, deviation_type=c("ltd","lad"), max_iters=10^6, filename="
 
 - deviation_type:
 
-  Character. Default is the first element of `=c("ltd","lad")`. If
-  `"ltd"` (default) flow direction dispersion is deteceted with Least
-  Transverse Deviation (LTD) criterion, if `"lad"` flow direction
-  dispersion is deteceted with Least Angular Deviation (LAD) criterion.
-  See Orlandini et al., 2003 for details
+  Character. Default is the first element of c("ltd", "lad"). If `"ltd"`
+  (the default), nondispersive flow directions are determined using the
+  least transversal deviation criterion (LTD). If `"lad"`, nondispersive
+  flow directions are determined using the least angular deviation (LAD)
+  criterion. See Orlandini et al. (2003) for details.
 
 - max_iters:
 
