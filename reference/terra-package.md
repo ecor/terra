@@ -41,11 +41,6 @@ to cluster nodes). Also see
 See these [guidelines](https://rspatial.org/pkg/10-parallel.html) for
 parallelization with terra objects.
 
-The "terra" package is a replacement of the "raster" package. "terra"
-has a very similar, but simpler, interface; it is faster, and it can do
-much more. At the bottom of this page there is a table that shows
-differences in the methods between the two packages.
-
 Below is a list of some of the most important methods grouped by theme.
 
 ———————————————————————————————————————
@@ -683,7 +678,10 @@ You can coerce SpatRasters to Raster\* objects, after loading the
 
 ## **Comparison with the raster package**
 
-———————————————————————————————————————
+——————————————————————————————————————— "terra" was written to replace
+the "raster" package. "terra" has a very similar, but simpler,
+interface; it is faster, and it can do much more. This section
+highlights some of the differences between the two packages.
 
 ## XXXI. New method names
 

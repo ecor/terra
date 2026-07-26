@@ -40,6 +40,13 @@
 <ul><li>multidim vrt can now be opened <a href="https://github.com/rspatial/terra/issues/2107" class="external-link">#2107</a> by Michael Sumner</li>
 <li>terra did not compile with GDAL &gt; 3.0.4 &amp; &lt; 3.8 <a href="https://github.com/rspatial/terra/issues/2109" class="external-link">#2109</a> by Andrew Gene Brown</li>
 <li>terra did not compile with GDAL &lt; 3.5 <a href="https://github.com/rspatial/terra/issues/2111" class="external-link">#2111</a> by Wolfgang Viechtbauer</li>
+<li>
+<code>distance&lt;SpatRaster&gt;</code> with a planar CRS ignored the “unit” (and misinterpreted the “maxdist”) argument <a href="https://github.com/rspatial/terra/issues/2139" class="external-link">#2139</a> by Jakub Nowosad</li>
+<li>
+<code>focal</code> returned wrong values (in some versions Inf) near the end of a chunk when processing a raster in chunks (with restrictive memory options) if the last chunk had fewer rows than half the window size <a href="https://github.com/rspatial/terra/issues/2138" class="external-link">#2138</a> by Chris Littleboy</li>
+<li>
+<code>rasterize</code> with points could crash R (or silently corrupt memory) when the output raster was processed in chunks and the last point fell before the last chunk <a href="https://github.com/rspatial/terra/issues/2142" class="external-link">#2142</a> by Agustín Lobo</li>
+<li>output of <code>cartogram(x, type="nc")</code> was invisible <a href="https://github.com/rspatial/terra/issues/2134" class="external-link">#2134</a> by Márcia Barbosa</li>
 </ul></div>
 <div class="section level3">
 <h3 id="enhancements-1-9-40">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-9-40"></a></h3>
@@ -60,9 +67,12 @@
 <code>furdist</code> method to get the furthest distance from a point to any location on another geometry</li>
 <li>
 <code>snapTo</code> method to move points to the nearest location on lines or polygons</li>
-<li><code>flowDir</code></li>
-<li><code>pittfiller</code></li>
-<li><code>as.arrows</code></li>
+<li>
+<code>flowDir</code> method to compute path-based nondisperive flow direction by Emanuele Cordano</li>
+<li>
+<code>pittfiller</code> method by Emanuele Cordano</li>
+<li>
+<code>as.arrows</code> to show direction arrows on a raster by Emanuele Cordano</li>
 </ul></div>
 </div>
     <div class="section level2">
