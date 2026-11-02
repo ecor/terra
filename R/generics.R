@@ -5,6 +5,21 @@
 
 
 
+setMethod("selectHighest", signature(x="SpatRaster"),
+	function(x, n, low=FALSE, ties="first", filename="", ...) {
+		n <- as.numeric(n[1])
+		if (!is.finite(n) || (n < 1)) {
+			error("selectHighest", "n must be a positive number")
+		}
+		ties <- match.arg(ties[1], c("all", "first"))
+		opt <- spatOptions(filename, ...)
+		x@pntr <- x@pntr$selectHighest(n, isTRUE(low[1]), ties == "all", opt)
+		messages(x, "selectHighest")
+	}
+)
+
+
+
 setMethod("centroids", signature(x="SpatRaster"),
 	function(x, weighted=FALSE) {
 		opt <- spatOptions()
@@ -30,6 +45,27 @@ setMethod("is.rotated", signature(x="SpatRaster"),
 setMethod("is.flipped", signature(x="SpatRaster"),
 	function(x)  {
 		x@pntr$is_flipped()
+	}
+)
+
+
+setMethod("has.geoloc", signature(x="SpatRaster"),
+	function(x) {
+		x@pntr$has_geoloc()
+	}
+)
+
+
+setMethod("geoloc", signature(x="SpatRaster"),
+	function(x) {
+		data.frame(
+			geolocation = x@pntr$has_geoloc(),
+			gcps = x@pntr$has_gcps(),
+			srs = x@pntr$geoloc_srs(),
+			x = x@pntr$geoloc_x(),
+			y = x@pntr$geoloc_y(),
+			stringsAsFactors = FALSE
+		)
 	}
 )
 
@@ -713,7 +749,7 @@ setMethod("mask", signature(x="SpatRaster", mask="sf"),
 )
 
 setMethod("project", signature(x="SpatRaster"),
-	function(x, y, method, mask=FALSE, align_only=FALSE, res=NULL, origin=NULL, threads=FALSE, use_gdal=TRUE, by_util=FALSE, pipeline="", AOI=NULL, desired_accuracy=-1.0, allow_approx=TRUE, filename="", ...)  {
+	function(x, y, method, mask=FALSE, align_only=FALSE, res=NULL, origin=NULL, threads=FALSE, use_gdal=TRUE, by_util=FALSE, pipeline="", warpOpts=NULL, transOpts=NULL, filename="", ...)  {
 
 		xscale=0
 		yscale=0
@@ -734,6 +770,14 @@ setMethod("project", signature(x="SpatRaster"),
 		}
 
 		opt <- spatOptions(filename, threads=threads, ...)
+
+		norm_opts <- function(v) {
+			if (is.null(v)) return(""[0])
+			v <- trimws(v)
+			v[nzchar(v)]
+		}
+		warpOpts <- norm_opts(warpOpts)
+		transOpts <- norm_opts(transOpts)
 
 		if (is.list(pipeline)) {
 			px <- attr(pipeline, "from")			
@@ -767,25 +811,26 @@ setMethod("project", signature(x="SpatRaster"),
 			error("project", "argument y cannot be a number. For EPSG codes use format 'epsg:1234'")			
 		}
 
-
-		if (is.null(AOI)) {
-			aoi <- numeric(0)
-		} else {
-			aoi <- try(ext(AOI), silent=TRUE)
-			if (inherits(AOI, "try-error")) {
-				error("project", "AOI must be or have a SpatExtent")
+		# AREA_OF_INTEREST from template y (lon/lat), unless already in transOpts
+		has_aoi <- any(grepl("^AREA_OF_INTEREST", transOpts, ignore.case=TRUE))
+		if (!has_aoi && inherits(y, "SpatRaster") && (crs(y) != "")) {
+			e <- ext(y)
+			if (!isTRUE(is.lonlat(y, perhaps=FALSE, warn=FALSE))) {
+				e <- try(project(e, from=crs(y), to="OGC:CRS84"), silent=TRUE)
 			}
-			aoi <- as.vector(aoi)[c(1,3,2,4)]
+			if (!inherits(e, "try-error")) {
+				v <- as.vector(e) # xmin, xmax, ymin, ymax
+				transOpts <- c(transOpts,
+					paste0("AREA_OF_INTEREST=", paste(c(v[1], v[3], v[2], v[4]), collapse=",")))
+			}
 		}
-
-		bp <- isTRUE(allow_approx)
 
 		if (inherits(y, "SpatRaster")) {
 			if (use_gdal) {
 				if (by_util) {
-					x@pntr <- x@pntr$warp_by_util(y@pntr, "", method, mask[1], align_only[1], FALSE, pipeline, aoi, desired_accuracy, bp, xscale, yscale, opt)
+					x@pntr <- x@pntr$warp_by_util(y@pntr, "", method, mask[1], align_only[1], FALSE, pipeline, xscale, yscale, warpOpts, transOpts, opt)
 				} else {
-					x@pntr <- x@pntr$warp(y@pntr, "", method, mask[1], align_only[1], FALSE, pipeline, aoi, desired_accuracy, bp, xscale, yscale, opt)
+					x@pntr <- x@pntr$warp(y@pntr, "", method, mask[1], align_only[1], FALSE, pipeline, xscale, yscale, warpOpts, transOpts, opt)
 				}
 			} else {
 				if (align_only) {
@@ -796,18 +841,20 @@ setMethod("project", signature(x="SpatRaster"),
 		} else {
 			if (!is.character(y)) {
 				y <- as.character(crs(y))
+			} else {
+				y <- character_crs(y, "project")
 			}
 			if (!is.null(res) || !is.null(origin)) {
 				tmp <- project(rast(x), y)
 				if (!is.null(res)) res(tmp) <- res
 				if (!is.null(origin)) origin(tmp) <- origin
-				return(project(x, tmp, method=method, mask=mask, align_only=align_only, filename=filename, use_gdal=use_gdal, by_util=by_util, pipeline=pipeline, AOI=AOI, desired_accuracy=desired_accuracy, allow_approx=allow_approx, ...))
+				return(project(x, tmp, method=method, mask=mask, align_only=align_only, filename=filename, use_gdal=use_gdal, by_util=by_util, pipeline=pipeline, warpOpts=warpOpts, transOpts=transOpts, ...))
 			}
 			if (use_gdal) {
 				if (by_util) {
-					x@pntr <- x@pntr$warp_by_util(SpatRaster$new(), y, method, mask, FALSE, FALSE, pipeline, aoi, desired_accuracy, bp, xscale, yscale, opt)
+					x@pntr <- x@pntr$warp_by_util(SpatRaster$new(), y, method, mask, FALSE, FALSE, pipeline, xscale, yscale, warpOpts, transOpts, opt)
 				} else {
-					x@pntr <- x@pntr$warp(SpatRaster$new(), y, method, mask, FALSE, FALSE, pipeline, aoi, desired_accuracy, bp, xscale, yscale, opt)
+					x@pntr <- x@pntr$warp(SpatRaster$new(), y, method, mask, FALSE, FALSE, pipeline, xscale, yscale, warpOpts, transOpts, opt)
 				}
 			} else {
 				y <- project(rast(x), y)
@@ -837,7 +884,7 @@ warp_scale <- function(x, y, n=21) {
 
 
 setMethod("project", signature(x="SpatVector"),
-	function(x, y, partial=FALSE, pipeline="", AOI=NULL, desired_accuracy=-1, allow_approx=TRUE)  {
+	function(x, y, partial=FALSE, pipeline="", transOpts=NULL)  {
 
 		if (is.list(pipeline)) {
 			px <- attr(pipeline, "from")			
@@ -870,27 +917,25 @@ setMethod("project", signature(x="SpatVector"),
 		}
 		if (!is.character(y)) {
 			y <- as.character(crs(y))
+		} else {
+			y <- character_crs(y, "project")
 		}
 
-		if (is.null(AOI)) {
-			aoi <- numeric(0)
+		if (is.null(transOpts)) {
+			transOpts <- ""[0]
 		} else {
-			aoi <- try(ext(AOI), silent=TRUE)
-			if (inherits(AOI, "try-error")) {
-				error("project", "AOI must be or have a SpatExtent")
-			}
-			aoi <- as.vector(aoi)[c(1,3,2,4)]
+			transOpts <- as.character(transOpts)
+			transOpts <- transOpts[nzchar(transOpts)]
 		}
-		x@pntr <- x@pntr$project(y, partial, pipeline, aoi, desired_accuracy, isTRUE(allow_approx))
+		x@pntr <- x@pntr$project(y, partial, pipeline, transOpts)
 		messages(x, "project")
 	}
 )
 
 
 setMethod("project", signature(x="SpatVectorCollection"),
-	function(x, y, partial=FALSE, pipeline=NULL, AOI=NULL, desired_accuracy=-1.0, allow_ballpark=TRUE)  {
-		x <- lapply(x, function(v) project(v, y, partial=partial, pipeline=pipeline, AOI=AOI,
-						desired_accuracy=desired_accuracy, allow_ballpark=allow_ballpark))
+	function(x, y, partial=FALSE, pipeline=NULL, transOpts=NULL)  {
+		x <- lapply(x, function(v) project(v, y, partial=partial, pipeline=pipeline, transOpts=transOpts))
 		svc(x)
 	}
 )
@@ -1035,9 +1080,9 @@ setMethod("resample", signature(x="SpatRaster", y="SpatRaster"),
 		opt <- spatOptions(filename, threads=threads, ...)
 
 		if (by_util) {
-			x@pntr <- x@pntr$warp_by_util(y@pntr, "", method, FALSE, FALSE, TRUE, "", numeric(0), -1.0, TRUE, 0, 0, opt)
+			x@pntr <- x@pntr$warp_by_util(y@pntr, "", method, FALSE, FALSE, TRUE, "", 0, 0, ""[0], ""[0], opt)
 		} else {
-			x@pntr <- x@pntr$warp(y@pntr, "", method, FALSE, FALSE, TRUE, "", numeric(0), -1.0, TRUE, 0, 0, opt)
+			x@pntr <- x@pntr$warp(y@pntr, "", method, FALSE, FALSE, TRUE, "", 0, 0, ""[0], ""[0], opt)
 		}
 		messages(x, "resample")
 	}
@@ -1127,8 +1172,45 @@ setMethod("segregate", signature(x="SpatRaster"),
 )
 
 
+.extent_center <- function(x) {
+	e <- as.vector(ext(x))
+	c(mean(e[1:2]), mean(e[3:4]))
+}
+
+
+.shift_from_to <- function(x, to) {
+	from <- .extent_center(x)
+	if (is.numeric(to)) {
+		to <- as.vector(to)
+		n <- length(to)
+		if (n == 2) {
+			dx <- if (is.na(to[1])) 0 else to[1] - from[1]
+			dy <- if (is.na(to[2])) 0 else to[2] - from[2]
+			return(c(dx, dy))
+		}
+		if (n != 4) {
+			error("shift", "'to' must be two coordinates (x, y), or a SpatExtent (or an object that has an extent)")
+		}
+	}
+	e <- try(ext(to), silent=TRUE)
+	if (inherits(e, "try-error")) {
+		error("shift", "'to' must be a SpatExtent (or an object that has an extent), or two coordinates (x, y)")
+	}
+	toxy <- .extent_center(e)
+	c(toxy[1] - from[1], toxy[2] - from[2])
+}
+
+
 setMethod("shift", signature(x="SpatRaster"),
-	function(x, dx=0, dy=0, filename="", ...) {
+	function(x, dx=0, dy=0, filename="", to, ...) {
+		if (!missing(to)) {
+			if (!missing(dx) || !missing(dy)) {
+				error("shift", "cannot use both 'to' and 'dx'/'dy'")
+			}
+			d <- .shift_from_to(x, to)
+			dx <- d[1]
+			dy <- d[2]
+		}
 		opt <- spatOptions(filename, ...)
 		x@pntr <- x@pntr$shift(dx, dy, opt)
 		messages(x, "shift")
@@ -1137,7 +1219,15 @@ setMethod("shift", signature(x="SpatRaster"),
 
 
 setMethod("shift", signature(x="SpatExtent"),
-	function(x, dx=0, dy=0) {
+	function(x, dx=0, dy=0, to) {
+		if (!missing(to)) {
+			if (!missing(dx) || !missing(dy)) {
+				error("shift", "cannot use both 'to' and 'dx'/'dy'")
+			}
+			d <- .shift_from_to(x, to)
+			dx <- d[1]
+			dy <- d[2]
+		}
 		s <- c(dx[1], dx[1], dy[1], dy[1])
 		ext(as.vector(x) + s)
 	}
@@ -1145,7 +1235,15 @@ setMethod("shift", signature(x="SpatExtent"),
 
 
 setMethod("shift", signature(x="SpatVector"),
-	function(x, dx=0, dy=0) {
+	function(x, dx=0, dy=0, to) {
+		if (!missing(to)) {
+			if (!missing(dx) || !missing(dy)) {
+				error("shift", "cannot use both 'to' and 'dx'/'dy'")
+			}
+			d <- .shift_from_to(x, to)
+			dx <- d[1]
+			dy <- d[2]
+		}
 		x@pntr <- x@pntr$shift(dx, dy)
 		messages(x, "shift")
 	}
@@ -1212,7 +1310,17 @@ setMethod("scale", signature(x="SpatRaster"),
 			doscale = TRUE;
 		}
 		x@pntr <- x@pntr$scale(center, docenter, scale, doscale, opt)
-		messages(x, "scale")
+		x <- messages(x, "scale")
+		v <- x@pntr$get_misc()
+		if (docenter) {
+			n <- if (length(center) == 0) nlyr(x) else length(center)
+			attr(x, "scaled:center") <- v[seq_len(n)]
+			v <- v[-seq_len(n)]
+		}
+		if (doscale) {
+			attr(x, "scaled:scale") <- v
+		}
+		x
 	}
 )
 

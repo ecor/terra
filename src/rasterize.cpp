@@ -27,6 +27,7 @@
 #include "recycle.h"
 #include "sort.h"
 #include "gdalio.h"
+#include "vecmath.h"
 
 
 SpatRaster SpatRaster::rasterizePoints(std::vector<double>&x, std::vector<double> &y, std::string fun, std::vector<double> &values, bool narm, double background, SpatOptions &opt) {
@@ -238,6 +239,27 @@ SpatRaster SpatRaster::rasterizePoints(std::vector<double>&x, std::vector<double
 					}
 				}
 				cellcnt++;
+			}
+			if (!out.writeValues(v, out.bs.row[i], out.bs.nrows[i]))  return out;
+		}
+	} else if (fun == "modal") {
+		for (size_t i=0; i < out.bs.n; i++) {
+			size_t cmin = out.bs.row[i] * nc;
+			size_t cmax = (out.bs.row[i]+out.bs.nrows[i]) * nc - 1;
+			std::vector<double> v(out.bs.nrows[i] * out.ncol(), background);
+			while ((cellcnt < cells.size()) && (cells[cellcnt] <= cmax)) {
+				size_t cell = cells[cellcnt];
+				std::vector<double> vv;
+				while ((cellcnt < cells.size()) && (cells[cellcnt] == cell)) {
+					if (!(narm && std::isnan(values[cellcnt]))) {
+						vv.push_back(values[cellcnt]);
+					}
+					cellcnt++;
+				}
+				if (!vv.empty()) {
+					size_t k = cell - cmin;
+					v[k] = vmodal(vv, narm);
+				}
 			}
 			if (!out.writeValues(v, out.bs.row[i], out.bs.nrows[i]))  return out;
 		}
@@ -458,6 +480,8 @@ bool SpatRaster::getDSh(GDALDatasetH &rstDS, SpatRaster &out, std::string &filen
 bool SpatRaster::getDShMEM(GDALDatasetH &rstDS, SpatRaster &out, double &naval, double background, SpatOptions &opt) {
 
 	SpatOptions ops(opt);
+	// integer output datatype is applied at writeBlock; MEM must be able to hold NA
+	ops.set_datatype("FLT4S");
 	if (opt.names.size() == nlyr()) {
 		out.setNames(opt.names);
 	}
@@ -481,7 +505,6 @@ bool SpatRaster::getDShMEM(GDALDatasetH &rstDS, SpatRaster &out, double &naval, 
 SpatRaster SpatRaster::rasterizeLyr(SpatVector x, double value, double background, bool touches, bool update, SpatOptions &opt) {
 
 // not working well in some cases. See #552
-	std::string gtype = x.type();
 	SpatRaster out;
 	out.setNames({"ID"});
 
@@ -700,7 +723,7 @@ SpatRaster SpatRaster::rasterize(SpatVector x, std::string field, std::vector<do
 	}
 	GDALClose(vecDS);
 
-	std::string errmsg, driver, filename;
+	std::string driver;
 	GDALDatasetH rstDS;
 	double naval;
 	if (add) {	background = 0;	}

@@ -6,6 +6,8 @@
 \alias{plot,SpatRaster,missing-method}
 \alias{plot,SpatRaster,numeric-method}
 \alias{plot,SpatRaster,character-method}
+\alias{plot,SpatRasterCollection,ANY-method}
+\alias{plot,SpatRasterDataset,ANY-method}
 
 \alias{plot,SpatVector,missing-method}
 \alias{plot,SpatVector,numeric-method}
@@ -29,8 +31,9 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 \S4method{plot}{SpatRaster,numeric}(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
     maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, 
 	all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, alpha=NULL,
-	sort=FALSE,  reverse=FALSE, grid=FALSE, zebra=FALSE, ext=NULL, reset=FALSE,
-	add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL, ...)
+	sort=FALSE, reverse=FALSE, grid=FALSE, zebra=FALSE, ext=NULL, reset=FALSE,
+	add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL,
+	blend=NULL, blendfun="multiply", ...)
 
 \S4method{plot}{SpatRaster,missing}(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, 
 	plg=list(), pax=list(), ...)
@@ -53,27 +56,27 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
 
 \arguments{
   \item{x}{SpatRaster or SpatVector}
-  \item{y}{missing or positive integer or name indicating the layer(s) to be plotted}
+  \item{y}{missing or positive integer or name indicating the layer(s) or attributes(s) to be plotted}
   \item{col}{character vector to specify the colors to use. The default is \code{map.pal("viridis", 100)}. The default can be changed with the \code{terra.pal} option. For example: \code{options(terra.pal=terrain.colors(10))}. If \code{x} is a \code{SpatRaster} it can also be a \code{data.frame} with two columns (value, color) for a "classes" type legend or with three columns (from, to, color) for an "interval" type legend. If \code{x} is a \code{SpatVector} it can also be a \code{data.frame} with two columns (value, color) or a named vector (value=color) for a "classes" type legend. If \code{x} is a SpatVectorCollection, a list can be provided with colors for each SpatVector}
   \item{type}{character. Type of map/legend. One of "continuous", "classes", or "interval". If not specified, the type is chosen based on the data}
   \item{mar}{numeric vector of length 4 to set the margins of the plot (to make space for the legend). The default is (3.1, 3.1, 2.1, 7.1) for a single plot with a legend and (3.1, 3.1, 2.1, 2.1) otherwise. The default for a RGB raster is 0. Use \code{mar=NA} to not set the margins}
-  \item{legend}{logical or character. If not \code{FALSE} a legend is drawn. The character value can be used to indicate where the legend is to be drawn. For example "topright" or "bottomleft". Use \code{plg} for more refined placement. Not supported for continuous legends (the default for raster data)}
+  \item{legend}{logical or character. If not \code{FALSE} a legend is drawn. The character value can be used to indicate where the legend is to be drawn. For example "topright" or "bottomleft" (inside the map). Append \code{"-out"} to place a categorical legend outside the map rectangle (e.g. \code{"bottomleft-out"}, \code{"top-out"}). The default for a categorical legend is \code{"topright-out"}. Use \code{plg} for more refined placement}
   \item{axes}{logical. Draw axes?}
   \item{buffer}{logical. If \code{TRUE} the plotting area is made slightly larger than the extent of \code{x}}
-  \item{background}{background color. Default is no color (white)}
+  \item{background}{background color. By default, the color is taken from \code{par("bg")} (usually white; in some cases transparent)}  
   \item{box}{logical. Should a box be drawn around the map?}
   \item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
   \item{overview}{logical. Should "overviews" be used for fast rendering? This can result in much faster plotting of raster files that have overviews (e.g. "COG" format) and are accessed over a http connection. However, these overviews generally show aggregate values, thus reducing the range of the actual values. If \code{NULL}, the argument is set to \code{TRUE} for rasters that are accessed over http and \code{FALSE} in other cases}
  
  \item{plg}{list with parameters for drawing the legend. See the arguments for \code{\link[graphics]{legend}}. 
  
-  A legend can be placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can be a keyword such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. For a continuous legend, only the placement keywords "left", "right", "top", "bottom", "topright", "bottomright" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that moves the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax). When supplying coordinates, use \code{horiz=TRUE} to get a horizontal legend.
+  A legend can be placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can be a keyword such as "topleft" and "bottomright". For a categorical legend these keywords place the legend inside the map rectangle; append \code{"-out"} to place it outside (e.g. \code{"bottomleft-out"}). \code{"top-out"} is above the map; the default is \code{"topright-out"}. For a continuous legend, the placement keywords "left", "right", "top", "bottom", "topleft", "topright", "bottomleft" and "bottomright" are recognized (an \code{"-out"} suffix is ignored); and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that moves the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax). When supplying coordinates, use \code{horiz=TRUE} to get a horizontal legend.
     
   Additional parameters for continuous legends include: 
 
   \itemize{
 	\item \code{digits} integer. The number of digits to print after the decimal point
-    \item \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
+    \item \code{size} to change the height and/or width; the defaults are \code{c(1,1)}. For a continuous legend this is a fraction of the map. \code{x="right"} and \code{x="left"} are vertically centered; \code{x="topright"}/\code{x="topleft"} and \code{x="bottomright"}/\code{x="bottomleft"} use the same size and align the legend to the top or bottom 
 	\item \code{at} to set the location of the tickmarks
 	\item \code{format} as in \code{\link{formatC}} to format the numbers. For example, you can use \code{format="g"} for scientific notation. The default is \code{"f"}
 	\item \code{tick} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout". 
@@ -106,6 +109,8 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{fun}{function to be called after plotting each SpatRaster layer to add something to each map (such as text, legend, lines). For example, with SpatVector \code{v}, you could do \code{fun=function() lines(v)}. The function may have one argument, representing the layer that is plotted (1 to the number of layers) }  
   \item{colNA}{character. color for the NA values}
   \item{alpha}{Either a single numeric between 0 and 1 to set the transparency for all colors (0 is transparent, 1 is opaque) or a SpatRaster with values between 0 and 1 to set the transparency by cell. To set the transparency for a given color, set it to the colors directly}
+  \item{blend}{NULL or SpatRaster. If not \code{NULL}, the colors of \code{x} are combined with the colors of \code{blend} (after \code{x} has been mapped to colors). \code{blend} may be a single layer (treated as grayscale), an RGB raster, or a raster with a color table. A fourth RGB layer or a color-table alpha column is used as the alpha of \code{blend}; otherwise that alpha is 1 (opaque). It is resampled to the plotted grid of \code{x} if needed. Missing values in \code{blend} are treated as white and opaque (no change under \code{"multiply"}). The \code{alpha} of \code{x} (scalar, color alpha, or a SpatRaster) is included in the same blend; it is not applied afterwards. The legend of \code{x} is not affected}
+  \item{blendfun}{character or function. How to combine the RGB and alpha of \code{x} and \code{blend}. One of \code{"multiply"} (the default), \code{"screen"}, or \code{"overlay"}; or a function of two arguments (each a three-column matrix of RGB values between 0 and 1, one row per cell) that returns a matrix of the same shape. The first argument is the colors of \code{x}, the second those of \code{blend}. Alpha is combined with the same function}
   \item{sort}{logical. If \code{TRUE} legends with categorical values are sorted. If \code{x} is a \code{SpatVector} you can also supply a vector of the unique values, in the order in which you want them to appear in the legend}
   \item{reverse}{logical. If \code{TRUE}, the legend order is reversed}
   \item{grid}{logical. If \code{TRUE} grid lines are drawn. Their properties such as type and color can be set with the \code{pax} argument. The grid is drawn first such that it is covered by \code{x}. See \code{\link{add_grid}} to add grid lines on top of the map}
@@ -115,7 +120,7 @@ There is a separate help file for plotting a \code{\link[=plot,SpatGraticule,mis
   \item{main}{character. Main plot titles (one for each layer to be plotted). You can use arguments \code{cex.main}, \code{font.main}, \code{col.main} to change the appearance; and \code{loc.main} to change the location of the main title (either two coordinates, or a character value such as "topleft"). You can also use \code{sub=""} for a subtitle. See \code{\link{title}}}
   \item{maxnl}{positive integer. Maximum number of layers to plot (for a multi-layer object).}
   \item{add}{logical. If \code{TRUE} add the object to the current plot}
-  \item{ext}{SpatExtent or other object for which \code{\link{ext}} returns one. Can be use instead of xlim and ylim to set the extent of the plot}
+  \item{ext}{SpatExtent or other object for which \code{\link{ext}} returns one. Can be used instead of xlim and ylim to set the extent of the plot}
   \item{reset}{logical. If \code{TRUE} the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link{lines}})}
   \item{values}{Either a vector with values to be used for plotting or a two-column data.frame, where the first column matches a variable in \code{x} and the second column has the values to be plotted}
   \item{...}{arguments passed to \code{plot("SpatRaster", "numeric")} and additional graphical arguments}  
@@ -175,6 +180,13 @@ plot(r/2, range=c(50,600), mar=c(2, 2, 2, 2), legend=FALSE,
 	pax=list(side=c(1,4), cex.axis=.6), box=FALSE)
 
 par(oldpar)
+
+# hillshade with multiply blend (legend stays on elevation)
+e <- rast(system.file("ex/elev.tif", package="terra"))
+slp <- terrain(e, "slope", unit="radians")
+asp <- terrain(e, "aspect", unit="radians")
+hill <- shade(slp, asp, 30, 270)
+plot(e, blend=hill)
 
 # multi-layer with RGB
 s <- rast(system.file("ex/logo.tif", package="terra"))   

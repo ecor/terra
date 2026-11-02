@@ -29,8 +29,8 @@ setMethod("writeStop", signature(x="SpatRaster"),
 	function(x) {
 		success <- x@pntr$writeStop()
 		messages(x, "writeStop")
-		f <- sources(x)
-		if (f != "") {
+		f <- unique(sources(x))
+		if (length(f) == 1 && f != "") {
 			x <- rast(f)
 		}
 		return(x)
@@ -38,8 +38,14 @@ setMethod("writeStop", signature(x="SpatRaster"),
 )
 
 setMethod("writeValues", signature(x="SpatRaster", v="vector"),
-	function(x, v, start, nrows) {
-		success <- x@pntr$writeValues(v, start-1, nrows)
+	function(x, v, start, nrows, col=1, ncols=ncol(x)) {
+		stopifnot(start > 0 && nrows > 0)
+		stopifnot(col > 0 && ncols > 0)
+		if ((col == 1) && (ncols == ncol(x))) {
+			success <- x@pntr$writeValues(v, start-1, nrows)
+		} else {
+			success <- x@pntr$writeValuesRect(v, start-1, nrows, col-1, ncols)
+		}
 		messages(x, "writeValues")
 		invisible(success)
 	}

@@ -18,6 +18,25 @@ expect_equal(as.vector(values(sb)), vv)
 ini <- init(r, fun = "cell")
 expect_equal(as.vector(values(ini)), as.numeric(1:ncell(r)))
 
+## init — mask=TRUE uses x
+e <- rast(system.file("ex/elev.tif", package="terra"))
+lat <- init(e, fun="y", mask=TRUE)
+expect_equal(as.vector(is.na(values(lat))), as.vector(is.na(values(e))))
+expect_false(all(is.na(values(lat))))
+z <- init(e, fun=8, mask=TRUE)
+expect_equal(as.vector(is.na(values(z))), as.vector(is.na(values(e))))
+expect_equal(unique(as.vector(values(z)[!is.na(values(z))])), 8)
+
+## init — function on a multi-source raster (mrangr / writeStop)
+r1 <- rast(nrows=5, ncols=5, vals=1)
+r2 <- rast(r1, vals=2)
+xs <- rast(list(r1, r2))
+ini2 <- init(xs, function(n) seq_len(n))
+expect_equal(nlyr(ini2), 2)
+expect_equal(as.vector(values(ini2)[,1]), 1:ncell(r1))
+ini2m <- init(xs, function(n) seq_len(n), mask=TRUE)
+expect_equal(nlyr(ini2m), 2)
+
 ## segregate — three binary layers for r < 20
 sg <- segregate(r < 20)
 expect_equal(nlyr(sg), 2L)
@@ -40,6 +59,18 @@ expect_equal(as.vector(values(diff(c(r, r * 2)))), v)
 ## modal — identical layers
 md <- modal(c(r, r, r))
 expect_equal(as.vector(values(md)), v)
+
+## modal — vectors
+expect_equal(modal(c(1, 2, 2, 3), ties="lowest"), 2)
+expect_equal(modal(c(1L, 1L, 2L, 2L), ties="lowest"), 1L)
+expect_equal(modal(c(1, 1, 2, 2), ties="highest"), 2)
+expect_equal(modal(c(2, 2, 1, 1), ties="first"), 2)
+expect_true(is.na(modal(c(1, NA, 1), na.rm=FALSE)))
+expect_equal(modal(c(1, NA, 1), na.rm=TRUE), 1)
+expect_equal(modal(c(1, 1, 2), freq=TRUE), 2L)
+expect_equal(modal(c("a", "b", "b")), "b")
+expect_equal(as.character(modal(factor(c("a", "b", "b"), levels=c("a","b","c")))), "b")
+expect_true(modal(c(TRUE, FALSE, TRUE)))
 
 ## thresh — mean split vs manual classify
 tr <- thresh(r, method = "mean", as.raster = TRUE)
@@ -73,9 +104,27 @@ er <- extractRange(stk, xy, first = 1, last = 3)
 ex <- extract(stk, xy)
 expect_equal(as.numeric(unlist(er[[1]][1, ])), as.numeric(ex[1, -1]))
 
-## selectHighest — five largest cells marked
+## selectHighest — five largest / smallest values marked
 sh <- selectHighest(r, n = 5)
-expect_equal(sum(sh[] == 1, na.rm = TRUE), 5)
+ish <- which(as.vector(sh[]) == 1)
+expect_equal(length(ish), 5)
+expect_equal(sort(v[ish]), sort(tail(sort(v), 5)))
+sl <- selectHighest(r, n = 5, low=TRUE)
+isl <- which(as.vector(sl[]) == 1)
+expect_equal(length(isl), 5)
+expect_equal(sort(v[isl]), sort(head(sort(v), 5)))
+# integer ties: all cells with the selected values, or exactly n cells
+rt <- rast(nrows=5, ncols=5, vals=rep(1:5, each=5))
+vt <- as.vector(values(rt))
+st <- selectHighest(rt, n=7, ties="all")
+ist <- which(as.vector(st[]) == 1)
+expect_equal(length(ist), 10)
+expect_true(all(vt[ist] >= 4))
+st1 <- selectHighest(rt, n=7, ties="first")
+ist1 <- which(as.vector(st1[]) == 1)
+expect_equal(length(ist1), 7)
+expect_true(all(vt[ist1] >= 4))
+expect_equal(sort(ist1), sort(order(vt, decreasing=TRUE)[1:7]))
 
 ## classify — two-column lookup (from test_classify.R pattern)
 set.seed(1)

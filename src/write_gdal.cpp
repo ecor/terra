@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "gdal_priv.h"
+#include "gdal_compat.h"
 #include "cpl_conv.h" // for CPLMalloc()
 #include "cpl_string.h"
 #include "ogr_spatialref.h"
@@ -719,8 +720,12 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 
 		if ((i==0) || (driver != "GTiff")) {
 			// to avoid "Setting nodata to nan on band 2, but band 1 has nodata at nan."
+			// NAflag=NA (NaN) means do not write a NoData tag. Integer defaults
+			// must not be applied in that case: UINT16_MAX is valid data (#2207).
 			if (hasNAflag) {
-				poBand->SetNoDataValue(naflag);
+				if (!std::isnan(naflag)) {
+					poBand->SetNoDataValue(naflag);
+				}
 			} else if (datatype == "INT4S") {
 				poBand->SetNoDataValue(INT32_MIN); //-2147483648;
 			} else if (datatype == "INT2S") {
@@ -815,6 +820,32 @@ bool SpatRaster::writeStartGDAL(SpatOptions &opt, const std::vector<std::string>
 	source[0].driver = "gdal" ;
 	source[0].filename = filename;
 	source[0].memory = false;
+	if (hasNAflag) {
+		source[0].hasFileNA = !std::isnan(naflag);
+		source[0].fileNAflag = naflag;
+	} else if (datatype.size() >= 3 && datatype.compare(0, 3, "INT") == 0) {
+		source[0].hasFileNA = true;
+		if (datatype == "INT4S") {
+			source[0].fileNAflag = INT32_MIN;
+		} else if (datatype == "INT2S") {
+			source[0].fileNAflag = INT16_MIN;
+		} else if (datatype == "INT4U") {
+			source[0].fileNAflag = UINT32_MAX;
+		} else if (datatype == "INT2U") {
+			source[0].fileNAflag = UINT16_MAX;
+		} else if (datatype == "INT1U") {
+			source[0].fileNAflag = 255;
+		} else if (datatype == "INT1S") {
+			source[0].fileNAflag = -128;
+		} else if (datatype == "INT8S") {
+			source[0].fileNAflag = (double)INT64_MIN;
+		} else if (datatype == "INT8U") {
+			source[0].fileNAflag = (double)(UINT64_MAX - 1101);
+		}
+	} else {
+		source[0].hasFileNA = false;
+		source[0].fileNAflag = NAN;
+	}
 
 	if (driver != "GTiff") write_aux_json(filename);
 /*

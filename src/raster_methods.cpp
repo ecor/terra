@@ -30,6 +30,7 @@
 #include "spatLookup.h"
 
 #include "tbb_helper.h"
+#include <unordered_set>
 
 SpatRaster SpatRaster::lookup_apply(std::vector<double> from_vals, std::vector<double> to_vals, bool others, 
 	double othersValue, SpatOptions &opt) {
@@ -246,41 +247,113 @@ SpatRaster SpatRaster::lookup_catalyze(std::vector<double> from_vals, std::vecto
 }
 
 
-/*
-SpatRaster SpatRaster::selectHighest(size_t n, bool low, SpatOptions &opt) {
-
-	SpatVector out;
+SpatRaster SpatRaster::selectHighest(size_t n, bool low, bool all, SpatOptions &opt) {
 
 	if (nlyr() > 1) {
 		SpatOptions ops(opt);
-		out.addWarning("only processing the first layer");
-		std::vector<unsigned> lyr = {0};
-		*this = subset(lyr, ops);
+		ops.set_filenames({""});
+		SpatRaster x = subset(std::vector<size_t>{0}, ops);
+		if (x.hasError()) {
+			return x;
+		}
+		SpatRaster out = x.selectHighest(n, low, all, opt);
+		out.addWarning("only the first layer is used");
+		return out;
 	}
+
+	SpatRaster out = geometry(1);
 	if (!hasValues()) {
-		return(out);
+		out.setError("SpatRaster has no cell values");
+		return out;
+	}
+	if (n < 1) {
+		out.setError("n must be larger than 0");
+		return out;
 	}
 	if (n >= ncell()) {
-		return isnotnan(opt);
+		return isnotnan(true, opt);
 	}
 
-	std::vector<double> sel;
-
 	if (!readStart()) {
-		return(out);
+		out.setError(getError());
+		return out;
 	}
 
 	BlockSize bs = getBlockSize(opt);
-	for (size_t i = 0; i < bs.n; i++) {
-		std::vector<double> v;
-		readBlock(v, out.bs, i);
-		for (size_t j=0; j<v.size(); j++) {
+
+	if (all) {
+		std::vector<double> best;
+		best.reserve(n);
+		for (size_t i=0; i<bs.n; i++) {
+			std::vector<double> v;
+			readBlock(v, bs, i);
+			std::vector<double> sel = vselect(v, n, low);
+			best.insert(best.end(), sel.begin(), sel.end());
+			if (best.size() > n) {
+				best = vselect(best, n, low);
+			}
+		}
+		readStop();
+
+		if (best.empty()) {
+			return isnotnan(true, opt);
 		}
 
+		std::sort(best.begin(), best.end());
+		best.erase(std::unique(best.begin(), best.end()), best.end());
+		size_t nr = best.size();
+		std::vector<double> rcl(2 * nr);
+		std::copy(best.begin(), best.end(), rcl.begin());
+		std::fill(rcl.begin()+nr, rcl.end(), 1.0);
+		return reclassify(rcl, 2, 0, false, true, NAN, false, false, false, opt);
+	}
+
+	std::vector<double> bestv;
+	std::vector<size_t> besti;
+	bestv.reserve(n);
+	besti.reserve(n);
+	size_t cell0 = 0;
+	for (size_t i=0; i<bs.n; i++) {
+		std::vector<double> v;
+		readBlock(v, bs, i);
+		std::vector<size_t> idx = vselect_index(v, n, low);
+		for (size_t k=0; k<idx.size(); k++) {
+			bestv.push_back(v[idx[k]]);
+			besti.push_back(cell0 + idx[k]);
+		}
+		if (bestv.size() > n) {
+			vselect_keep(bestv, besti, n, low);
+		}
+		cell0 += v.size();
+	}
 	readStop();
-	return(out);
+
+	if (besti.empty()) {
+		return isnotnan(true, opt);
+	}
+
+	std::unordered_set<size_t> sel(besti.begin(), besti.end());
+	out.setValueType(3);
+	if (!out.writeStart(opt, filenames())) {
+		return out;
+	}
+	cell0 = 0;
+	for (size_t i=0; i<out.bs.n; i++) {
+		size_t nc = (size_t)out.bs.nrows[i] * ncol();
+		std::vector<double> v(nc, NAN);
+		for (size_t j=0; j<nc; j++) {
+			if (sel.find(cell0 + j) != sel.end()) {
+				v[j] = 1;
+			}
+		}
+		cell0 += nc;
+		if (!out.writeBlock(v, i)) {
+			return out;
+		}
+	}
+	out.writeStop();
+	return out;
 }
-*/
 
 
 
@@ -3235,7 +3308,27 @@ SpatRaster SpatRaster::disaggregate(std::vector<size_t> fact, SpatOptions &opt) 
 
 
 
+static bool init_write_masked(SpatRaster &src, SpatRaster &out, std::vector<double> &v, size_t i, bool mask, size_t nc) {
+	if (mask) {
+		std::vector<double> m;
+		src.readValues(m, out.bs.row[i], out.bs.nrows[i], 0, nc);
+		recycle(m, v.size());
+		for (size_t j=0; j<v.size(); j++) {
+			if (std::isnan(m[j])) {
+				v[j] = NAN;
+			}
+		}
+	}
+	return out.writeBlock(v, i);
+}
+
+
 SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
+	return init(value, false, plusone, opt);
+}
+
+
+SpatRaster SpatRaster::init(std::string value, bool mask, bool plusone, SpatOptions &opt) {
 
 	SpatRaster out = geometry(1);
 
@@ -3246,10 +3339,17 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 		return out;
 	}
 
+	if (mask && !hasValues()) {
+		out.setError("cannot mask: raster has no values");
+		return out;
+	}
+
 	if (value == "xy") {
 		SpatOptions ops(opt);
-		SpatRaster x = init("x", false, ops);
-		SpatRaster y = init("y", false, ops);
+		SpatRaster x = init("x", mask, false, ops);
+		if (x.hasError()) return x;
+		SpatRaster y = init("y", mask, false, ops);
+		if (y.hasError()) return y;
 		x.source.push_back(y.source[0]);
 		if (opt.get_filename() != "") {
 			x = x.writeRaster(opt);
@@ -3259,8 +3359,15 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 
 	out.source[0].setName(0, value);
 
+	if (mask) {
+		if (!readStart()) {
+			out.setError(getError());
+			return out;
+		}
+	}
+
 	if (!out.writeStart(opt, filenames())) {
-		readStop();
+		if (mask) readStop();
 		return out;
 	}
 
@@ -3275,7 +3382,10 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 					v[j*nc+k] = r;
 				}
 			}
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	} else if (value == "col") {
 		std::vector<double> cnn(nc);
@@ -3287,7 +3397,10 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 				v = cnn;
 				recycle(v, out.bs.nrows[i] * nc);
 			}
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	} else if (value == "cell") {
 		for (size_t i = 0; i < out.bs.n; i++) {
@@ -3295,7 +3408,10 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 			size_t firstcell = cellFromRowCol(out.bs.row[i], 0);
 			firstcell = plusone ? firstcell + 1 : firstcell;
 			std::iota(v.begin(), v.end(), firstcell);
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	} else if (value == "x") {
 		std::vector<int64_t> col(nc);
@@ -3307,7 +3423,10 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 				v = xcoords;
 				recycle(v, out.bs.nrows[i] * nc);
 			}
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	} else if (value == "y") {
 
@@ -3319,7 +3438,10 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 					v[j*nc+k] = y;
 				}
 			}
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	} else if (value == "chess") {
 		std::vector<double> a(nc);
@@ -3329,29 +3451,38 @@ SpatRaster SpatRaster::init(std::string value, bool plusone, SpatOptions &opt) {
 			a[i] = even;
 			b[i] = !even;
 		}
-		std::vector<double> v;
+		std::vector<double> vv;
 		for (size_t i = 0; i < out.bs.n; i++) {
 			if ((out.bs.row[i]%2) == 0) {
-				v = a;
-				v.insert(v.end(), b.begin(), b.end());
+				vv = a;
+				vv.insert(vv.end(), b.begin(), b.end());
 			} else {
-				v = b;
-				v.insert(v.end(), b.begin(), b.end());
+				vv = b;
+				vv.insert(vv.end(), b.begin(), b.end());
 			}
-			recycle(v, out.bs.nrows[i] * nc);
-			if (!out.writeBlock(v, i)) return out;
+			recycle(vv, out.bs.nrows[i] * nc);
+			if (!init_write_masked(*this, out, vv, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 		//source[0].range_min.resize(1, 0);
 		//source[0].range_max.resize(1, 1);
 		//source[0].hasRange.resize(1, true);
 	}
 
+	if (mask) readStop();
 	out.writeStop();
 	return(out);
 }
 
 
 SpatRaster SpatRaster::init(std::vector<double> values, SpatOptions &opt) {
+	return init(values, false, opt);
+}
+
+
+SpatRaster SpatRaster::init(std::vector<double> values, bool mask, SpatOptions &opt) {
 
 
 	SpatRaster out = geometry();
@@ -3360,7 +3491,22 @@ SpatRaster SpatRaster::init(std::vector<double> values, SpatOptions &opt) {
 		return(out);
 	}
 
-	if (!out.writeStart(opt, filenames())) { return out; }
+	if (mask && !hasValues()) {
+		out.setError("cannot mask: raster has no values");
+		return(out);
+	}
+
+	if (mask) {
+		if (!readStart()) {
+			out.setError(getError());
+			return out;
+		}
+	}
+
+	if (!out.writeStart(opt, filenames())) {
+		if (mask) readStop();
+		return out;
+	}
 	size_t nc = ncol();
 	size_t nl = nlyr();
 	if (values.size() == 1) {
@@ -3368,7 +3514,10 @@ SpatRaster SpatRaster::init(std::vector<double> values, SpatOptions &opt) {
 		std::vector<double> v;
 		for (size_t i = 0; i < out.bs.n; i++) {
 			v.resize(out.bs.nrows[i]*nc*nl, val);
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 		//source[0].range_min.resize(1, val);
 		//source[0].range_max.resize(1, val);
@@ -3386,9 +3535,13 @@ SpatRaster SpatRaster::init(std::vector<double> values, SpatOptions &opt) {
 			recycle(v, out.bs.nrows[i]*nc);
 			recycle(v, out.bs.nrows[i]*nc*nl);
 			over = v.size() % values.size();
-			if (!out.writeBlock(v, i)) return out;
+			if (!init_write_masked(*this, out, v, i, mask, nc)) {
+				if (mask) readStop();
+				return out;
+			}
 		}
 	}
+	if (mask) readStop();
 	out.writeStop();
 	return(out);
 }
@@ -4798,6 +4951,14 @@ SpatDataFrame SpatRaster::global_weighted_mean(SpatRaster &weights, std::string 
 
 SpatRaster SpatRaster::scale(std::vector<double> center, bool docenter, std::vector<double> scale, bool doscale, SpatOptions &opt) {
 	SpatRaster out;
+	if (!(docenter || doscale)) {
+		if (!opt.get_filename().empty()) {
+			out = writeRaster(opt);
+		} else {
+			out = deepCopy();
+		}
+		return(out);
+	}
 	SpatOptions opts(opt);
 	SpatDataFrame df;
 	if (docenter) {
@@ -4827,6 +4988,12 @@ SpatRaster SpatRaster::scale(std::vector<double> center, bool docenter, std::vec
 		} else {
 			out = arith(scale, "/", false, false, opt);
 		}
+	}
+	if (docenter) {
+		out.misc.insert(out.misc.end(), center.begin(), center.end());
+	}
+	if (doscale) {
+		out.misc.insert(out.misc.end(), scale.begin(), scale.end());
 	}
 	return out;
 }
@@ -5840,7 +6007,6 @@ SpatRaster SpatRaster::clumps(int directions, bool zeroAsNA, SpatOptions &opt) {
 
 	std::vector<size_t> dim = {nrow(), ncol()};
 
-	std::string tempfile = "";
     std::vector<double> d, v, vv;
 	if (!readStart()) {
 		out.setError(getError());

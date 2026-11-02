@@ -109,7 +109,6 @@ SpatRaster SpatRaster::writeRaster(SpatOptions &opt) {
 
 	// recursive writing of layers
 	std::vector<std::string> fnames = opt.get_filenames();
-	std::string msg;
 
 	size_t nl = nlyr();
 	if (fnames.size() > 1) {
@@ -323,6 +322,20 @@ bool SpatRaster::writeValuesRect(std::vector<double> &vals, size_t startrow, siz
 
 	if ((startrow + nrows) > nrow()) {
 		setError("incorrect start and/or nrows value");
+		return false;
+	}
+	if ((startcol + ncols) > ncol()) {
+		setError("incorrect start col and/or ncols value");
+		return false;
+	}
+
+	size_t nv = nrows * ncols * nlyr();
+	if (vals.size() != nv) {
+		if (vals.size() > nv) {
+			setError("too many values for writing: " + std::to_string(vals.size()) + " > " + std::to_string(nv));
+		} else {
+			setError("too few values for writing: " + std::to_string(vals.size()) + " < " + std::to_string(nv));
+		}
 		return false;
 	}
 

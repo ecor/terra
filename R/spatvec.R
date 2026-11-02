@@ -38,6 +38,13 @@ setMethod("is.points", signature(x="SpatVector"),
 )
 
 
+setMethod("has.z", signature(x="SpatVector"),
+	function(x) {
+		x@pntr$has_z()
+	}
+)
+
+
 setMethod("geomtype", signature(x="Spatial"),
 	function(x){
 		type <- sub("spatial", "", as.vector(tolower(class(x)[1])))
@@ -60,7 +67,7 @@ setMethod("geom", signature(x="SpatVector"),
 		}	else {
 			g <- x@pntr$get_geometry()
 			g <- do.call(cbind, g)
-			colnames(g) <- c("geom", "part", "x", "y", "hole")[1:ncol(g)]
+			colnames(g) <- c("geom", "part", "x", "y", "hole", "z")[1:ncol(g)]
 			if (df) {
 				data.frame(g)
 			} else {
@@ -84,7 +91,7 @@ setMethod("crds", signature(x="SpatVector"),
 		} else {
 			g <- x@pntr$coordinates()
 			g <- do.call(cbind, g)
-			colnames(g) <- c("x", "y")
+			colnames(g) <- c("x", "y", "z")[1:ncol(g)]
 			if (df) {
 				data.frame(g)
 			} else {
@@ -292,5 +299,49 @@ setMethod("normalize.longitude", signature(x="SpatVector"),
 	}
 )
 
+
+
+setMethod("selectSize", signature(x="SpatVector"),
+function(x, n = Inf, largest = TRUE, threshold = NULL, dissolve = FALSE, singleparts = TRUE) {
+
+	stopifnot(geomtype(x) %in% c("polygons", "lines"))
+
+	if (dissolve) {
+		x <- aggregate(x)
+	}
+
+	if (singleparts) {
+		x <- disagg(x)
+	}
+
+	if (is.polygons(x)) {
+		size <- expanse(x)
+	} else if (is.lines(x)) {
+		size <- perim(x)
+	}
+
+	if (!is.null(threshold)) {
+		if (largest) {
+			keep <- unname(size >= threshold)
+		} else {
+			keep <- unname(size <= threshold)
+		}
+
+		x <- x[keep, ]
+		size <- size[keep]
+	}
+
+	size_rank <- order(size)
+
+	if (is.finite(n)) {
+		if (largest) {
+			x <- x[rev(size_rank)[1:n], ]
+		} else {
+			x <- x[size_rank[1:n], ]
+		}
+	}
+
+	x
+})
 
 
