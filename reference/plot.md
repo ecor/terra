@@ -19,8 +19,9 @@ or
 plot(x, y=1, col, type=NULL, mar=NULL, legend=TRUE, axes=!add, plg=list(), pax=list(), 
     maxcell=500000, smooth=FALSE, range=NULL, fill_range=FALSE, levels=NULL, 
   all_levels=FALSE, breaks=NULL, breakby="eqint", fun=NULL, colNA=NULL, alpha=NULL,
-  sort=FALSE,  reverse=FALSE, grid=FALSE, zebra=FALSE, ext=NULL, reset=FALSE,
-  add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL, ...)
+  sort=FALSE, reverse=FALSE, grid=FALSE, zebra=FALSE, ext=NULL, reset=FALSE,
+  add=FALSE, buffer=FALSE, background=NULL, box=axes, clip=TRUE, overview=NULL,
+  blend=NULL, blendfun="multiply", ...)
 
 # S4 method for class 'SpatRaster,missing'
 plot(x, y, main, mar=NULL, nc, nr, maxnl=16, maxcell=500000, add=FALSE, 
@@ -56,8 +57,8 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
 
 - y:
 
-  missing or positive integer or name indicating the layer(s) to be
-  plotted
+  missing or positive integer or name indicating the layer(s) or
+  attributes(s) to be plotted
 
 - col:
 
@@ -89,9 +90,10 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
 
   logical or character. If not `FALSE` a legend is drawn. The character
   value can be used to indicate where the legend is to be drawn. For
-  example "topright" or "bottomleft". Use `plg` for more refined
-  placement. Not supported for continuous legends (the default for
-  raster data)
+  example "topright" or "bottomleft" (inside the map). Append `"-out"`
+  to place a categorical legend outside the map rectangle (e.g.
+  `"bottomleft-out"`, `"top-out"`). The default for a categorical legend
+  is `"topright-out"`. Use `plg` for more refined placement
 
 - axes:
 
@@ -104,7 +106,8 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
 
 - background:
 
-  background color. Default is no color (white)
+  background color. By default, the color is taken from `par("bg")`
+  (usually white; in some cases transparent)
 
 - box:
 
@@ -130,24 +133,30 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
 
   A legend can be placed by specifying arguments `x` and `y`. For a
   continuous legend `y` can have two values. `x` can also be a
-  SpatExtent. Furthermore, `x` can be a keyword such "topleft" and
-  "bottomright" to place the legend at these locations inside the map
-  rectangle. For a continuous legend, only the placement keywords
-  "left", "right", "top", "bottom", "topright", "bottomright" are
-  recognized; and when using these keywords, the legend is placed
-  outside of the map rectangle. The placement of the legend can be
-  altered with argument `nudge` that moves the location in the
-  directions specified with one value (x direction) or two values (x,
-  y). For a continuous legend it can also have four values (xmin, xmax,
-  ymin, ymax). When supplying coordinates, use `horiz=TRUE` to get a
-  horizontal legend.
+  SpatExtent. Furthermore, `x` can be a keyword such as "topleft" and
+  "bottomright". For a categorical legend these keywords place the
+  legend inside the map rectangle; append `"-out"` to place it outside
+  (e.g. `"bottomleft-out"`). `"top-out"` is above the map; the default
+  is `"topright-out"`. For a continuous legend, the placement keywords
+  "left", "right", "top", "bottom", "topleft", "topright", "bottomleft"
+  and "bottomright" are recognized (an `"-out"` suffix is ignored); and
+  when using these keywords, the legend is placed outside of the map
+  rectangle. The placement of the legend can be altered with argument
+  `nudge` that moves the location in the directions specified with one
+  value (x direction) or two values (x, y). For a continuous legend it
+  can also have four values (xmin, xmax, ymin, ymax). When supplying
+  coordinates, use `horiz=TRUE` to get a horizontal legend.
 
   Additional parameters for continuous legends include:
 
   - `digits` integer. The number of digits to print after the decimal
     point
 
-  - `size` to change the height and/or width; the defaults are `c(1,1)`
+  - `size` to change the height and/or width; the defaults are `c(1,1)`.
+    For a continuous legend this is a fraction of the map. `x="right"`
+    and `x="left"` are vertically centered; `x="topright"`/`x="topleft"`
+    and `x="bottomright"`/`x="bottomleft"` use the same size and align
+    the legend to the top or bottom
 
   - `at` to set the location of the tickmarks
 
@@ -267,6 +276,28 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
   between 0 and 1 to set the transparency by cell. To set the
   transparency for a given color, set it to the colors directly
 
+- blend:
+
+  NULL or SpatRaster. If not `NULL`, the colors of `x` are combined with
+  the colors of `blend` (after `x` has been mapped to colors). `blend`
+  may be a single layer (treated as grayscale), an RGB raster, or a
+  raster with a color table. A fourth RGB layer or a color-table alpha
+  column is used as the alpha of `blend`; otherwise that alpha is 1
+  (opaque). It is resampled to the plotted grid of `x` if needed.
+  Missing values in `blend` are treated as white and opaque (no change
+  under `"multiply"`). The `alpha` of `x` (scalar, color alpha, or a
+  SpatRaster) is included in the same blend; it is not applied
+  afterwards. The legend of `x` is not affected
+
+- blendfun:
+
+  character or function. How to combine the RGB and alpha of `x` and
+  `blend`. One of `"multiply"` (the default), `"screen"`, or
+  `"overlay"`; or a function of two arguments (each a three-column
+  matrix of RGB values between 0 and 1, one row per cell) that returns a
+  matrix of the same shape. The first argument is the colors of `x`, the
+  second those of `blend`. Alpha is combined with the same function
+
 - sort:
 
   logical. If `TRUE` legends with categorical values are sorted. If `x`
@@ -324,7 +355,8 @@ plot(x, y, main, mar=NULL, ext=NULL, ...)
 
   SpatExtent or other object for which
   [`ext`](https://rspatial.github.io/terra/reference/ext.md) returns
-  one. Can be use instead of xlim and ylim to set the extent of the plot
+  one. Can be used instead of xlim and ylim to set the extent of the
+  plot
 
 - reset:
 
@@ -415,6 +447,13 @@ plot(r/2, range=c(50,600), mar=c(2, 2, 2, 2), legend=FALSE,
   pax=list(side=c(1,4), cex.axis=.6), box=FALSE)
 
 par(oldpar)
+
+# hillshade with multiply blend (legend stays on elevation)
+e <- rast(system.file("ex/elev.tif", package="terra"))
+slp <- terrain(e, "slope", unit="radians")
+asp <- terrain(e, "aspect", unit="radians")
+hill <- shade(slp, asp, 30, 270)
+plot(e, blend=hill)
 
 # multi-layer with RGB
 s <- rast(system.file("ex/logo.tif", package="terra"))   
